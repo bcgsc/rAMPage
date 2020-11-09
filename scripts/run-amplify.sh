@@ -176,7 +176,7 @@ then
 fi
 
 echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
-echo -e "Sequence_ID\tSequence\tScore\tPrediction\tCharge\tAttention" > $outdir/AMPlify_results.tsv
+echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" > $outdir/AMPlify_results.tsv
 while read line
 do
 	seq_id=$(echo "$line" | awk '{print $NF}')
@@ -259,7 +259,7 @@ echo 1>&2; echo 1>&2
 echo "Filtering for sequences with an AMPlify score >= $confidence..." 1>&2
 echo "$header" > $outdir/AMPlify_results.conf.tsv
 echo -e "COMMAND: awk -F \"\\\t\" -v var=$confidence '{if(\$4>=var) print}' <(tail -n +2 $outdir/AMPlify_results.tsv) >> $outdir/AMPlify_results.conf.tsv\n" 1>&2
-awk -F "\t" -v var=$confidence '{if($4>=var) print}' <(tail -n +2 $outdir/AMPlify_results.tsv) > $outdir/AMPlify_results.conf.tsv
+awk -F "\t" -v var=$confidence '{if($4>=var) print}' <(tail -n +2 $outdir/AMPlify_results.tsv) >> $outdir/AMPlify_results.conf.tsv
 
 echo "Converting those sequences to FASTA format..." 1>&2
 echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.faa <(awk -F \"\\\t\" -v var=$confidence '{if(\$4>=var) print \$1}' <(tail -n +2 $outdir/AMPlify_results.tsv)) > ${outfile_conf}\n" 1>&2
