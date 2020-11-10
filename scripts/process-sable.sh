@@ -22,6 +22,10 @@ function get_help() {
 	echo 1>&2
 	exit 1
 }
+if [[ "$#" -eq 0 ]]
+then
+	get_help
+fi
 
 while getopts :h opt
 do
@@ -32,7 +36,10 @@ do
 done
 
 shift $((OPTIND-1))
-
+if [[ "$#" -ne 1 ]]
+then
+	echo "ERROR: Incorrect number of arguments." 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help
+fi
 infile=$(realpath $1)
 if [[ ! -s $infile ]]
 then
