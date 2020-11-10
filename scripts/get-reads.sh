@@ -6,6 +6,7 @@ function get_help() {
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
 		\tGets reads for one single organism, using fasterq-dump.\n \
+		\tOUTPUT: *.fastq.gz, RUNS.DONE
 		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump\n \
 		" | column -s$'\t' -t 1>&2
 	echo 1>&2
@@ -126,6 +127,10 @@ done < $sra
 if [[ "$fail" = true ]]
 then
 	touch $outdir/READS.FAIL
+	if [[ -f "$outdir/READS.DONE" ]]
+	then
+		rm $outdir/READS.DONE
+	fi
 
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	if [[ ! -z $email  ]]
