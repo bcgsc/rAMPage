@@ -57,6 +57,18 @@ then
 	rm $outdir/RUNS.DONE
 fi
 
+# check if input file exists
+if [[ ! -s $1 ]]
+then
+	if [[ ! -f $1 ]]
+	then
+		echo "ERROR: The input file does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	else
+		echo "ERROR: The input file is empty." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	fi
+	get_help
+fi
+
 accessions=$(cat $1)
 
 echo "Downloading run info..." 1>&2
