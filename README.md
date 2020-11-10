@@ -51,7 +51,6 @@ hymenoptera/nvitripennis/venom_ovary	SRP067692	stranded
 ## Usage
 
 ```
-$ git clone https://github.com/bcgsc/rAMPage.git
 $ cd rAMPage
 $ make
 ```
@@ -61,6 +60,11 @@ $ make
 
 ## Installation
 
+1. Edit the paths in `scripts/config.sh`
+1. Run `scripts/config.sh`
+	```
+	$ source scripts/config.sh
+	```
 
 ## Implementation
 
