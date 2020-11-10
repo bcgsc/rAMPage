@@ -9,6 +9,7 @@ function get_help() {
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
 		\tPreprocesses and trims reads with fastp.\n \
+		\tOUTPUT: *.fastq.gz, TRIM.DONE\n \
 		\tFor more information: https://github.com/OpenGene/fastp\n \
 		" | column -s$'\t' -t 1>&2
 	echo 1>&2
@@ -61,6 +62,9 @@ fi
 if [[ -f $outdir/TRIM.DONE ]]
 then
 	rm $outdir/TRIM.DONE
+elif [[ -f $outdir/TRIM.FAIL ]]
+then
+	rm $outdir/TRIM.FAIL
 fi
 
 echo "HOSTNAME: $(hostname)" 1>&2
@@ -126,6 +130,12 @@ done < $(dirname $indir)/sra/runs.txt
 if [[ "$fail" = true ]]
 then
 	touch $outdir/TRIM.FAIL
+
+	if [[ -f "$outdir/TRIM.DONE" ]]
+	then
+		rm $outdir/TRIM.DONE
+	fi
+
 	if [[ "$email" = true ]]
 	then
 		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
