@@ -4,6 +4,8 @@ END := $(wildcard *.END)
 LIB := $(wildcard *.LIB)
 TAXON_CLASS := $(wildcard *.CLASS)
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
+RAW_READS := $(wildcard raw_reads/*.fastq.gz)
+TRIMMED_READS := $(wildcard trimmed_reads/*.paired.fastq.gz)
 
 .PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean
 # final
@@ -31,7 +33,7 @@ homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhm
 translation: translation/rnabloom.transcripts.filtered.transdecoder.faa
 
 translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSDECODER_TRANSLATION.DONE: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa $(ROOT_DIR)/scripts/get-runtime.sh filtering/FILTER.DONE
-	$< -T transdecoder -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log
+	$< -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log
 
 # 6. filter expression 
 filtering: filtering/rnabloom.transcripts.filtered.fa
@@ -48,22 +50,23 @@ assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE: $(ROOT_DIR)/scripts
 # 4. make a reads list
 readslist: trimmed_reads/reads.txt
 
-trimmed_reads/reads.txt trimmed_reads/READSLIST.DONE: $(ROOT_DIR)/scripts/make-reads-list.sh sra/metadata.tsv trimmed_reads/*.paired.fastq.gz $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/TRIM.DONE
+trimmed_reads/reads.txt trimmed_reads/READSLIST.DONE: $(ROOT_DIR)/scripts/make-reads-list.sh sra/metadata.tsv $(TRIMMED_READS) $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/TRIM.DONE
 	$< -d trimmed_reads sra/metadata.tsv &> logs/04-readslist.log
 
 # 3. trim the reads
-trim: trimmed_reads/*.paired.fastq.gz trimmed_reads/TRIM.DONE
+trim: $(TRIMMED_READS) trimmed_reads/TRIM.DONE
 
-trimmed_reads/%.paired.fastq.gz: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/%.fastq.gz $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
-	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
-trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/%.fastq.gz $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
+# trimmed_reads/%.paired.fastq.gz: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/%.fastq.gz $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
+#	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
+trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(RAW_READS) $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
 	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
 
 # 2. download reads
-reads: raw_reads/*.fastq.gz raw_reads/READS.DONE
+reads: $(RAW_READS) raw_reads/READS.DONE
 
-raw_reads/%.fastq.gz: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
-	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
+# Use the DONE file INSTEAD of wildcard
+# raw_reads/%.fastq.gz: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
+#	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
 raw_reads/READS.DONE: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
 	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
 # 1. get runs
