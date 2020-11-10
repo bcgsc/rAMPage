@@ -24,7 +24,7 @@ cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE: $(ROOT_DIR)/scripts/cleave
 # 8. homology search
 homology: homology/jackhmmer.nr.faa
 
-homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMPS) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/get-runtime.sh $(TAXON_CLASS) $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSDECODER_TRANSLATION.DONE
+homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/get-runtime.sh $(TAXON_CLASS) $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSDECODER_TRANSLATION.DONE
 	$< -i translation -o homology -t $(THREADS) &> logs/08-homology.log
 
 # 7. translation 
@@ -74,4 +74,4 @@ sra/runs.txt sra/metadata.tsv sra/RUNS.DONE sra/METADATA.DONE: $(ROOT_DIR)/scrip
 
 clean:
 	rm logs/* 2> /dev/null || true
-	rm -rf sra raw_reads trimmed_reads assembly filtering translation homology cleavage amplify || true
+	rm -rf sra raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out || true
