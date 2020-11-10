@@ -1,5 +1,6 @@
 #!/bin/bash
-# set -eou pipefail PROGRAM=$(basename $0)
+set -eou pipefail
+PROGRAM=$(basename $0)
 function get_help() {
 
 	# DESCRIPTION
@@ -90,7 +91,7 @@ then
 	while read path
 #	while IFS=$'\t' read path accession
 	do
-		fastp_log=$(ls -t $ROOT_DIR/$path/logs/03-trimmed_reads-*.log 2> /dev/null | head -n1)
+		fastp_log=$(ls -t $ROOT_DIR/$path/logs/03-trimmed_reads-*.log 2> /dev/null | head -n1 || true)
 		if [[ -s $fastp_log ]]
 		then
 			# number of filtered reads
@@ -102,7 +103,7 @@ then
 			fi
 
 			# number of transcripts
-			rnabloom_log=$(ls -t $ROOT_DIR/$path/logs/05-assembly*.log 2> /dev/null | head -n1)
+			rnabloom_log=$(ls -t $ROOT_DIR/$path/logs/05-assembly*.log 2> /dev/null | head -n1 || true)
 			if [[ -s $rnabloom_log ]]
 			then
 				num_transcripts=$(awk '/Total number of assembled non-redundant transcripts:/ {print $NF}' $rnabloom_log)
@@ -118,7 +119,7 @@ then
 			num_reads="NA"
 			num_transcripts="NA"
 		fi
-		filter_log=$(ls -t $ROOT_DIR/$path/logs/06-filtering-*.log 2> /dev/null | head -n1)
+		filter_log=$(ls -t $ROOT_DIR/$path/logs/06-filtering-*.log 2> /dev/null | head -n1 || true)
 		
 		if [[ -s $filter_log ]]
 		then
@@ -131,7 +132,7 @@ then
 			num_filter="NA"
 		fi
 
-		td_log=$(ls -t $ROOT_DIR/$path/logs/07-translation-*.log 2> /dev/null | head -n1)
+		td_log=$(ls -t $ROOT_DIR/$path/logs/07-translation-*.log 2> /dev/null | head -n1 || true)
 
 		# number of annotated sequences
 		if [[ -s $td_log ]]
@@ -148,7 +149,7 @@ then
 
 		# number of AMP proteins
 		
-		jackhmmer_log=$(ls -t $ROOT_DIR/$path/logs/08-homology*.log 2> /dev/null | head -n1)
+		jackhmmer_log=$(ls -t $ROOT_DIR/$path/logs/08-homology*.log 2> /dev/null | head -n1 || true)
 		if [[ -s $jackhmmer_log ]]
 		then
 			jackhmmer_count=$(awk '/Number of AMPs found \(non-redundant\):/ {print $NF}' $jackhmmer_log)
@@ -159,7 +160,7 @@ then
 		else
 			jackhmmer_count="NA"
 		fi
-		amplify_log=$(ls -t $ROOT_DIR/$path/logs/10-amplify-*.log 2> /dev/null | head -n1)
+		amplify_log=$(ls -t $ROOT_DIR/$path/logs/10-amplify-*.log 2> /dev/null | head -n1 || true)
 
 		if [[ -s $amplify_log ]]
 		then
@@ -196,7 +197,7 @@ then
 else
 	for path in "$@"
 	do
-		fastp_log=$(ls -t $ROOT_DIR/$path/logs/03-trimmed_reads-*.log 2> /dev/null | head -n1)
+		fastp_log=$(ls -t $ROOT_DIR/$path/logs/03-trimmed_reads-*.log 2> /dev/null | head -n1 || true)
 		if [[ -s $fastp_log ]]
 		then
 			# number of filtered reads
@@ -208,7 +209,7 @@ else
 			fi
 
 			# number of transcripts
-			rnabloom_log=$(ls -t $ROOT_DIR/$path/logs/05-assembly-*.log 2> /dev/null | head -n1)
+			rnabloom_log=$(ls -t $ROOT_DIR/$path/logs/05-assembly-*.log 2> /dev/null | head -n1 || true)
 			if [[ -s $rnabloom_log ]]
 			then
 				num_transcripts=$(awk '/Total number of assembled non-redundant transcripts:/ {print $NF}' $rnabloom_log)
@@ -224,7 +225,7 @@ else
 			num_reads="NA"
 			num_transcripts="NA"
 		fi
-		filter_log=$(ls -t $ROOT_DIR/$path/logs/06-filtering-*.log 2> /dev/null | head -n1)
+		filter_log=$(ls -t $ROOT_DIR/$path/logs/06-filtering-*.log 2> /dev/null | head -n1 || true)
 		
 		if [[ -s $filter_log ]]
 		then
@@ -237,7 +238,7 @@ else
 			num_filter="NA"
 		fi
 
-		td_log=$(ls -t $ROOT_DIR/$path/logs/07-translation-*.log 2> /dev/null | head -n1)
+		td_log=$(ls -t $ROOT_DIR/$path/logs/07-translation-*.log 2> /dev/null | head -n1 || true)
 
 		# number of annotated sequences
 		if [[ -s $td_log ]]
@@ -254,7 +255,7 @@ else
 
 		# number of AMP proteins
 		
-		jackhmmer_log=$(ls -t $ROOT_DIR/$path/logs/08-homology-*.log 2> /dev/null | head -n1)
+		jackhmmer_log=$(ls -t $ROOT_DIR/$path/logs/08-homology-*.log 2> /dev/null | head -n1 || true)
 		if [[ -s $jackhmmer_log ]]
 		then
 			jackhmmer_count=$(awk '/Number of AMPs found \(non-redundant\):/ {print $NF}' $jackhmmer_log)
@@ -266,7 +267,7 @@ else
 			jackhmmer_count="NA"
 		fi
 
-		amplify_log=$(ls -t $ROOT_DIR/$path/logs/10-amplify-*.log 2> /dev/null | head -n1)
+		amplify_log=$(ls -t $ROOT_DIR/$path/logs/10-amplify-*.log 2> /dev/null | head -n1 || true)
 
 		if [[ -s $amplify_log ]]
 		then
