@@ -83,7 +83,7 @@ fi
 timestamp=$(date '+%Y%m%d_%H%M%S')
 outfile=$ROOT_DIR/summary/summary_table-${timestamp}.tsv
 # echo -e "Path\tAccession\tNumber of Reads\tNumber of Transcripts\tNumber of Annotated Sequences\tNumber of Potential AMPs (nhmmer)" | tee $outfile
-echo -e "Path\tNumber of Trimmed Reads\tNumber of Transcripts\tNumber of Transcripts After Filtering\tNumber of Valid ORFs\tNumber of Potential AMPs (using HMMs)\tNumber of Potential AMPs (using HMMs then AMPlify)\tNumber of Short Unique Potential AMPs (length <= 50)\tNumber of Confident Unique Potential AMPs (score >= 0.99)\tNumbber of Positive Unique AMPs (charge >=2)\tNumber of Confident and Short Unique Potential AMPs\tNumber of Confident, Short, and Positive unique AMPs" | tee $outfile
+echo -e "Path\tNumber of Trimmed Reads\tNumber of Transcripts\tNumber of Transcripts After Filtering\tNumber of Valid ORFs\tNumber of Potential AMPs (using HMMs)\tNumber of Potential AMPs (using HMMs then AMPlify)\tNumber of Short Unique Potential AMPs (length <= 50)\tNumber of Confident Unique Potential AMPs (score >= 0.99)\tNumber of Positive Unique AMPs (charge >=2)\tNumber of Confident and Short Unique Potential AMPs\tNumber of Confident, Short, and Positive unique AMPs" | tee $outfile
 
 if [[ "$commandline" = false ]]
 then
