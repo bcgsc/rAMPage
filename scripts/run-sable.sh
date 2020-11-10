@@ -63,16 +63,44 @@ echo "PROGRAM: $(command -v $BLAST_BIN/psiblast)" 1>&2
 echo -e "VERSION: $($BLAST_BIN/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
 
 fasta=$(realpath $1)
-filename=$(basename $fasta ".faa")
+
+if [[ ! -s $fasta ]]
+then
+	if [[ ! -f $fasta ]]
+	then
+		echo "ERROR: Input file does not exist." 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help
+	else
+		echo "ERROR: Input file is empty!" 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help
+	fi
+	exit 2
+fi
+
 # This script differs, as it must be run in the output directory.
-(cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads)
+(cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &> $outdir/sable.log)
+
+if [[ -s $outdir/OUT_SABLE_graph ]]
+then
+	echo -e "Parsing SABLE TXT output into a TSV format...\n" 1>&2
+	$ROOT_DIR/scripts/process-sable.sh $outdir/OUT_SABLE_graph &>> $outdir/sable.log
+else
+	touch $outdir/SABLE.FAIL
+
+	if [[ "$email" = true ]]
+	then
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		echo "$outdir" | mail -s "Failed SABLE run on $org" $address
+		echo "Email alert sent to $address." 1>&2
+	fi
+
+	exit 2
+fi
 
 touch $outdir/SABLE.DONE
 
 if [[ "$email" = true ]]
 then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
+	echo "$outdir" | mail -s "Successful SABLE run on $org" $address
 	echo "Email alert sent to $address." 1>&2
 fi
 
