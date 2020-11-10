@@ -26,13 +26,13 @@ cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE: $(ROOT_DIR)/scripts/cleave
 # 8. homology search
 homology: homology/jackhmmer.nr.faa
 
-homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/get-runtime.sh $(TAXON_CLASS) $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSDECODER_TRANSLATION.DONE
+homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/get-runtime.sh $(TAXON_CLASS) $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSLATION.DONE
 	$< -i translation -o homology -t $(THREADS) &> logs/08-homology.log
 
 # 7. translation 
 translation: translation/rnabloom.transcripts.filtered.transdecoder.faa
 
-translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSDECODER_TRANSLATION.DONE: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa $(ROOT_DIR)/scripts/get-runtime.sh filtering/FILTER.DONE
+translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATION.DONE: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa $(ROOT_DIR)/scripts/get-runtime.sh filtering/FILTER.DONE
 	$< -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log
 
 # 6. filter expression 
