@@ -7,6 +7,7 @@ function get_help() {
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
 		\tGets the SRA RUN (i.e. SRR) accessions using wget.\n \
+		\tOUTPUT: runs.txt, metadata.tsv RUNS.DONE METADATA.DONE\n \
 		" | column -s$'\t' -t 1>&2
 	echo 1>&2
 	# USAGE
@@ -23,12 +24,13 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		" | column -s$'\t' -t 1>&2
 	exit 1
+	
 }
 while getopts :ho: opt
 do
 	case $opt in 
 		h) get_help;;
-		o) outdir=$(realpath $OPTARG);;
+		o) outdir=$(realpath $OPTARG); mkdir -p $outdir;;
 		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help ;;
 	esac
 done
@@ -49,7 +51,6 @@ echo -e "START: $(date)" 1>&2
 start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
-mkdir -p $outdir
 
 if [[ -f $outdir/RUNS.DONE ]]
 then
