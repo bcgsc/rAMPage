@@ -50,6 +50,11 @@ hymenoptera/nvitripennis/venom_ovary	SRP067692	stranded
 
 ## Usage
 
+```
+$ git clone https://github.com/bcgsc/rAMPage.git
+$ cd rAMPage
+$ make
+```
 
 ## Directory Structure
 
