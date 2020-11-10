@@ -35,6 +35,16 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 - [ ] pigz v2.4
 
+## Input
+
+A 3-column TSV file:
+
+```
+ORDER/SPECIES/TISSUE	SRA	ACCESSION(S)	STRANDEDNESS
+anura/xlaevis/liver	SRX847156 SRX847157	nonstranded
+hymenoptera/nvitripennis/venom_ovary	SRP067692	stranded
+```
+
 ## Usage
 
 
