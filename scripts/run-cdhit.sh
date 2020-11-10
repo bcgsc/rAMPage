@@ -77,16 +77,10 @@ cdhit_version=$( { $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}
 echo -e "VERSION: $cdhit_version\n" 1>&2
 
 log=$outdir/cdhit.log
-count=2
-while [[ -s $log ]]
-do
-	log="$outdir/cdhit-${count}.log"
-	count=$((count+1))
-done
 
 echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc )% global sequence similarity..." 1>&2
-echo -e "COMMAND: $RUN_CDHIT -i $input -o $output -c $similarity -T $threads &> $log\n" 1>&2
-$RUN_CDHIT -i $input -o $output -c $similarity -T $threads &> $log
+echo -e "COMMAND: $RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>> $log\n" 1>&2
+$RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>> $log
 
 if [[ "$verbose" = true ]]
 then
