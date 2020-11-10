@@ -143,9 +143,11 @@ fi
 model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
 echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
 echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-# $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true
+$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true
 
-file=$(ls -t $outdir/AMPlify_results_*.txt 2> /dev/null | head -n1)
+echo "Finished running AMPlify." 1>&2
+file=$(ls -t $outdir/AMPlify_results_*.txt 2> /dev/null | head -n1 || true)
+echo -e "Output: $file\n" 1>&2
 
 if [[ ! -s $file ]]
 then
