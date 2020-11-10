@@ -39,8 +39,11 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 A 3-column TSV file:
 
+| PATH | SRA ACCESSION(S) | STRANDEDNESS |
+|------|------------------|--------------|
+|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|
+
 ```
-ORDER/SPECIES/TISSUE	SRA	ACCESSION(S)	STRANDEDNESS
 anura/xlaevis/liver	SRX847156 SRX847157	nonstranded
 hymenoptera/nvitripennis/venom_ovary	SRP067692	stranded
 ```
