@@ -6,6 +6,7 @@ function get_help() {
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
 		\tMakes the pooled reads lists for RNA-Bloom. Filters given TSV for relevant information.\n \
+		\tOUTPUT: reads.txt, READSLIST.DONE\n \
 		\tFor more information: https://github.com/bcgsc/RNA-Bloom\n \
 		" | column -s$'\t' -t 1>&2 
 	echo 1>&2
@@ -63,7 +64,29 @@ start_sec=$(date '+%s') 1>&2
 echo -e "PATH=$PATH\n" 1>&2
 infile=$(realpath $1)
 
+if [[ ! -s $infile ]]
+then
+	if [[ ! -f $infile ]]
+	then
+		echo "ERROR: Input file $infile does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	else
+		echo "ERROR: Input file $infile is empty." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	fi
+	get_help
+fi
+
+if [[ ! -d $dir ]]
+then
+	echo "ERROR: Given directory $dir does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	get_help
+fi
+
 workdir=$(dirname $dir)
+
+if [[ -f $dir/READSLIST.DONE ]]
+then
+	rm $dir/READSLIST.DONE
+fi
 
 outfile=$dir/reads.txt
 
