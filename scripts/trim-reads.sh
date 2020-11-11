@@ -67,11 +67,31 @@ then
 	rm $outdir/TRIM.FAIL
 fi
 
+if  [[ ! -d $indir ]]
+then
+	echo "ERROR: Input directory $indir does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	get_help
+fi
+
+if ! ls $indir/*.fastq.gz &> /dev/null
+then
+	echo "ERROR: Input raw reads not found in $indir." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	get_help
+fi
+
+if [[ ! -f $indir/READS.DONE ]]
+then
+	echo "ERROR: Input raw reads not found in $indir." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+	get_help
+fi
+
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 start_sec=$(date '+%s') 
 
-mkdir -p $outdir
+
+
+
 workdir=$(dirname $indir)
 if [[ -f $workdir/PAIRED.END ]]
 then
