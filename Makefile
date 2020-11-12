@@ -33,7 +33,7 @@ $(ROOT_DIR)/amps.nr.faa: $(FASTA) $(TSV) $(ROOT_DIR)/scripts/run-cdhit.sh $(ROOT
 # run sable
 sable: $(ROOT_DIR)/sable_output.tsv
 
-$(ROOT_DIR)/sable/OUT_SABLE_graph $(ROOT_DIR)/sabble/sable_output.tsv: $(ROOT_DIR)/rr/amps.nr.faa $(ROOT_DIR)/scripts/run-sable.sh
+$(ROOT_DIR)/sable/OUT_SABLE_graph $(ROOT_DIR)/sable/sable_output.tsv: $(ROOT_DIR)/rr/amps.nr.faa $(ROOT_DIR)/scripts/run-sable.sh
 	$(ROOT_DIR)/scripts/run-sable.sh -o sable $(ROOT_DIR)/rr/amps.nr.faa &> $(ROOT_DIR)/logs/12-sable.log
 
 # $(ROOT_DIR)/sable/sable_output.tsv: $(ROOT_DIR)/sable/OUT_SABLE_graph $(ROOT_DIR)/scripts/process-sable.sh 
