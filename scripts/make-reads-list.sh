@@ -3,36 +3,50 @@ set -euo pipefail
 PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
-	echo "DESCRIPTION:" 1>&2
+ 	{ echo "DESCRIPTION:";
 	echo -e "\
 		\tMakes the pooled reads lists for RNA-Bloom. Filters given TSV for relevant information.\n \
-		\tOUTPUT: reads.txt, READSLIST.DONE\n \
+		\n \
+		\tOUTPUT:\n \
+		\t-------\n \
+		\t  - reads.txt\n \
+		\t  - READSLIST.DONE\n \
+		\n \
+		\tEXIT CODES:\n \
+		\t-----------\n \
+		\t  - 0: successfully completed\n \
+		\t  - 1: general error\n \
+		\n \
 		\tFor more information: https://github.com/bcgsc/RNA-Bloom\n \
-		" | column -s$'\t' -t 1>&2 
-	echo 1>&2
+		" | column -s$'\t' -t -L;
 	
 	# USAGE
-	echo "USAGE(S):"
+	echo "USAGE(S):";
 	echo -e "\
 		\t$PROGRAM [OPTIONS] -d <I/O directory> <metadata TSV file>\n \
-		" | column -s$'\t' -t 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L;
 
 	# OPTIONS
-	echo "OPTION(S):" 1>&2
+	echo "OPTION(S):"
 	echo -e "\
 		\t-d <directory>\tInput directory (trimmed reads) and output directory for reads list\t(required)\n \
 		\t-h\tShow this help menu\n \
-		" | column -s$'\t' -t 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L;
 	
-	echo "EXAMPLE(S):" 1>&2
+	echo "EXAMPLE(S):" 
 	echo -e "\
 		\t$PROGRAM -d /path/to/trimmed_reads /path/to/metadata.tsv\n \
-		" | column -s$'\t' -t 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L ; } 1>&2
 
 	exit 1
+}
+
+function print_error() {
+	{ message="$1";
+	echo "ERROR: $message";
+	printf '%.0s=' $(seq 1 $(tput cols));
+	echo;
+	get_help; } 1>&2
 }
 
 while getopts :d:h opt
@@ -40,7 +54,7 @@ do
 	case $opt in
 		d) dir="$(realpath $OPTARG)";;
 		h) get_help ;;
-		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help ;;
+		\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
 
@@ -53,8 +67,12 @@ fi
 
 if [[ "$#" -ne 1 ]]
 then
-	echo "ERROR: Incorrect number of arguments." 1>&2;printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Incorrect number of arguments." 
+fi
+
+if [[ ! -d $dir ]]
+then
+	print_error "Given directory $dir does not exist."
 fi
 
 echo "HOSTNAME: $(hostname)" 1>&2
@@ -68,17 +86,15 @@ if [[ ! -s $infile ]]
 then
 	if [[ ! -f $infile ]]
 	then
-		echo "ERROR: Input file $infile does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+		print_error: "Input file $infile does not exist." 
 	else
-		echo "ERROR: Input file $infile is empty." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+		print_error "Input file $infile is empty."
 	fi
-	get_help
 fi
 
 if [[ ! -d $dir ]]
 then
-	echo "ERROR: Given directory $dir does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Given directory $dir does not exist."
 fi
 
 workdir=$(dirname $dir)
@@ -100,18 +116,17 @@ elif [[ -f $workdir/AGNOSTIC.LIB ]]
 then
 	stranded=false
 else
-	echo "ERROR: *.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help
+	print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
 fi
 
 if [[ -f $workdir/PAIRED.END ]]
 then
-	# if the _1 or _2 files exist, paired = true
 	paired=true
 elif [[ -f $workdir/SINGLE.END ]]
 then
 	paired=false
 else
-	echo "ERROR: *.END file not found. Please check that the reads have been downloaded correctly." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help
+	print_error "*.END file not found. Please check that the reads have been downloaded correctly."
 fi
 
 num_cols=$(head -n1 $infile | awk -F $'\t' '{print NF}')
@@ -132,7 +147,7 @@ then
 		paste -d" " <(for i in $(seq $num_rows); do echo "no_pooling"; done) <(cut -f1 -d $'\t' $infile |tail -n +2| sed "s|^|$dir/|" | sed 's/$/.fastq.gz/') > $outfile
 	fi
 else
-
+# else, collapse all columns, find the columns that contain unique values
 	indices=()
 	equal=()
 	for j in $(seq 2 $num_cols)
