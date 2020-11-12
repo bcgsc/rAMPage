@@ -1,14 +1,25 @@
 #!/bin/bash
-#SBATCH --partition=upgrade
 set -euo pipefail
 PROGRAM=$(basename $0)
+
 function get_help() {
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
 		\tGets reads for one single organism, using fasterq-dump.\n \
-		\tOUTPUT: *.fastq.gz, RUNS.DONE
-		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump\n \
-		" | column -s$'\t' -t 1>&2
+		\n \
+		\tOUTPUT:\n \
+		\t-------\n \
+		\t  - *.fastq.gz\n \
+		\t  - RUNS.DONE or RUNS.FAIL\n \
+		\n \
+		\tEXIT CODES:\n \
+		\t-------------\n \
+		\t  - 0: successfully completed\n \
+		\t  - 1: general error\n \
+		\t  - 2: failed to download\n \
+		\n \
+		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump \
+		" | column -s$'\t' -t -L 1>&2
 	echo 1>&2
 
 	# USAGE
@@ -26,10 +37,11 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
 		" | column -s$'\t' -t 1>&2
+		echo 1>&2
 	exit 1
 }
 
-# defaults
+# default parameters
 threads=6
 email=""
 while getopts :a:ho:t: opt
@@ -37,7 +49,7 @@ do
 	case $opt in 
 		a) address="$OPTARG"; email="-a $address" ;;
 		h) get_help;;
-		o) outdir="$(realpath $OPTARG)";;
+		o) outdir="$(realpath $OPTARG)"; mkdir -p $outdir;;
 		t) threads="$OPTARG";;
 		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2 ; echo 1>&2; get_help;;
 	esac
@@ -45,18 +57,20 @@ done
 
 shift $((OPTIND-1))
 
-
+# no arguments given
 if [[ "$#" -eq 0 ]]
 then
 	get_help
 fi
 
+# incorrect arguments given
 if [[ "$#" -ne 1 ]]
 then
 	echo "ERROR: Incorrect number of arguments."; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	get_help;
 fi
 
+# if older 'completion' files exist, remove them
 if [[ -f $outdir/READS.DONE ]]
 then
 	rm $outdir/READS.DONE
@@ -68,9 +82,10 @@ fi
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
 start_sec=$(date '+%s')
-mkdir -p $outdir
+
 sra=$(realpath $1)
 
+# check if input file is empty or does not exist
 if [[ ! -s $sra ]]
 then
 	if [[ ! -f $sra ]]
@@ -88,6 +103,8 @@ echo -e "PATH=$PATH\n" 1>&2
 echo "PROGRAM: $(command -v $FASTERQ_DUMP)" 1>&2
 $FASTERQ_DUMP --version > /dev/null
 echo -e "VERSION: $($FASTERQ_DUMP --version | awk '/version/ {print $NF}')\n" 1>&2 
+
+# get each accession parallelly using the get-accession.sh script
 while read accession
 do
 	# assume that the FASTQs do not exist due to timestamping of the folders
@@ -124,17 +141,21 @@ then
 fi
 fail=false
 failed_accs=()
+
+# store an array of all 'failed' accessions
 while read accession
 do
 	if ls $outdir/${accession}*.fastq.gz 1> /dev/null 2>&1
 	then
 		:
 	else
+		# if there are failed accessions, add to a list and fail = true
 		fail=true
 		failed_accs+=( $accession )
 	fi
 done < $sra
 
+# if fail = true, then write 'FAIL' file.
 if [[ "$fail" = true ]]
 then
 	touch $outdir/READS.FAIL
@@ -157,6 +178,7 @@ fi
 
 workdir=$(dirname $outdir)
 
+# write a file to indicate whether reads are SINGLE or PAIRED end
 if ls $outdir/*_?.fastq.gz 1> /dev/null 2>&1
 then
 	touch $workdir/PAIRED.END
@@ -172,7 +194,7 @@ echo 1>&2
 touch $outdir/READS.DONE
 
 org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-if [[ ! -z $email  ]]
+if [[ -n $email  ]]
 then
 	echo "$outdir" | mail -s "Finished downloading reads for $org" "$address"
 	echo "Email alert sent to $address." 1>&2

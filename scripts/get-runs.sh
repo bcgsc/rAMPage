@@ -1,14 +1,25 @@
 #!/bin/bash
-
 set -euo pipefail
 PROGRAM=$(basename $0)
+
 function get_help() {
 	# DESCRIPTION
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
 		\tGets the SRA RUN (i.e. SRR) accessions using wget.\n \
-		\tOUTPUT: runs.txt, metadata.tsv RUNS.DONE METADATA.DONE\n \
-		" | column -s$'\t' -t 1>&2
+		\n \
+		\tOUTPUT:\n \
+		\t-------\n \
+		\t  - runs.txt\n \
+		\t  - metadata.tsv\n \
+		\t  - RUNS.DONE\n \
+		\t  - METADATA.DONE\n \
+		\n
+		\tEXIT CODES:\n \
+		\t-------------\n \
+		\t  - 0: successfully completed\n \
+		\t  - 1: general error\n \
+		" | column -s$'\t' -t -L 1>&2
 	echo 1>&2
 	# USAGE
 	echo "USAGE(S):" 1>&2 
@@ -23,6 +34,7 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		" | column -s$'\t' -t 1>&2
+		echo 1>&2
 	exit 1
 	
 }
@@ -36,28 +48,34 @@ do
 done
 
 shift $((OPTIND-1))
+
+# if no arguments, print help menu automatically
 if [[ "$#" -eq 0 ]]
 then
 	get_help
 fi
+
+# if incorrect number of arguments is given
 if [[ "$#" -ne 1 ]]
 then
 	echo "ERROR: Incorrect number of arguments." 1>&2;printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
 	get_help
 fi
 
+# print environment details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
 start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
 
+# remove 'completion' files if alraedy exist
 if [[ -f $outdir/RUNS.DONE ]]
 then
 	rm $outdir/RUNS.DONE
 fi
 
-# check if input file exists
+# check if input file exists or is empty
 if [[ ! -s $1 ]]
 then
 	if [[ ! -f $1 ]]
@@ -80,12 +98,12 @@ do
 	done
 done
 
-# wait
-
 cat $outdir/*.wget.log > $outdir/wget.log
+
 # get SRR numbers
 cat $outdir/temp*.csv > $outdir/RunInfoTable.csv 
 
+# delete empty lines in RunInfoTable.csv
 sed -i '/^$/d' $outdir/RunInfoTable.csv
 
 echo "Downloading SRA Run accessions to $outdir/runs.txt..." 1>&2
@@ -102,6 +120,7 @@ end_sec=$(date '+%s')
 $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 echo 1>&2
 
+# soft link to a generic name
 default_name="$(realpath -s $(dirname $outdir)/sra)"
 if [[ "$default_name" != "$outdir" ]]
 then
