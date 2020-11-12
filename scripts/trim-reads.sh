@@ -6,31 +6,48 @@ set -euo pipefail
 PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
-	echo "DESCRIPTION:" 1>&2
+	{ echo "DESCRIPTION:";
 	echo -e "\
 		\tPreprocesses and trims reads with fastp.\n \
-		\tOUTPUT: *.fastq.gz, TRIM.DONE\n \
+		\n \
+		\tOUTPUT:\n \
+		\t-------\n \
+		\t  - *.[paired.]fastq.gz\n \
+		\t  - TRIM.DONE\n \
+		\tEXIT CODES:\n \
+		\t-----------\n \
+		\t  - 0: successfully completed\n \
+		\t  - 1: general error\n \
+		\t  - 2: trimming failed\n \
+		\t  - 3: core dumped\n \
+		\n \
 		\tFor more information: https://github.com/OpenGene/fastp\n \
-		" | column -s$'\t' -t 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L;
 
 	# USAGE
-	echo "USAGE(S):" 1>&2
+	echo "USAGE(S):";
 	echo -e "\
 		\t$PROGRAM [OPTIONS] -i <input directory> -o <output directory>\n \
-		" | column -t -s$'\t' 1>&2
-	echo 1>&2
+		" | column -t -s$'\t' -L;
 
 	# OPTIONS
-	echo "OPTION(S):" 1>&2
+	echo "OPTION(S):";
 	echo -e "\
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-i <directory>\tinput directory for raw reads\t(required)\n \
 		\t-o <directory>\toutput directory for trimmed reads\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 4)\n \
-		" | column -t -s$'\t' 1>&2
+		" | column -t -s$'\t' -L; }
 	exit 1
+}
+
+function print_error() {
+	{ message="$1";
+	echo "ERROR: $message";
+	printf '%.0s=' $(seq 1 $(tput cols));
+	echo;
+	get_help; } 1>&2
 }
 
 if [[ "$#" -eq 0 ]]
@@ -47,7 +64,7 @@ do
 		i) indir=$(realpath $OPTARG);;
 		o) outdir=$(realpath $OPTARG); mkdir -p $outdir;;
 		t) threads="$OPTARG";;
-		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help ;;
+		\?) print_error "Invalid option: -$OPTARG";; 
 	esac
 done
 
@@ -55,8 +72,7 @@ shift $((OPTIND-1))
 
 if [[ "$#" -ne 0 ]]
 then
-	echo "ERROR: Incorrect number of arguments." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Incorrect number of arguments." 
 fi
 
 if [[ -f $outdir/TRIM.DONE ]]
@@ -69,20 +85,17 @@ fi
 
 if  [[ ! -d $indir ]]
 then
-	echo "ERROR: Input directory $indir does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Input directory $indir does not exist." 
 fi
 
 if ! ls $indir/*.fastq.gz &> /dev/null
 then
-	echo "ERROR: Input raw reads not found in $indir." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Input raw reads not found in $indir." 
 fi
 
 if [[ ! -f $indir/READS.DONE ]]
 then
-	echo "ERROR: Input raw reads not found in $indir." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Input raw reads not found in $indir." 
 fi
 
 echo "HOSTNAME: $(hostname)" 1>&2
@@ -100,7 +113,7 @@ elif [[ -f $workdir/SINGLE.END ]]
 then
 	single=true
 else
-	echo "ERROR: *.END file not found. Please check that the reads have been downloaded properly." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help;
+	print_error "*.END file not found. Please check that the reads have been downloaded properly." 
 fi
 
 echo -e "PATH=$PATH\n" 1>&2

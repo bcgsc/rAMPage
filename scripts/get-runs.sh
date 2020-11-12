@@ -4,7 +4,7 @@ PROGRAM=$(basename $0)
 
 function get_help() {
 	# DESCRIPTION
-	echo "DESCRIPTION:" 1>&2
+	{ echo "DESCRIPTION:";
 	echo -e "\
 		\tGets the SRA RUN (i.e. SRR) accessions using wget.\n \
 		\n \
@@ -19,31 +19,39 @@ function get_help() {
 		\t-------------\n \
 		\t  - 0: successfully completed\n \
 		\t  - 1: general error\n \
-		" | column -s$'\t' -t -L 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L;
+
 	# USAGE
-	echo "USAGE(S):" 1>&2 
+	echo "USAGE(S):";
 	echo -e "\
 		\t$PROGRAM -o <output directory> <SRA accessions TXT file>\n \
-		" | column -s$'\t' -t 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L;
 
 	# OPTIONS
-	echo "OPTION(S):" 1>&2
+	echo "OPTION(S):";
 	echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		" | column -s$'\t' -t 1>&2
-		echo 1>&2
+		" | column -s$'\t' -t -L; }
+
 	exit 1
 	
 }
+
+function print_error() {
+	{ message="$1";
+	echo "ERROR: $message";
+	printf '%.0s=' $(seq 1 $(tput cols));
+	echo;
+	get_help; } 1>&2
+}
+
 while getopts :ho: opt
 do
 	case $opt in 
 		h) get_help;;
 		o) outdir=$(realpath $OPTARG); mkdir -p $outdir;;
-		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2; get_help ;;
+		\?) print_error "Invalid option: -$OPTARG";;
 	esac
 done
 
@@ -58,8 +66,7 @@ fi
 # if incorrect number of arguments is given
 if [[ "$#" -ne 1 ]]
 then
-	echo "ERROR: Incorrect number of arguments." 1>&2;printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help
+	print_error "Incorrect number or arguments."
 fi
 
 # print environment details
@@ -80,9 +87,9 @@ if [[ ! -s $1 ]]
 then
 	if [[ ! -f $1 ]]
 	then
-		echo "ERROR: Input file $(realpath $1) does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+		print_error "ERROR: Input file $(realpath $1) does not exist."
 	else
-		echo "ERROR: Input file $(realpath $1) is empty." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+		print_error "Input file $(realpath $1) is empty."
 	fi
 	get_help
 fi
@@ -107,7 +114,7 @@ cat $outdir/temp*.csv > $outdir/RunInfoTable.csv
 sed -i '/^$/d' $outdir/RunInfoTable.csv
 
 echo "Downloading SRA Run accessions to $outdir/runs.txt..." 1>&2
-cat $outdir/RunInfoTable.csv | cut -f1 -d, | sort -u | sed '/^$/d' | grep -v 'Run' > $outdir/runs.txt
+cut -f1 -d, $outdir/RunInfoTable.csv | sort -u | sed '/^$/d' | grep -v 'Run' > $outdir/runs.txt
 
 rm $outdir/temp*.csv
 rm $outdir/*.wget.log

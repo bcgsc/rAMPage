@@ -3,7 +3,7 @@ set -euo pipefail
 PROGRAM=$(basename $0)
 
 function get_help() {
-	echo "DESCRIPTION:" 1>&2
+	{ echo "DESCRIPTION:";
 	echo -e "\
 		\tGets reads for one single organism, using fasterq-dump.\n \
 		\n \
@@ -18,27 +18,32 @@ function get_help() {
 		\t  - 1: general error\n \
 		\t  - 2: failed to download\n \
 		\n \
-		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump \
-		" | column -s$'\t' -t -L 1>&2
-	echo 1>&2
+		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump\n \
+		" | column -s$'\t' -t -L;
 
 	# USAGE
-	echo "USAGE(S):" 1>&2
+	echo "USAGE(S):";
 	echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <SRA RUN (i.e. SRR) accession list>\n \
-		" | column -s$'\t' -t 1>&2
-	echo 1>&2
+		" | column -s$'\t' -t -L;
 
 	# OPTIONS
-	echo "OPTION(S):" 1>&2 
+	echo "OPTION(S):";
 	echo -e "\
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
-		" | column -s$'\t' -t 1>&2
-		echo 1>&2
+		" | column -s$'\t' -t -L; } 1>&2
 	exit 1
+}
+
+function print_error() {
+	{ message="$1";
+	echo "ERROR: $message";
+	printf '%.0s=' $(seq 1 $(tput cols));
+	echo;
+	get_help; } 1>&2
 }
 
 # default parameters
@@ -51,7 +56,7 @@ do
 		h) get_help;;
 		o) outdir="$(realpath $OPTARG)"; mkdir -p $outdir;;
 		t) threads="$OPTARG";;
-		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2 ; echo 1>&2; get_help;;
+		\?) print_error "Invalid option: -$OPTARG";;
 	esac
 done
 
@@ -66,8 +71,7 @@ fi
 # incorrect arguments given
 if [[ "$#" -ne 1 ]]
 then
-	echo "ERROR: Incorrect number of arguments."; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
-	get_help;
+	echo "Incorrect number of arguments."
 fi
 
 # if older 'completion' files exist, remove them
@@ -90,11 +94,10 @@ if [[ ! -s $sra ]]
 then
 	if [[ ! -f $sra ]]
 	then
-		echo "ERROR: Input file $sra does not exist." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+		print_error "Input file $sra does not exist." 
 	else
-		echo "ERROR: Input file $sra is empty." 1>&2; printf '%.0s=' $(seq 1 $(tput cols)) 1>&2; echo 1>&2
+		print_error "Input file $sra is empty." 
 	fi
-	get_help
 fi
 
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
