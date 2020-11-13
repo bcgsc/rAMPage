@@ -42,6 +42,13 @@ function print_error() {
 	} 1>&2
 }
 
+function print_line() {
+	{
+		printf '%.0s=' $(seq $(tput cols))
+		echo
+	} 1>&2
+}
+
 # 3 - no arguments given
 if [[ "$#" -eq 0 ]]; then
 	get_help
@@ -255,15 +262,15 @@ else
 fi
 
 echo "SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 count=$(grep -c '^>' ${outfile_nr})
-echo "Output: ${outfile_nr}" 1>&2
-echo "Number of unique AMPs: $(printf "%'d" $count)" 1>&2
+{
+	echo "Output: ${outfile_nr}"
+	echo "Number of unique AMPs: $(printf "%'d" $count)"
+} 1>&2
 
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 echo 1>&2
 #----------------------------------------------------------
 
@@ -292,15 +299,15 @@ else
 fi
 
 echo "SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 count_conf=$(grep -c '^>' ${outfile_conf_nr} || true)
-echo "Output: ${outfile_conf_nr}" 1>&2
-echo "Number of high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf})" 1>&2
+{
+	echo "Output: ${outfile_conf_nr}"
+	echo "Number of high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf})"
+} 1>&2
 
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 echo 1>&2
 #--------------------------------------------------------------------
 
@@ -329,15 +336,15 @@ else
 fi
 
 echo "SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 count_short=$(grep -c '^>' ${outfile_short_nr} || true)
-echo "Output: ${outfile_short_nr}" 1>&2
-echo "Number of short (length <= $length) unique AMPs: $(printf "%'d" ${count_short})" 1>&2
+{
+	echo "Output: ${outfile_short_nr}"
+	echo "Number of short (length <= $length) unique AMPs: $(printf "%'d" ${count_short})"
+} 1>&2
 
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 echo 1>&2
 
 ### Filter all sequences labelled 'AMP' and have charge >= $charge
@@ -365,15 +372,15 @@ else
 fi
 
 echo "SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 count_charge=$(grep -c '^>' ${outfile_charge_nr} || true)
-echo "Output: ${outfile_charge_nr}" 1>&2
-echo "Number of positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_charge})" 1>&2
+{
+	echo "Output: ${outfile_charge_nr}"
+	echo "Number of positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_charge})"
+} 1>&2
 
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 echo 1>&2
 #--------------------------------------------------------------------
 
@@ -401,14 +408,15 @@ else
 	cp $outfile_conf_short $outfile_conf_short_nr
 fi
 echo "SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 count_conf_short=$(grep -c '^>' ${outfile_conf_short_nr} || true)
-echo "Output: ${outfile_conf_short_nr}" 1>&2
-echo "Number of short (length <= $length) and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short})" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+{
+	echo "Output: ${outfile_conf_short_nr}"
+	echo "Number of short (length <= $length) and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short})"
+} 1>&2
+
+print_line
 echo 1>&2
 #--------------------------------------------------------------------
 
@@ -437,20 +445,20 @@ else
 fi
 
 echo "SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 count_conf_short_charge=$(grep -c '^>' ${outfile_conf_short_charge_nr} || true)
-echo "Output: ${outfile_conf_short_charge_nr}" 1>&2
-echo "Number of positive (charge >= $charge), short (length <= $length), and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short_charge})" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+{
+	echo "Output: ${outfile_conf_short_charge_nr}"
+	echo "Number of positive (charge >= $charge), short (length <= $length), and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short_charge})"
+} 1>&2
+
+print_line
 echo 1>&2
 #--------------------------------------------------------------------
 
 echo "FINAL SUMMARY" 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 
 echo -e "\
 	File\tDescription\n \
@@ -476,8 +484,7 @@ echo -e "\
 	$(basename $outfile_conf_short_nr)\t$count_conf_short\n \
 	$(basename $outfile_conf_short_charge_nr)\t$count_conf_short_charge\n \
 	" | column -s $'\t' -t 1>&2
-printf '%.0s=' $(seq $(tput cols)) 1>&2
-echo 1>&2
+print_line
 echo 1>&2
 
 touch $outdir/AMPLIFY.DONE
