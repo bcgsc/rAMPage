@@ -3,9 +3,9 @@ set -euo pipefail
 PROGRAM=$(basename $0)
 
 function get_help() {
-	# DESCRIPTION
-	{ echo "DESCRIPTION:";
-	echo -e "\
+    # DESCRIPTION
+    { echo "DESCRIPTION:";
+        echo -e "\
 		\tGets the SRA RUN (i.e. SRR) accessions using wget.\n \
 		\n \
 		\tOUTPUT:\n \
@@ -19,40 +19,40 @@ function get_help() {
 		\t-------------\n \
 		\t  - 0: successfully completed\n \
 		\t  - 1: general error\n \
-		" | column -s$'\t' -t -L;
-
-	# USAGE
-	echo "USAGE(S):";
-	echo -e "\
+        " | column -s$'\t' -t -L;
+        
+        # USAGE
+        echo "USAGE(S):";
+        echo -e "\
 		\t$PROGRAM -o <output directory> <SRA accessions TXT file>\n \
-		" | column -s$'\t' -t -L;
-
-	# OPTIONS
-	echo "OPTION(S):";
-	echo -e "\
+        " | column -s$'\t' -t -L;
+        
+        # OPTIONS
+        echo "OPTION(S):";
+        echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		" | column -s$'\t' -t -L; }
-
-	exit 1
-	
+    " | column -s$'\t' -t -L; }
+    
+    exit 1
+    
 }
 
 function print_error() {
-	{ message="$1";
-	echo "ERROR: $message";
-	printf '%.0s=' $(seq 1 $(tput cols));
-	echo;
-	get_help; } 1>&2
+    { message="$1";
+        echo "ERROR: $message";
+        printf '%.0s=' $(seq 1 $(tput cols));
+        echo;
+    get_help; } 1>&2
 }
 
 while getopts :ho: opt
 do
-	case $opt in 
-		h) get_help;;
-		o) outdir=$(realpath $OPTARG); mkdir -p $outdir;;
-		\?) print_error "Invalid option: -$OPTARG";;
-	esac
+    case $opt in
+        h) get_help;;
+        o) outdir=$(realpath $OPTARG); mkdir -p $outdir;;
+        \?) print_error "Invalid option: -$OPTARG";;
+    esac
 done
 
 shift $((OPTIND-1))
@@ -60,13 +60,13 @@ shift $((OPTIND-1))
 # if no arguments, print help menu automatically
 if [[ "$#" -eq 0 ]]
 then
-	get_help
+    get_help
 fi
 
 # if incorrect number of arguments is given
 if [[ "$#" -ne 1 ]]
 then
-	print_error "Incorrect number or arguments."
+    print_error "Incorrect number or arguments."
 fi
 
 # print environment details
@@ -79,19 +79,19 @@ echo -e "PATH=$PATH\n" 1>&2
 # remove 'completion' files if alraedy exist
 if [[ -f $outdir/RUNS.DONE ]]
 then
-	rm $outdir/RUNS.DONE
+    rm $outdir/RUNS.DONE
 fi
 
 # check if input file exists or is empty
 if [[ ! -s $1 ]]
 then
-	if [[ ! -f $1 ]]
-	then
-		print_error "ERROR: Input file $(realpath $1) does not exist."
-	else
-		print_error "Input file $(realpath $1) is empty."
-	fi
-	get_help
+    if [[ ! -f $1 ]]
+    then
+        print_error "ERROR: Input file $(realpath $1) does not exist."
+    else
+        print_error "Input file $(realpath $1) is empty."
+    fi
+    get_help
 fi
 
 accessions=$(cat $1)
@@ -99,16 +99,16 @@ accessions=$(cat $1)
 echo "Downloading run info..." 1>&2
 for i in $accessions
 do
-	while [[ ! -s $outdir/temp.${i}.csv ]]
-	do
-		wget --tries=inf -o "$outdir/${i}.wget.log" -O "$outdir/temp.${i}.csv" "http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=${i}" || true
-	done
+    while [[ ! -s $outdir/temp.${i}.csv ]]
+    do
+        wget --tries=inf -o "$outdir/${i}.wget.log" -O "$outdir/temp.${i}.csv" "http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=${i}" || true
+    done
 done
 
 cat $outdir/*.wget.log > $outdir/wget.log
 
 # get SRR numbers
-cat $outdir/temp*.csv > $outdir/RunInfoTable.csv 
+cat $outdir/temp*.csv > $outdir/RunInfoTable.csv
 
 # delete empty lines in RunInfoTable.csv
 sed -i '/^$/d' $outdir/RunInfoTable.csv
@@ -131,26 +131,26 @@ echo 1>&2
 default_name="$(realpath -s $(dirname $outdir)/sra)"
 if [[ "$default_name" != "$outdir" ]]
 then
-	count=1
-	if [[ -d "$default_name" ]]
-	then
-		if [[ ! -h "$default_name" ]]
-		then
-			temp="${default_name}-${count}"
-			while [[ -d "$temp" ]]
-			do
-				count=$((count+1))
-				temp="${default_name}-${count}"
-			done
-			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old files.\n" 1>&2
-			mv $default_name $temp
-		else
-			unlink $default_name
-			echo "Unlinking the old soft link..." 1>&2
-		fi
-	fi
-		echo -e "$outdir softlinked to $default_name\n" 1>&2
-		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
+    count=1
+    if [[ -d "$default_name" ]]
+    then
+        if [[ ! -h "$default_name" ]]
+        then
+            temp="${default_name}-${count}"
+            while [[ -d "$temp" ]]
+            do
+                count=$((count+1))
+                temp="${default_name}-${count}"
+            done
+            echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old files.\n" 1>&2
+            mv $default_name $temp
+        else
+            unlink $default_name
+            echo "Unlinking the old soft link..." 1>&2
+        fi
+    fi
+    echo -e "$outdir softlinked to $default_name\n" 1>&2
+    (cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
 fi
 
 touch $outdir/RUNS.DONE
