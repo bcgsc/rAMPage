@@ -2,6 +2,7 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+# 1 - get_help function
 function get_help() {
     {
         echo "DESCRIPTION:"
@@ -39,6 +40,8 @@ function get_help() {
     } 1>&2
     exit 1
 }
+
+# 2 - print_error function
 function print_error() {
     {
         message="$1"
@@ -49,12 +52,16 @@ function print_error() {
     } 1>&2
 }
 
+# 3 - no arguments given
 if [[ "$#" -eq 0 ]]; then
     get_help
 fi
+
 # default parameters
 threads=6
 email=""
+
+# 4 - read options
 while getopts :a:ho:t: opt; do
     case $opt in
     a)
@@ -73,37 +80,31 @@ done
 
 shift $((OPTIND - 1))
 
-# no arguments given
-if [[ "$#" -eq 0 ]]; then
-    get_help
-fi
-
-# incorrect arguments given
+# 5 - incorrect number arguments given
 if [[ "$#" -ne 1 ]]; then
     print_error "Incorrect number of arguments."
 fi
 
-# if older 'completion' files exist, remove them
+# 6 - check input files
+if [[ ! -f $(realpath $1) ]]; then
+    print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+    print_error "input file $(realpath $1) is empty."
+fi
+
+# 7 - remove status files
 rm -f $outdir/READS.DONE
 rm -f $outdir/READS.FAIL
 
-# check if input file is empty or does not exist
-if [[ ! -s $1 ]]; then
-    if [[ ! -f $1 ]]; then
-        print_error "Input file $1 does not exist."
-    else
-        print_error "Input file $1 is empty."
-    fi
-fi
-
+# 8 - print environment details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
 start_sec=$(date '+%s')
 
-sra=$(realpath $1)
-
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
 echo -e "PATH=$PATH\n" 1>&2
+
+sra=$(realpath $1)
 
 echo "PROGRAM: $(command -v $FASTERQ_DUMP)" 1>&2
 $FASTERQ_DUMP --version >/dev/null

@@ -2,6 +2,7 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+# 1 - get_help function
 function get_help() {
 	{
 		echo "DESCRIPTION:"
@@ -47,6 +48,8 @@ function get_help() {
 	#		\tFor more information on CD-HIT: http://weizhongli-lab.org/cd-hit/\n \
 	#		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n \
 }
+
+# 2 - print_error function
 function print_error() {
 	{
 		message="$1"
@@ -57,8 +60,16 @@ function print_error() {
 	} 1>&2
 }
 
+# 3 - no arguments given
+if [[ "$#" -eq 0 ]]; then
+	get_help
+fi
+
+# default parameters
 email=false
 # similarity=0.90
+
+# 4 - read options
 while getopts :a:ho: opt; do
 	case $opt in
 	a)
@@ -72,46 +83,40 @@ while getopts :a:ho: opt; do
 		;;
 		#		s) similarity="$OPTARG";;
 	\?)
-		echo "ERROR: Invalid option: -$OPTARG" 1>&2
-		printf '%.0s=' $(seq 1 $(tput cols)) 1>&2
-		echo 1>&2
-		get_help
+		print_error "Invalid option: -$OPTARG" 1>&2
 		;;
 	esac
 done
 
 shift $((OPTIND - 1))
 
-if [[ "$#" -eq 0 ]]; then
-	get_help
-fi
-
+# 5 - wrong number arguments given
 if [[ "$#" -ne 1 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
-infile=$(realpath $1)
-
-if [[ ! -s $infile ]]; then
-	if [[ ! -f $infile ]]; then
-		print_error "Input file $infile does not exist."
-	else
-		print_error "Input file $infile is empty."
-	fi
+# 6 - check input files
+if [[ ! -f $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+	print_error "input file $(realpath $1) is empty."
 fi
-tempfile=$outdir/prop.out
 
-# remove existing status files
+# 7 - remove existing status files
 rm -f $outdir/CLEAVE.DONE
 rm -f $outdir/CLEAVE.FAIL
 rm -f $outdir/CLEAVE_LEN.DONE
 rm -f $outdir/CLEAVE_LEN.FAIL
 
+# 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
+
+infile=$(realpath $1)
+tempfile=$outdir/prop.out
 
 echo "PROGRAM: $(command -v $RUN_PROP)" 1>&2
 echo -e "VERSION: 1.0c\n" 1>&2

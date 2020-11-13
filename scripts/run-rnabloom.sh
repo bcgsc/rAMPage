@@ -3,6 +3,7 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+# 1 - get_help function
 function get_help() {
     # DESCRIPTION
     {
@@ -22,13 +23,13 @@ function get_help() {
 		\n \
 		\tFor more information: https://github.com/bcgsc/RNA-Bloom\n \
         " | column -s$'\t' -t -L
-        
+
         #  USAGE
         echo "USAGE(S):"
         echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <reads list>\n \
         " | column -s$'\t' -t -L
-        
+
         # OPTION
         echo "OPTION(S):"
         echo -e "\
@@ -38,13 +39,13 @@ function get_help() {
 		\t-o <directory>\toutput directory\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
         " | column -s$'\t' -t -L
-        
+
         # EXAMPLE
         echo "EXAMPLE(S):"
         echo -e "\
 		\t$PROGRAM -m 900G -t 48 readslist.txt\n \
         " | column -s$'\t' -t -L
-        
+
         # reads list
         echo "EXAMPLE READS LIST (NONSTRANDED):"
         echo -e "\
@@ -54,7 +55,7 @@ function get_help() {
 		\t...     ...                    ...\n \
 		\t...     ...                    ...\n \
         " | column -s$'\t' -t -L
-        
+
         echo "EXAMPLE READS LIST (STRANDED):"
         echo -e "\
 		\ttissue1 path/to/read2.fastq.gz path/to/read1.fastq.gz\n \
@@ -66,6 +67,8 @@ function get_help() {
     } 1>&2
     exit 1
 }
+
+# 2 - print_error function
 function print_error() {
     {
         message="$1"
@@ -75,57 +78,63 @@ function print_error() {
         get_help
     } 1>&2
 }
+
+# 3 - no arguments given
+if [[ "$#" -eq 0 ]]; then
+    get_help
+fi
+
+# default parameters
 threads=8
 custom_threads=false
 memory_bool=false
 email=false
+
+# 4 - read options
 while getopts :a:hm:o:t: opt; do
     case $opt in
-        a)
-            address="$OPTARG"
-            email=true
+    a)
+        address="$OPTARG"
+        email=true
         ;;
-        h) get_help ;;
-        m)
-            memory_bool=true
-            memory="-Xmx${OPTARG}"
+    h) get_help ;;
+    m)
+        memory_bool=true
+        memory="-Xmx${OPTARG}"
         ;;
-        o) outdir="$(realpath $OPTARG)" ;;
-        t)
-            threads="$OPTARG"
-            custom_threads=true
+    o)
+        outdir="$(realpath $OPTARG)"
+        mkdir -p $outdir
         ;;
-        \?) print_error "Invalid option: -$OPTARG" ;;
+    t)
+        threads="$OPTARG"
+        custom_threads=true
+        ;;
+    \?) print_error "Invalid option: -$OPTARG" ;;
     esac
 done
 shift $((OPTIND - 1))
-if [[ "$#" -eq 0 ]]
-then
-    get_help
-fi
 
-if [[ "$#" -ne 1 ]]
-then
+# 5 - wrong number arguments given
+if [[ "$#" -ne 1 ]]; then
     print_error "Incorrect number of arguments."
 fi
 
-if [[ -f $outdir/ASSEMBLY.DONE ]]
-then
-    rm $outdir/ASSEMBLY.DONE
+# 6 - check input files
+if [[ ! -f $(realpath $1) ]]; then
+    print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+    print_error "input file $(realpath $1) is empty."
 fi
 
-if [[ -f $outdir/ASSEMBLY.FAIL ]]
-then
-    rm $outdir/ASSEMBLY.FAIL
-fi
+# 7 - remove status files
+rm -f $outdir/ASSEMBLY.DONE
+rm -f $outdir/ASSEMBLY.FAIL
 
-workdir=$(dirname $outdir)
-
+# 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
-echo "START: $(date)" 1>&2
+echo -e "START: $(date)\n" 1>&2
 start_sec=$(date '+%s')
-echo -e "Creating output directory: $outdir\n" 1>&2
-mkdir -p $outdir
 
 minimap2_dir=$MINIMAP_DIR
 ntcard_dir=$NTCARD_DIR
@@ -136,8 +145,7 @@ echo -e "PATH=$PATH\n"
 
 echo "Checking minimap2..." 1>&2
 bin=$(command -v minimap2 || true)
-if [[ -n $bin ]]
-then
+if [[ -n $bin ]]; then
     echo "PROGRAM: $bin" 1>&2
     echo -e "VERSION: $(minimap2 --version)\n" 1>&2
 else
@@ -146,8 +154,7 @@ fi
 
 echo "Checking ntCard..." 1>&2
 bin=$(command -v ntcard || true)
-if [[ -n $bin ]]
-then
+if [[ -n $bin ]]; then
     echo "PROGRAM: $bin" 1>&2
     echo -e "VERSION: $(ntcard --version 2>&1 | awk '/ntCard/ {print $NF}')\n" 1>&2
 else
@@ -156,8 +163,7 @@ fi
 
 echo "Checking Java SE Runtime Environment (JRE)..." 1>&2
 bin=$(command -v $JAVA_EXEC || true)
-if [[ -n $bin ]]
-then
+if [[ -n $bin ]]; then
     echo "PROGRAM: $bin" 1>&2
     java_version=$($JAVA_EXEC -version 2>&1 | head -n1 | awk '{print $3}' | sed 's/"//g')
     echo -e "VERSION: $java_version\n" 1>&2
@@ -165,52 +171,29 @@ else
     print_error "Cannot find JRE 8 in your PATH."
 fi
 
-if [[ "$java_version" != 1.8* ]]
-then
+if [[ "$java_version" != 1.8* ]]; then
     print_error "RNA-Bloom requires Java SE Runtime Environment (JRE) 8. Version detected: $java_version"
 fi
 
-if [[ "$memory_bool" == true ]]
-then
-    rnabloom_jar="$JAVA_EXEC ${memory} -jar $RUN_RNABLOOM"
-else
-    rnabloom_jar="$JAVA_EXEC -jar $RUN_RNABLOOM"
-fi
-
+workdir=$(dirname $outdir)
 readslist=$(realpath $1)
 
-if [[ ! -s "$readslist" ]]
-then
-    if [[ ! -f "$readslist" ]]
-    then
-        print_error "Input file $readslist does not exist."
-    else
-        print_error "Input file $readslist is empty."
-    fi
-fi
-
-if [[ -f $workdir/PAIRED.END ]]
-then
+if [[ -f $workdir/PAIRED.END ]]; then
     single=false
     echo "Paired-end reads detected!" 1>&2
-    if [[ -f $workdir/STRANDED.LIB ]]
-    then
+    if [[ -f $workdir/STRANDED.LIB ]]; then
         stranded=true
-    elif [[ -f $workdir/NONSTRANDED.LIB ]]
-    then
+    elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
         stranded=false
     else
         print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
     fi
-elif [[ -f $workdir/SINGLE.END ]]
-then
+elif [[ -f $workdir/SINGLE.END ]]; then
     single=true
     echo "Single-end reads detected!" 1>&2
-    if [[ -f $workdir/STRANDED.LIB ]]
-    then
+    if [[ -f $workdir/STRANDED.LIB ]]; then
         stranded=true
-    elif [[ -f $workdir/NONSTRANDED.LIB ]]
-    then
+    elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
         stranded=false
     else
         print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
@@ -219,18 +202,22 @@ else
     print_error "*.END file not found. Please check that the reads have been downloaded correctly."
 fi
 
-if [[ "$stranded" == true ]]
-then
+if [[ "$memory_bool" == true ]]; then
+    rnabloom_jar="$JAVA_EXEC ${memory} -jar $RUN_RNABLOOM"
+else
+    rnabloom_jar="$JAVA_EXEC -jar $RUN_RNABLOOM"
+fi
+
+if [[ "$stranded" == true ]]; then
     stranded_opt="-stranded"
     echo "The library construction for this dataset is stranded." 1>&2
 else
     stranded_opt=""
     echo -e "The library construction for this dataset is nonstranded or agnostic.\n" 1>&2
 fi
-if command -v pigz &>/dev/null
-then
-    if [[ "$custom_threads" = true ]]
-    then
+
+if command -v pigz &>/dev/null; then
+    if [[ "$custom_threads" = true ]]; then
         compress="pigz -p $threads"
     else
         compress=pigz
@@ -238,34 +225,33 @@ then
 else
     compress=gzip
 fi
+
 references=()
 basename_refs=()
-if ls $workdir/*.fna* 1>/dev/null 2>&1
-then
+
+if ls $workdir/*.fna* 1>/dev/null 2>&1; then
     # if the reference exists, then use it
     reference=$(ls $workdir/*.fna*)
     ${compress} -d $reference 2>/dev/null || true
-    
-    for i in $workdir/*.fna*
-    do
+
+    for i in $workdir/*.fna*; do
         references+=($i)
         basename_refs+=($(basename $i))
     done
 fi
-if ls $workdir/*.fsa_nt* 1>/dev/null 2>&1
-then
+
+if ls $workdir/*.fsa_nt* 1>/dev/null 2>&1; then
     # if the reference exists, then use it
     reference=$(ls $workdir/*.fsa_nt*)
     ${compress} -d $reference 2>/dev/null || true
-    
-    for i in $workdir/*.fsa_nt*
-    do
+
+    for i in $workdir/*.fsa_nt*; do
         references+=($i)
         basename_refs+=($(basename $i))
     done
 fi
-if [[ "${#references[@]}" -eq 0 ]]
-then
+
+if [[ "${#references[@]}" -eq 0 ]]; then
     ref_opt=""
     echo -e "No reference transcriptome(s) detected.\n" 1>&2
 else
@@ -273,14 +259,12 @@ else
     echo -e "Reference transcriptome(s) detected: ${basename_refs[*]}\n" 1>&2
 fi
 
-if [[ "$single" = true ]]
-then
+if [[ "$single" = true ]]; then
     reads_opt="-left $(awk '{print $2}' $readslist)"
     revcomp_opt=""
     mergepool_opt=""
     pool=false
-elif [[ "$(awk '{print $1}' $readslist | sort -u | wc -l)" -eq 1 ]]
-then
+elif [[ "$(awk '{print $1}' $readslist | sort -u | wc -l)" -eq 1 ]]; then
     reads_opt="-left $(awk '{print $2}' $readslist) -right $(awk '{print $3}' $readslist)"
     revcomp_opt="-revcomp-right"
     mergepool_opt=""
@@ -291,10 +275,10 @@ else
     mergepool_opt="-mergepool"
     pool=true
 fi
+
 logfile=$outdir/rnabloom.out
 
-if [[ -z "$ref_opt" ]]
-then
+if [[ -z "$ref_opt" ]]; then
     echo "Conducting a de-novo transcriptome assembly." 1>&2
 else
     echo "Conducting a reference-guided transcriptome assembly." 1>&2
@@ -305,23 +289,19 @@ echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $t
 
 ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} &>>$logfile
 
-if [[ ! -f TRANSCRIPTS_NR.DONE ]]
-then
+if [[ ! -f TRANSCRIPTS_NR.DONE ]]; then
     touch $outdir/ASSEMBLY.FAIL
-    if [[ -f $outdir/ASSEMBLY.DONE ]]
-    then
+    if [[ -f $outdir/ASSEMBLY.DONE ]]; then
         rm $outdir/ASSEMBLY.DONE
     fi
-    
+
     org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-    if [[ "$email" = true ]]
-    then
+    if [[ "$email" = true ]]; then
         echo "$outdir" | mail -s "Failed assembling $org" "$address"
         echo "Email alert sent to $address." 1>&2
     fi
 fi
-if [[ $pool = false ]]
-then
+if [[ $pool = false ]]; then
     echo -e "Combining rnabloom.transcripts.nr.fa and rnabloom.transcripts.nr.short.fa...\n" 1>&2
     cat $outdir/rnabloom.transcripts.nr.fa $outdir/rnabloom.transcripts.nr.short.fa >$outdir/rnabloom.transcripts.all.fa
 else
@@ -338,18 +318,14 @@ sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.all.fa
 
 echo -e "Assembly: $outdir/rnabloom.transcripts.all.fa\n" 1>&2
 default_name="$(realpath -s ${workdir}/assembly)"
-if [[ "$default_name" != "$outdir" ]]
-then
+if [[ "$default_name" != "$outdir" ]]; then
     count=1
-    if [[ -d "$default_name" ]]
-    then
-        if [[ ! -L "$default_name" ]]
-        then
+    if [[ -d "$default_name" ]]; then
+        if [[ ! -L "$default_name" ]]; then
             # if 'default' assembly directory already exists, then rename it.
             # rename it to name +1 so the assembly doesn't overwrite
             temp="${default_name}-${count}"
-            while [[ -d "$temp" ]]
-            do
+            while [[ -d "$temp" ]]; do
                 count=$((count + 1))
                 temp="${default_name}-${count}"
             done
@@ -359,8 +335,7 @@ then
             unlink $default_name
         fi
     fi
-    if [[ "$default_name" != "$outdir" ]]
-    then
+    if [[ "$default_name" != "$outdir" ]]; then
         echo -e "$outdir softlinked to $default_name\n" 1>&2
         (cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
     fi
@@ -374,8 +349,7 @@ echo 1>&2
 
 touch $outdir/ASSEMBLY.DONE
 org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-if [[ "$email" = true ]]
-then
+if [[ "$email" = true ]]; then
     echo "$outdir" | mail -s "Finished assembling $org" "$address"
     echo "Email alert sent to $address." 1>&2
 fi

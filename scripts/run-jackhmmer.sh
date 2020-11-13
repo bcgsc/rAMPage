@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+
+# 1 - get_help function
 function get_help() {
 	# DESCRIPTION
 	{
@@ -46,6 +48,8 @@ function get_help() {
 
 	exit 1
 }
+
+# 2 - print_error function
 function print_error() {
 	{
 		message="$1"
@@ -55,15 +59,19 @@ function print_error() {
 		get_help
 	} 1>&2
 }
+
+# 3 - no arguments given
+if [[ "$#" -eq 0 ]]; then
+	get_help
+fi
+
+# default parameters
 evalue=1e-5
 threads=8
 email=false
 similarity=0.90
 
-if [[ "$#" -eq 0 ]]; then
-	get_help
-fi
-
+# 4 - read options
 while getopts :a:e:ho:s:t: opt; do
 	case $opt in
 	a)
@@ -79,26 +87,23 @@ while getopts :a:e:ho:s:t: opt; do
 	s) similarity="$OPTARG" ;;
 	t) threads="$OPTARG" ;;
 	\?)
-		echo "ERROR: Invalid option: -$OPTARG" 1>&2
-		printf '%.0s=' $(seq 1 $(tput cols)) 1>&2
-		echo 1>&2
-		get_help
+		print_error "Invalid option: -$OPTARG" 1>&2
 		;;
 	esac
 done
 
 shift $((OPTIND - 1))
+
+# 5 - wrong number arguments
 if [[ "$#" -ne 1 ]]; then
 	print_error "Incorrect number of arguments."
 fi
-infile=$(realpath $1)
 
-if [[ ! -s $infile ]]; then
-	if [[ ! -f $infile ]]; then
-		print_error "Input file $infile does not exist."
-	else
-		print_error "Input file $infile is empty."
-	fi
+# 6 - check input files
+if [[ ! -f $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+	print_error "input file $(realpath $1) is empty."
 fi
 
 workdir=$(realpath $(dirname $outdir))
@@ -111,28 +116,24 @@ else
 	exit 2
 fi
 
-if [[ -f $outdir/HOMOLOGY.DONE ]]; then
-	rm $outdir/HOMOLOGY.DONE
-fi
+# 7 - remove status files
+rm -f $outdir/HOMOLOGY.DONE
+rm -f $outdir/HOMOLOGY.FAIL
+rm -f $outdir/SEQUENCES.DONE
+rm -f $outdir/SEQEUNCES.FAIL
+rm -f $outdir/SEQUENCES_NR.DONE
+rm -f $outdir/SEQUENCES_NR.FAIL
 
-if [[ -f $outdir/HOMOLOGY.FAIL ]]; then
-	rm $outdir/HOMOLOGY.FAIL
-fi
-
-if [[ -f $outdir/SEQUENCES.DONE ]]; then
-	rm $outdir/SEQUENCES.DONE
-fi
-
-if [[ -f $outdir/SEQUENCES.FAIL ]]; then
-	rm $outdir/SEQEUNCES.FAIL
-fi
-
+# 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 start_sec=$(date '+%s')
-logfile="$outdir/jackhmmer.log"
 
 echo -e "PATH=$PATH\n" | tee $logfile 1>&2
+
+infile=$(realpath $1)
+logfile="$outdir/jackhmmer.log"
+
 echo "Running jackhmmer on ${infile}..." | tee -a $logfile 1>&2
 echo "PROGRAM: $(command -v $RUN_JACKHMMER)" | tee -a $logfile 1>&2
 echo -e "VERSION: $($RUN_JACKHMMER -h | awk '/HMMER/ {print $3, $4, $5}' | tr -d ';')\n" | tee -a $logfile 1>&2
@@ -143,9 +144,6 @@ $RUN_JACKHMMER -o $outdir/jackhmmer.out --tblout $outdir/jackhmmer.tbl --cpu $th
 if [[ ! -s $outdir/jackhmmer.tbl ]]; then
 	echo "ERROR: Failed to run jackhmmer." 1>&2
 	touch $outdir/HOMOLOGY.FAIL
-	if [[ -f "$outdir/HOMOLOGY.DONE" ]]; then
-		rm $outdir/HOMOLOGY.DONE
-	fi
 
 	if [[ "$email" = true ]]; then
 		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
@@ -158,9 +156,6 @@ fi
 
 echo -e "Finished running jackhmmer on $infile!\n" 1>&2
 touch $outdir/HOMOLOGY.DONE
-if [[ -f "$outdir/HOMOLOGY.FAIL" ]]; then
-	rm $outdir/HOMOLOGY.FAIL
-fi
 
 if [[ -s $outdir/jackhmmer.tbl ]]; then
 	echo "Running seqtk subseq on $outdir/jackhmmer.tbl..." 1>&2
@@ -173,9 +168,6 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		if [[ ! -f $outdir/jackhmmer.faa ]]; then
 			echo "ERROR: Failed to fetch sequences from $infile." 1>&2
 			touch $outdir/SEQUENCES.FAIL
-			if [[ -f "$outdir/SEQUENCES.FAIL" ]]; then
-				rm $outdir/SEQUENCES.FAIL
-			fi
 			if [[ "$email" = true ]]; then
 				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 				echo "$outdir" | mail -s "Failed to fetch sequences after homology search on $org" $address
@@ -185,10 +177,6 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		else
 			echo "ERROR: Homology search yielded 0 sequences." 1>&2
 			touch $outdir/SEQUENCES.FAIL
-
-			if [[ -f $outdir/SEQUENCES.DONE ]]; then
-				rm $outdir/SEQUENCES.DONE
-			fi
 
 			if [[ "$email" = true ]]; then
 				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
@@ -200,9 +188,6 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 
 	fi
 	touch $outdir/SEQUENCES.DONE
-	if [[ -f "$outdir/SEQUENCES.FAIL" ]]; then
-		rm $outdir/SEQUENCES.FAIL
-	fi
 	count=$(grep -c '^>' $outdir/jackhmmer.faa)
 	echo -e "Number of AMPs found (redundant): $(printf "%'d" $count)\n" 1>&2
 
@@ -211,17 +196,11 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 
 	if [[ -s $outdir/jackhmmer.nr.faa ]]; then
 		touch $outdir/SEQUENCES_NR.DONE
-		if [[ -f "$outdir/SEQUENCES_NR.FAIL" ]]; then
-			rm $outdir/SEQUENCES_NR.FAIL
-		fi
 
 		count=$(grep -c '^>' $outdir/jackhmmer.nr.faa)
 		echo -e "Number of AMPS found (non-redundant): $(printf "%'d" $count)\n" 1>&2
 	else
 		touch $outdir/SEQUENCES_NR.FAIL
-		if [[ -f $outdir/SEQUENCES_NR.DONE ]]; then
-			rm $outdir/SEQUENCES_NR.DONE
-		fi
 
 		if [[ "$email" = true ]]; then
 			org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
@@ -234,9 +213,6 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 else
 	echo -e "$outdir/jackhmmer.tbl is empty!\n" 1>&2
 	touch $outdir/HOMOLOGY.FAIL
-	if [[ -f "$outdir/HOMOLOGY.DONE" ]]; then
-		rm $outdir/HOMOLOGY.DONE
-	fi
 
 	if [[ "$email" = true ]]; then
 		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')

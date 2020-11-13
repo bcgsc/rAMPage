@@ -2,6 +2,7 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+# 1 - get_help function
 function get_help() {
     # DESCRIPTION
     {
@@ -40,6 +41,7 @@ function get_help() {
 
 }
 
+# 2 - print_error function
 function print_error() {
     {
         message="$1"
@@ -49,10 +51,13 @@ function print_error() {
         get_help
     } 1>&2
 }
+
+# 3 - no arguments given
 if [[ "$#" -eq 0 ]]; then
     get_help
 fi
 
+# 4 - read options
 while getopts :ho: opt; do
     case $opt in
     h) get_help ;;
@@ -66,34 +71,28 @@ done
 
 shift $((OPTIND - 1))
 
-# if no arguments, print help menu automatically
-if [[ "$#" -eq 0 ]]; then
-    get_help
-fi
-
-# if incorrect number of arguments is given
+# 5 - incorrect number of arguments given
 if [[ "$#" -ne 1 ]]; then
     print_error "Incorrect number or arguments."
 fi
 
-# remove status files if alraedy exist
-rm -f $outdir/RUNS.DONE
-
-# check if input file exists or is empty
-if [[ ! -s $1 ]]; then
-    if [[ ! -f $1 ]]; then
-        print_error "ERROR: Input file $(realpath $1) does not exist."
-    else
-        print_error "Input file $(realpath $1) is empty."
-    fi
+# 6 - check input files
+if [[ ! -f $(realpath $1) ]]; then
+    print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+    print_error "Input file $(realpath $1) is empty."
 fi
 
-# print environment details
+# 7 - remove status files
+rm -f $outdir/RUNS.DONE
+
+# 8 - print environment details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
 start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
+
 accessions=$(cat $1)
 
 echo "Downloading run info..." 1>&2
