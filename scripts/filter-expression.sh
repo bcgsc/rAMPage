@@ -178,7 +178,7 @@ echo -e "VERSION: $( echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>
 awk -v var="$cutoff" '{if($4>=var) print}' $outdir/quant.sf > $outdir/remaining.sf
 awk -v var="$cutoff" '{if($4<var) print}' $outdir/quant.sf > $outdir/discarded.sf
 
-echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if(\$4>=var) print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
+echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var) print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
 $RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if($4>=var) print $1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa
 
 
