@@ -41,7 +41,7 @@ function get_help() {
 		\t-o <directory>\toutput directory for trimmed reads\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 4)\n \
     " | column -t -s$'\t' -L
-    }
+    } 1>&2
     exit 1
 }
 

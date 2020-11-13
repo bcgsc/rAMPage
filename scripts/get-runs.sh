@@ -35,7 +35,7 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
     " | column -s$'\t' -t -L
-    }
+    } 1>&2
 
     exit 1
 
