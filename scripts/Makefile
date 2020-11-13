@@ -27,7 +27,7 @@ cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE: $(ROOT_DIR)/scripts/cleave
 homology: homology/jackhmmer.nr.faa
 
 homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/get-runtime.sh $(TAXON_CLASS) $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSLATION.DONE
-	$< -i translation -o homology -t $(THREADS) &> logs/08-homology.log
+	$< -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log
 
 # 7. translation 
 translation: translation/rnabloom.transcripts.filtered.transdecoder.faa

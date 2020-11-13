@@ -13,19 +13,23 @@ function get_help() {
 		\t  - jackhmmer.nr.faa\n \
 		\t  - HOMOLOGY.DONE or HOMOLOGY.FAIL\n \
 		\t  - SEQUENCES.DONE or SEQUENCES.FAIL\n \
+		\t  - SEQUENCES_NR.DONE or SEQUENCES_NR.FAIL\n \
 		\n \
 		\tEXIT CODES:\n \
 		\t-----------\n \
 		\t  - 0: successfully completed\n \
 		\t  - 1: general error\n \
-		\t  - 2:\n \
+		\t  - 2: homology search failed\n \
+		\t  - 3: sequence fetch failed\n \
+		\t  - 4: homology search yielded 0 results\n \
+		\t  - 5: sequence redundancy removal failed\n \
 		\n \
 		\tFor more information: http://eddylab.org/software/hmmer/Userguide.pdf\n \
 		" | column -s$'\t' -t -L
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -i <input directory> -o <output directory>\n \
+		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
 		" | column -s$'\t' -t -L
 
 		# OPTIONS
@@ -34,7 +38,6 @@ function get_help() {
 		\t-a <address>\temail alert\n \
 		\t-e <E-value>\tE-value threshold\t(default = 1e-3)\n \
 		\t-h\tshow this help menu\n \
-		\t-i <directory>\tinput (i.e. translation) directory\t(required)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\t CD-HIT global sequence similarity cut-off (default = 0.90)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
@@ -61,7 +64,7 @@ if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
-while getopts :a:e:hi:o:s:t: opt; do
+while getopts :a:e:ho:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -69,7 +72,6 @@ while getopts :a:e:hi:o:s:t: opt; do
 		;;
 	e) evalue="$OPTARG" ;;
 	h) get_help ;;
-	i) indir="$(realpath $OPTARG)" ;;
 	o)
 		outdir="$(realpath $OPTARG)"
 		mkdir -p $outdir
@@ -86,9 +88,17 @@ while getopts :a:e:hi:o:s:t: opt; do
 done
 
 shift $((OPTIND - 1))
+if [[ "$#" -ne 1 ]]; then
+	print_error "Incorrect number of arguments."
+fi
+infile=$(realpath $1)
 
-if [[ ! -d $indir ]]; then
-	print_error "Given directory $indir does not exist."
+if [[ ! -s $infile ]]; then
+	if [[ ! -f $infile ]]; then
+		print_error "Input file $infile does not exist."
+	else
+		print_error "Input file $infile is empty."
+	fi
 fi
 
 workdir=$(realpath $(dirname $outdir))
@@ -120,7 +130,6 @@ fi
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 start_sec=$(date '+%s')
-infile="$indir/rnabloom.transcripts.filtered.transdecoder.faa"
 logfile="$outdir/jackhmmer.log"
 
 echo -e "PATH=$PATH\n" | tee $logfile 1>&2
