@@ -39,6 +39,7 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-i <directory>\tinput directory for raw reads\t(required)\n \
 		\t-o <directory>\toutput directory for trimmed reads\t(required)\n \
+        \t-p\ttrim each run in parallel\n \
 		\t-t <int>\tnumber of threads\t(default = 4)\n \
     " | column -t -s$'\t' -L
     } 1>&2
@@ -65,9 +66,9 @@ fi
 # default parameters
 threads=4
 email=false
-
+parallel=false
 # 4 - read options
-while getopts :a:hi:o:t: opt; do
+while getopts :a:hi:o:pt: opt; do
     case $opt in
     a)
         email=true
@@ -79,6 +80,7 @@ while getopts :a:hi:o:t: opt; do
         outdir=$(realpath $OPTARG)
         mkdir -p $outdir
         ;;
+    p) parallel=true ;;
     t) threads="$OPTARG" ;;
     \?) print_error "Invalid option: -$OPTARG" ;;
     esac
@@ -122,23 +124,39 @@ fi
 
 echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
-
-while read run; do
-    if [[ "$single" = false ]]; then
-        if [[ ! -f "$indir/${run}_1.fastq.gz" || ! -f "$indir/${run}_2.fastq.gz" ]] && [[ -f "$indir/${run}.fastq.gz" ]]; then
-            echo -e "\nRun ${run} contains single-end reads. Paired-end reads are prioritized over single-end reads. Therefore single-end reads are skipped and not trimmed.\n" 1>&2
-            sed -i "/$run/d" $(dirname $indir)/sra/runs.txt
-            sed -i "/$run/d" $(dirname $indir)/sra/metadata.tsv
-            sed -i "/$run/d" $(dirname $indir)/sra/RunInfoTable.csv
-            echo "$run" >>$(dirname $indir)/sra/skipped.txt
-            continue
+if [[ "$parallel" = true ]]; then
+    while read run; do
+        if [[ "$single" = false ]]; then
+            if [[ ! -f "$indir/${run}_1.fastq.gz" || ! -f "$indir/${run}_2.fastq.gz" ]] && [[ -f "$indir/${run}.fastq.gz" ]]; then
+                echo -e "\nRun ${run} contains single-end reads. Paired-end reads are prioritized over single-end reads. Therefore single-end reads are skipped and not trimmed.\n" 1>&2
+                sed -i "/$run/d" $(dirname $indir)/sra/runs.txt
+                sed -i "/$run/d" $(dirname $indir)/sra/metadata.tsv
+                sed -i "/$run/d" $(dirname $indir)/sra/RunInfoTable.csv
+                echo "$run" >>$(dirname $indir)/sra/skipped.txt
+                continue
+            fi
         fi
-    fi
-    echo "Trimming ${run}..." 1>&2
-    $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
-done <$(dirname $indir)/sra/runs.txt
-wait
+        echo "Trimming ${run}..." 1>&2
+        $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+    done <$(dirname $indir)/sra/runs.txt
+    wait
+else
 
+    while read run; do
+        if [[ "$single" = false ]]; then
+            if [[ ! -f "$indir/${run}_1.fastq.gz" || ! -f "$indir/${run}_2.fastq.gz" ]] && [[ -f "$indir/${run}.fastq.gz" ]]; then
+                echo -e "\nRun ${run} contains single-end reads. Paired-end reads are prioritized over single-end reads. Therefore single-end reads are skipped and not trimmed.\n" 1>&2
+                sed -i "/$run/d" $(dirname $indir)/sra/runs.txt
+                sed -i "/$run/d" $(dirname $indir)/sra/metadata.tsv
+                sed -i "/$run/d" $(dirname $indir)/sra/RunInfoTable.csv
+                echo "$run" >>$(dirname $indir)/sra/skipped.txt
+                continue
+            fi
+        fi
+        echo "Trimming ${run}..." 1>&2
+        $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+    done <$(dirname $indir)/sra/runs.txt
+fi
 fail=false
 failed_accs=()
 while read run; do

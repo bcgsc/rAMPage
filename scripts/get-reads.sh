@@ -35,6 +35,7 @@ function get_help() {
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
+        \t-p\tdownload each run in parallel\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
     " | column -s$'\t' -t -L
     } 1>&2
@@ -60,9 +61,9 @@ fi
 # default parameters
 threads=6
 email=""
-
+parallel=false
 # 4 - read options
-while getopts :a:ho:t: opt; do
+while getopts :a:ho:pt: opt; do
     case $opt in
     a)
         address="$OPTARG"
@@ -73,6 +74,7 @@ while getopts :a:ho:t: opt; do
         outdir="$(realpath $OPTARG)"
         mkdir -p $outdir
         ;;
+    p) parallel=true ;;
     t) threads="$OPTARG" ;;
     \?) print_error "Invalid option: -$OPTARG" ;;
     esac
@@ -110,15 +112,23 @@ echo "PROGRAM: $(command -v $FASTERQ_DUMP)" 1>&2
 $FASTERQ_DUMP --version >/dev/null
 echo -e "VERSION: $($FASTERQ_DUMP --version | awk '/version/ {print $NF}')\n" 1>&2
 
-# get each accession parallelly using the get-accession.sh script
-while read accession; do
-    # assume that the FASTQs do not exist due to timestamping of the folders
-    echo "Initiating download of ${accession}..." 1>&2
-    $ROOT_DIR/scripts/get-accession.sh $email -t $threads -o $outdir $accession &
-done <$sra
+if [[ "$parallel" = true ]]; then
+    # get each accession parallelly using the get-accession.sh script
+    while read accession; do
+        # assume that the FASTQs do not exist due to timestamping of the folders
+        echo "Initiating download of ${accession}..." 1>&2
+        $ROOT_DIR/scripts/get-accession.sh $email -t $threads -o $outdir $accession &
+    done <$sra
 
-# wait for all child processes to finish
-wait
+    # wait for all child processes to finish
+    wait
+else
+    while read accession; do
+        # assume that the FASTQs do not exist due to timestamping of the folders
+        echo "Initiating download of ${accession}..." 1>&2
+        $ROOT_DIR/scripts/get-accession.sh $email -t $threads -o $outdir $accession
+    done <$sra
+fi
 
 # soft link to 'default name'
 default_name="$(realpath -s $(dirname $outdir)/raw_reads)"
