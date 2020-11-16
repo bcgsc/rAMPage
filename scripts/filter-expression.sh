@@ -100,7 +100,7 @@ if [[ ! -f $(realpath $1) ]]; then
 elif [[ ! -s $(realpath $1) ]]; then
     print_error "input file $(realpath $1) is empty."
 fi
-
+workdir=$(dirname $outdir)
 if [[ -f $workdir/STRANDED.LIB ]]; then
     stranded=true
 elif [[ -f $workdir/NONSTRANDED.LIB || -f $workdir/AGNOSTIC.LIB ]]; then
@@ -129,7 +129,6 @@ start_sec=$(date '+%s')
 echo -e "PATH=$PATH\n" 1>&2
 
 readslist=$(realpath $1)
-workdir=$(dirname $outdir)
 
 echo "PROGRAM: $(command -v $RUN_SALMON)" 1>&2
 echo -e "VERSION: $($RUN_SALMON --version 2>&1 | awk '{print $NF}')\n" 1>&2
