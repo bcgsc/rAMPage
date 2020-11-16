@@ -1,5 +1,7 @@
-SHELL = /bin/bash
+SHELL = /usr/bin/env bash
 THREADS = 48
+PARALLEL = false
+
 END := $(wildcard *.END)
 LIB := $(wildcard *.LIB)
 TAXON_CLASS := $(wildcard *.CLASS)
@@ -67,7 +69,7 @@ trim: $(TRIMMED_READS) trimmed_reads/TRIM.DONE
 #	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
 trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(RAW_READS) $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
 #	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
-	/usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
+	if [[ $(PARALLEL) == true ]]; then /usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) -p &> logs/03-trimmed_reads.log; else /usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log; fi
 
 # 2. download reads
 reads: $(RAW_READS) raw_reads/READS.DONE
@@ -77,7 +79,7 @@ reads: $(RAW_READS) raw_reads/READS.DONE
 #	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
 raw_reads/READS.DONE: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
 #	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
-	/usr/bin/time -pv $< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
+	if [[ $(PARALLEL) == true ]]; then /usr/bin/time -pv $< -o raw_reads -p sra/runs.txt &> logs/02-raw_reads.log; else /usr/bin/time -pv $< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log; fi
 
 # 1. get runs
 accessions: sra/runs.txt sra/metadata.tsv
