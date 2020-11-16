@@ -129,10 +129,10 @@ echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 start_sec=$(date '+%s')
 
+logfile="$outdir/jackhmmer.log"
 echo -e "PATH=$PATH\n" | tee $logfile 1>&2
 
 infile=$(realpath $1)
-logfile="$outdir/jackhmmer.log"
 
 echo "Running jackhmmer on ${infile}..." | tee -a $logfile 1>&2
 echo "PROGRAM: $(command -v $RUN_JACKHMMER)" | tee -a $logfile 1>&2
