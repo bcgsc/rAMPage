@@ -9,6 +9,18 @@ function get_help() {
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tPredicts AMP vs. non-AMP from the peptide sequence using AMPlify.\n \
+		\n \
+		\tOUTPUT:\n \
+		\t-------\n \
+		\t  - amps.conf.short.charge.nr.faa\n \
+		\t  - AMPlify_results.conf.short.charge.tsv\n \
+		\n \
+		\tEXIT CODES:\n \
+		\t-----------\n \
+		\t  - 0: successfully completed\n \
+		\t  - 1: general errors\n \
+		\t  - 2: AMPlify failed\n \
+		\n \
 		\tFor more information on AMPlify: https://github.com/bcgsc/amplify\n \
 		" | column -s $'\t' -t -L
 
