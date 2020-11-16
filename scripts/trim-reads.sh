@@ -124,7 +124,8 @@ fi
 
 echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
-if [[ "$parallel" = true ]]; then
+if [[ "$parallel" = true ]]; thena
+	echo -e "Trimming each accession in parallel...\n" 1>&2
     while read run; do
         if [[ "$single" = false ]]; then
             if [[ ! -f "$indir/${run}_1.fastq.gz" || ! -f "$indir/${run}_2.fastq.gz" ]] && [[ -f "$indir/${run}.fastq.gz" ]]; then
