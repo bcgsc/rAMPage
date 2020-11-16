@@ -35,7 +35,7 @@ function get_help() {
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-        \t-p\tdownload each run in parallel\n \
+		\t-p\tdownload each run in parallel\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
     " | column -s$'\t' -t -L
     } 1>&2
