@@ -1,7 +1,82 @@
-SHELL = /bin/bash
+SHELL = /usr/bin/env bash
+PARALLEL = true
+
+FILTER_BY_CHARGE = true
+FILTER_BY_LENGTH = true
+FILTER_BY_SCORE = true
 
 .PHONY = all clean config setup launch
-FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.conf.short.charge.nr.faa)
+
+# only 1 is true
+ifeq ($(FILTER_BY_CHARGE), true)
+	ifeq ( $(FILTER_BY_LENGTH), false)
+		ifeq ( $(FILTER_BY_SCORE), false)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.charge.nr.faa)
+		endif
+	endif
+endif
+
+ifeq ($(FILTER_BY_CHARGE), false)
+	ifeq ( $(FILTER_BY_LENGTH), true)
+		ifeq ( $(FILTER_BY_SCORE), false)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.short.nr.faa)
+		endif
+	endif
+endif
+
+
+ifeq ($(FILTER_BY_CHARGE), false)
+	ifeq ( $(FILTER_BY_LENGTH), false)
+		ifeq ( $(FILTER_BY_SCORE), true)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.conf.nr.faa)
+		endif
+	endif
+endif
+
+# only 2 are true
+ifeq ($(FILTER_BY_CHARGE), true)
+	ifeq ( $(FILTER_BY_LENGTH), true)
+		ifeq ( $(FILTER_BY_SCORE), false)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.short.charge.nr.faa)
+		endif
+	endif
+endif
+
+ifeq ($(FILTER_BY_CHARGE), false)
+	ifeq ( $(FILTER_BY_LENGTH), true)
+		ifeq ( $(FILTER_BY_SCORE), true)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.conf.short.nr.faa)
+		endif
+	endif
+endif
+
+ifeq ($(FILTER_BY_CHARGE), true)
+	ifeq ( $(FILTER_BY_LENGTH), false)
+		ifeq ( $(FILTER_BY_SCORE), true)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.conf.charge.nr.faa)
+		endif
+	endif
+endif
+
+# if all are true
+
+ifeq ($(FILTER_BY_CHARGE), true)
+	ifeq ( $(FILTER_BY_LENGTH), true)
+		ifeq ( $(FILTER_BY_SCORE), true)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.conf.short.charge.nr.faa)
+		endif
+	endif
+endif
+
+# if all are false
+ifeq ($(FILTER_BY_CHARGE), false)
+	ifeq ( $(FILTER_BY_LENGTH), false)
+		ifeq ( $(FILTER_BY_SCORE), false)
+			FASTA := $(wildcard $(ROOT_DIR)/*/*/*/amplify/amps.nr.faa)
+		endif
+	endif
+endif
+
 TSV := $(wildcard $(ROOT_DIR)/*/*/*/amplify/AMPlify_results.tsv)
 
 all: launch
@@ -18,7 +93,7 @@ SETUP.DONE: scripts/setup.sh master_accessions.tsv CONFIG.DONE
 launch: $(FASTA) $(TSV)
 
 $(TSV) $(FASTA): setup 
-	while read sp; do (cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$(sp) && cd $(ROOT_DIR)/$(sp) && make) & done < master_accessions.tsv
+	while read sp; do (cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$(sp) && cd $(ROOT_DIR)/$(sp) && make PARALLEL=true) & done < master_accessions.tsv
 	wait
 
 # redundancy removal
