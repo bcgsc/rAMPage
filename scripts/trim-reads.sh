@@ -124,7 +124,7 @@ fi
 
 echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
-if [[ "$parallel" = true ]]; thena
+if [[ "$parallel" = true ]]; then
 	echo -e "Trimming each accession in parallel...\n" 1>&2
     while read run; do
         if [[ "$single" = false ]]; then

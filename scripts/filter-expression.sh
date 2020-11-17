@@ -4,9 +4,9 @@ PROGRAM=$(basename $0)
 
 # 1 - get_help function
 function get_help() {
-    {
-        echo "DESCRIPTION:"
-        echo -e "\
+	{
+		echo "DESCRIPTION:"
+		echo -e "\
 		\tQuantifies the expression of each transcript using Salmon and filters out lowly expressed transcripts specified by the given TPM cut-off.\n \
 		\n \
 		\tOUTPUT:\n \
@@ -23,13 +23,13 @@ function get_help() {
 		\tFor more information: https://combine-lab.github.io/salmon/\n \
         " | column -s$'\t' -t -L
 
-        echo "USAGE(S):"
-        echo -e "\
+		echo "USAGE(S):"
+		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> -r <reference transcriptome> <readslist TXT file>\n \
         " | column -s$'\t' -t -L
 
-        echo "OPTION(S):"
-        echo -e "\
+		echo "OPTION(S):"
+		echo -e "\
 		\t-a <address>\temail alert\n \
 		\t-c <dbl>\tTPM cut-off\t(default = 0.50)\n \
 		\t-h\tshow this help menu\n \
@@ -37,24 +37,24 @@ function get_help() {
 		\t-r <FASTA file>\treference transcriptome\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
         " | column -s$'\t' -t -L
-    } 1>&2
-    exit 1
+	} 1>&2
+	exit 1
 }
 
 # 2 - print_error function
 function print_error() {
-    {
-        message="$1"
-        echo "ERROR: $message"
-        printf '%.0s=' $(seq 1 $(tput cols))
-        echo
-        get_help
-    } 1>&2
+	{
+		message="$1"
+		echo "ERROR: $message"
+		printf '%.0s=' $(seq 1 $(tput cols))
+		echo
+		get_help
+	} 1>&2
 }
 
 # 3 - no arguments given
 if [[ "$#" -eq 0 ]]; then
-    get_help
+	get_help
 fi
 
 # default options
@@ -64,57 +64,57 @@ cutoff=0.50
 
 # 4 - read options
 while getopts :a:c:ho:r:t: opt; do
-    case $opt in
-    a)
-        address="$OPTARG"
-        email=true
-        ;;
-    c) cutoff="$OPTARG" ;;
-    h) get_help ;;
-    o)
-        outdir="$(realpath $OPTARG)"
-        mkdir -p $outdir
-        ;;
-    r) ref="$OPTARG" ;;
-    t) threads="$OPTARG" ;;
-    \?) print_error "Invalid option: -$OPTARG" ;;
-    esac
+	case $opt in
+	a)
+		address="$OPTARG"
+		email=true
+		;;
+	c) cutoff="$OPTARG" ;;
+	h) get_help ;;
+	o)
+		outdir="$(realpath $OPTARG)"
+		mkdir -p $outdir
+		;;
+	r) ref="$OPTARG" ;;
+	t) threads="$OPTARG" ;;
+	\?) print_error "Invalid option: -$OPTARG" ;;
+	esac
 done
 
 shift $((OPTIND - 1))
 
 # 5 - wrong number arguments given
 if [[ "$#" -ne 1 ]]; then
-    print_error "Incorrect number of arguments."
+	print_error "Incorrect number of arguments."
 fi
 
 # 6 - check input files
 if [[ ! -f "$ref" ]]; then
-    print_error "Given reference transcriptome $ref does not exist."
+	print_error "Given reference transcriptome $ref does not exist."
 elif [[ ! -s "$ref" ]]; then
-    print_error "Given reference transcriptome $ref is empty."
+	print_error "Given reference transcriptome $ref is empty."
 fi
 
 if [[ ! -f $(realpath $1) ]]; then
-    print_error "Input file $(realpath $1) does not exist."
+	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-    print_error "input file $(realpath $1) is empty."
+	print_error "input file $(realpath $1) is empty."
 fi
 workdir=$(dirname $outdir)
 if [[ -f $workdir/STRANDED.LIB ]]; then
-    stranded=true
+	stranded=true
 elif [[ -f $workdir/NONSTRANDED.LIB || -f $workdir/AGNOSTIC.LIB ]]; then
-    stranded=false
+	stranded=false
 else
-    print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
+	print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
 fi
 
 if [[ -f $workdir/PAIRED.END ]]; then
-    paired=true
+	paired=true
 elif [[ -f $workdir/SINGLE.END ]]; then
-    paired=false
+	paired=false
 else
-    print_error "*.END file not found."
+	print_error "*.END file not found."
 fi
 
 # 7 - remove status files
@@ -142,23 +142,23 @@ echo "Quantifying expression..." 1>&2
 
 # quantify
 if [[ "$paired" = true ]]; then
-    if [[ "$stranded" = true ]]; then
-        libtype=ISR
-        echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist) -2 $(awk '{print $2}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
-        $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist) -2 $(awk '{print $2}' $readslist) -o $outdir &>$outdir/quant.log
-    else
-        libtype=IU
-        echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist) -2 $(awk '{print $3}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
-        $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist) -2 $(awk '{print $3}' $readslist) -o $outdir &>$outdir/quant.log
-    fi
+	if [[ "$stranded" = true ]]; then
+		libtype=ISR
+		echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist) -2 $(awk '{print $2}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
+		$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist) -2 $(awk '{print $2}' $readslist) -o $outdir &>$outdir/quant.log
+	else
+		libtype=IU
+		echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist) -2 $(awk '{print $3}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
+		$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist) -2 $(awk '{print $3}' $readslist) -o $outdir &>$outdir/quant.log
+	fi
 else
-    if [[ "$stranded" = true ]]; then
-        libtype=SR
-    else
-        libtype=U
-    fi
-    echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
-    $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist) -o $outdir &>$outdir/quant.log
+	if [[ "$stranded" = true ]]; then
+		libtype=SR
+	else
+		libtype=U
+	fi
+	echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
+	$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist) -o $outdir &>$outdir/quant.log
 fi
 
 echo "Filtering the transcriptome for transcripts whose TPM >= ${cutoff}..." 1>&2
@@ -173,15 +173,15 @@ echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var)
 $RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if($4>=var) print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
 
 if [[ ! -s $outdir/rnabloom.transcripts.filtered.fa ]]; then
-    touch $outdir/FILTER.FAIL
-    echo "STATUS: failed." 1>&2
+	touch $outdir/FILTER.FAIL
+	echo "ERROR: Salmon output file $outdir/rnabloom.transcripts.filtered.fa does not exist or is empty." 1>&2
 
-    if [[ "$email" = true ]]; then
-        org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-        echo "$outdir" | mail -s "Failed expression filtering $org" $address
-        echo "Email alert sent to $address." 1>&2
-    fi
-    exit 2
+	if [[ "$email" = true ]]; then
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		echo "$outdir" | mail -s "Failed expression filtering $org" $address
+		echo "Email alert sent to $address." 1>&2
+	fi
+	exit 2
 fi
 
 before=$(grep -c '^>' $ref)
@@ -200,26 +200,26 @@ echo -e "\
 echo 1>&2
 default_name="$(realpath -s $(dirname $outdir)/filtering)"
 if [[ "$default_name" != "$outdir" ]]; then
-    count=1
-    if [[ -d "$default_name" ]]; then
-        if [[ ! -L "$default_name" ]]; then
-            # if 'default' assembly directory already exists, then rename it.
-            # rename it to name +1 so the assembly doesn't overwrite
-            temp="${default_name}-${count}"
-            while [[ -d "$temp" ]]; do
-                count=$((count + 1))
-                temp="${default_name}-${count}"
-            done
-            echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old assemblies.\n" 1>&2
-            mv $default_name $temp
-        else
-            unlink $default_name
-        fi
-    fi
-    if [[ "$default_name" != "$outdir" ]]; then
-        echo -e "$outdir softlinked to $default_name\n" 1>&2
-        (cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
-    fi
+	count=1
+	if [[ -d "$default_name" ]]; then
+		if [[ ! -L "$default_name" ]]; then
+			# if 'default' assembly directory already exists, then rename it.
+			# rename it to name +1 so the assembly doesn't overwrite
+			temp="${default_name}-${count}"
+			while [[ -d "$temp" ]]; do
+				count=$((count + 1))
+				temp="${default_name}-${count}"
+			done
+			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old assemblies.\n" 1>&2
+			mv $default_name $temp
+		else
+			unlink $default_name
+		fi
+	fi
+	if [[ "$default_name" != "$outdir" ]]; then
+		echo -e "$outdir softlinked to $default_name\n" 1>&2
+		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
+	fi
 fi
 echo -e "END: $(date)\n" 1>&2
 end_sec=$(date '+%s')
@@ -228,9 +228,9 @@ $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 echo 1>&2
 
 if [[ "$email" = true ]]; then
-    org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-    echo "$outdir" | mail -s "Finished expression filtering for $org" $address
-    echo "Email alert sent to $address." 1>&2
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	echo "$outdir" | mail -s "Finished expression filtering for $org" $address
+	echo "Email alert sent to $address." 1>&2
 fi
 
 echo "STATUS: complete." 1>&2

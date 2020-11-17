@@ -190,12 +190,16 @@ else
 	echo -e "Sequences are already between 2 and 200 amino acids long.\n" 1>&2
 fi
 
+# RUNNING AMPLIFY
+# -------------------
 model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
 echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
 echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
 $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 
 echo "Finished running AMPlify." 1>&2
+# -------------------
+
 file=$(ls -t $outdir/AMPlify_results_*.txt 2>/dev/null | head -n1 || true)
 echo -e "Output: $file\n" 1>&2
 
@@ -206,6 +210,7 @@ if [[ ! -s $file ]]; then
 		echo "$outdir" | mail -s "Failed AMPlify run on $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
+	echo "ERROR: AMPlify output file $file does not exist or is empty!" 1>&2
 	exit 2
 fi
 
@@ -262,7 +267,6 @@ echo -e "Number of input sequences: $(printf "%'d" $input_count)\n" 1>&2
 echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
-
 ### 1 - Filter all sequences for those that are labelled AMP
 #----------------------------------------------------------
 echo "Filtering for those sequences labelled 'AMP' by AMPlify..." 1>&2
@@ -291,7 +295,7 @@ fi
 echo "SUMMARY" 1>&2
 print_line
 
-count=$(grep -c '^>' ${outfile_nr})
+count=$(grep -c '^>' ${outfile_nr} || true)
 {
 	echo "Output: ${outfile_nr}"
 	echo "Number of unique AMPs: $(printf "%'d" $count)"

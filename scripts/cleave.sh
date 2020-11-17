@@ -161,7 +161,7 @@ if command -v $RUN_SIGNALP &>/dev/null; then
 else
 	signalp=false
 	signalp_opt=""
-	echo -e "SignalP program not found. Please download SignalP into $ROOT_DIR/src, and source $ROOT_DIR/scripts/config.sh from the $ROOT_DIR, so that the RUN_SIGNALP environment variable is re-exported.\n" 1>&2
+	echo "ERROR: SignalP program not found. Please download SignalP into $ROOT_DIR/src, and source $ROOT_DIR/scripts/config.sh from the $ROOT_DIR, so that the RUN_SIGNALP environment variable is re-exported." 1>&2
 	exit 2
 #	echo -e "SignalP program not found. Proceeding without SignalP.\n" 1>&2
 fi
@@ -283,7 +283,7 @@ if [[ -s "$outfile" ]]; then
 	touch $outdir/CLEAVE.DONE
 else
 	touch $outdir/CLEAVE.FAIL
-
+	echo "ERROR: Cleaving output file $outfile does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
 		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
@@ -310,6 +310,7 @@ if [[ -s $outfile_len ]]; then
 	touch $outdir/CLEAVE_LEN.DONE
 else
 	touch $outdir/CLEAVE_LEN.FAIL
+	echo "ERROR: Length filtering output file $outfile_len does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
 		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		echo "$outdir" | mail -s "Failed filtering out long sequences for $org" $address

@@ -142,7 +142,7 @@ echo "COMMAND: $RUN_JACKHMMER -o $outdir/jackhmmer.out --tblout $outdir/jackhmme
 $RUN_JACKHMMER -o $outdir/jackhmmer.out --tblout $outdir/jackhmmer.tbl --cpu $threads --noali --notextw -E $evalue $db $infile &>>$logfile
 
 if [[ ! -s $outdir/jackhmmer.tbl ]]; then
-	echo "ERROR: Failed to run jackhmmer." 1>&2
+	echo "ERROR: jackhmmer output file $outdir/jackhmmer.tbl does not exist or is empty." 1>&2
 	touch $outdir/HOMOLOGY.FAIL
 
 	if [[ "$email" = true ]]; then
@@ -166,7 +166,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 	$RUN_SEQTK subseq $infile <(awk '!/^#/ {print $1}' $outdir/jackhmmer.tbl | sort -u) >$outdir/jackhmmer.faa
 	if [[ ! -s $outdir/jackhmmer.faa ]]; then
 		if [[ ! -f $outdir/jackhmmer.faa ]]; then
-			echo "ERROR: Failed to fetch sequences from $infile." 1>&2
+			echo "ERROR: seqtk subseq output file $outdir/jackhmmer.faa does not exist." 1>&2
 			touch $outdir/SEQUENCES.FAIL
 			if [[ "$email" = true ]]; then
 				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
@@ -175,7 +175,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 			fi
 			exit 3
 		else
-			echo "ERROR: Homology search yielded 0 sequences." 1>&2
+			echo "ERROR: seqtk subseq output file $outdir/jackhmmer.faa is empty." 1>&2
 			touch $outdir/SEQUENCES.FAIL
 
 			if [[ "$email" = true ]]; then
@@ -211,7 +211,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		exit 5
 	fi
 else
-	echo -e "$outdir/jackhmmer.tbl is empty!\n" 1>&2
+	echo "ERROR: jackhmmer output file $outdir/jackhmmer.tbl is empty." 1>&2
 	touch $outdir/HOMOLOGY.FAIL
 
 	if [[ "$email" = true ]]; then
