@@ -1,3 +1,5 @@
+:warning: **IMPORTANT** :warning: The path to these dependencies must be configured in `scripts/config.sh` in order to be successfully exported to the rest of the pipeline.
+
 This folder will hold all the tools (dependencies) needed in this pipeline if they are not already installed:
 
 |Dependency| Tested Version |
@@ -14,5 +16,3 @@ This folder will hold all the tools (dependencies) needed in this pipeline if th
 | [ProP](https://services.healthtech.dtu.dk/services/ProP-1.0/9-Downloads.php#) | v1.0c |
 | [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.0.0) |v1.0.0|
 | [SABLE](https://sourceforge.net/projects/meller-sable/) | v4.0 |
-
-:warning: **IMPORTANT** :warning: The path to these dependencies must be configured in `scripts/config.sh` in order to be successfully exported to the rest of the pipeline.
