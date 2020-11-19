@@ -2,59 +2,72 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+# 1 - get_help
 function get_help() {
-	echo "DESCRIPTION:" 1>&2
-	echo -e "\
+	{
+		echo "DESCRIPTION:" 1>&2
+		echo -e "\
 		\tParses the raw SABLE output into a TSV file.\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | column -s $'\t' -t -L
 
-	echo "USAGE(S):" 1>&2
-	echo -e "\
+		echo "USAGE(S):"
+		echo -e "\
 		\t$PROGRAM [OPTIONS] <SABLE Output TXT file>\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | column -s $'\t' -t -L
 
-	echo "OPTION(S):" 1>&2
-	echo -e "\
+		echo "OPTION(S):"
+		echo -e "\
 		\t-h\tshow this help menu\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | column -s $'\t' -t -L
+	} 1>&2
 	exit 1
 }
-if [[ "$#" -eq 0 ]]
-then
+
+# 2 - print_error
+function print_error() {
+	{
+		message="$1"
+		echo "ERROR: $message"
+		printf '%.0s=' $(seq 1 $(tput cols))
+		echo
+		get_help
+	} 1>&2
+}
+
+# 3 - no arguments given
+if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
-while getopts :h opt
-do
+# 4 - get options
+while getopts :h opt; do
 	case $opt in
-		h) get_help;;
-		\?) echo "ERROR: Invalid option: -$opt" 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help;;
+	h) get_help ;;
+	\?)
+		print_error "Invalid option: -$OPTARG"
+		;;
 	esac
 done
 
-shift $((OPTIND-1))
-if [[ "$#" -ne 1 ]]
-then
-	echo "ERROR: Incorrect number of arguments." 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help
-fi
-infile=$(realpath $1)
-if [[ ! -s $infile ]]
-then
-	if [[ ! -f $infile ]]
-	then
-		echo "ERROR: Input file $infile does not exist." 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help
-	else
-		echo "ERROR: Input file $infile is empty." 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help
-	fi
+shift $((OPTIND - 1))
+
+# 5 - incorrect arguments
+if [[ "$#" -ne 1 ]]; then
+	print_error "Incorrect number of arguments."
 fi
 
+# 6 check input files
+if [[ ! -f $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) is empty."
+fi
+
+infile=$(realpath $1)
+
 outfile=$(dirname $infile)/sable_output.tsv
-echo -e "Sequence ID\tSequence\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" > $outfile
-while read line
-do 
+echo -e "Sequence ID\tSequence\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outfile
+while read line; do
 	seqname=$(echo "$line" | awk '{print $2}')
 	read sequence
 	read structure
@@ -63,5 +76,5 @@ do
 	read rsa_conf
 
 	ss=$($ROOT_DIR/scripts/longest-ss.py "$structure")
-	echo -e "$seqname\t$sequence\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >> $outfile
-done < $infile
+	echo -e "$seqname\t$sequence\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >>$outfile
+done <$infile

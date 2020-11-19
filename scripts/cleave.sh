@@ -111,7 +111,7 @@ rm -f $outdir/CLEAVE_LEN.FAIL
 # 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
-start_sec=$(date '+%s')
+# start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
 
@@ -212,15 +212,17 @@ fi
 # RUN PROP and get output
 echo "Predicting cleavage sites..." 1>&2
 echo "COMMAND: $RUN_PROP -p $signalp_opt $infile > $tempfile" 1>&2
-start_sec_temp=$(date '+%s')
+# start_sec_temp=$(date '+%s')
+
 $RUN_PROP -p $signalp_opt $infile >$tempfile
-end_sec_temp=$(date '+%s')
+# end_sec_temp=$(date '+%s')
+
 cp $tempfile $outdir/prop.raw.out
 sed -i 's/ \+$//' $tempfile
 sed -i 's/^[[:space:]]*[0-9]\+[[:space:]]*/Sequence: /' $tempfile
 
-$ROOT_DIR/scripts/get-runtime.sh $start_sec_temp $end_sec_temp 1>&2
-echo 1>&2
+# $ROOT_DIR/scripts/get-runtime.sh $start_sec_temp $end_sec_temp 1>&2
+# echo 1>&2
 echo -e "Output: $tempfile\n" 1>&2
 
 # Parse the output
@@ -257,11 +259,11 @@ done
 
 # Sambina's cleaving script
 echo "Cleaving peptides..." 1>&2
-start_cleave=$(date '+%s')
-/projects/btl_scratch/saninta/amp_pipeline/cleave-seq.py $infile $tsv $outdir
-end_cleave=$(date '+%s')
-$ROOT_DIR/scripts/get-runtime.sh $start_cleave $end_cleave
-echo 1>&2
+# start_cleave=$(date '+%s')
+$ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir
+# end_cleave=$(date '+%s')
+# $ROOT_DIR/scripts/get-runtime.sh $start_cleave $end_cleave
+# echo 1>&2
 
 # DESCRIBE OUTPUT FILES HERE
 echo "Output Files:" 1>&2
@@ -344,10 +346,10 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-end_sec=$(date '+%s')
+# end_sec=$(date '+%s')
 
-$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-echo 1>&2
+# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
+# echo 1>&2
 
 if [[ "$email" = true ]]; then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')

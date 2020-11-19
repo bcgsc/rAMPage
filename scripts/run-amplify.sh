@@ -121,7 +121,7 @@ echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
-start_sec=$(date '+%s')
+# start_sec=$(date '+%s')
 
 input=$(realpath $1)
 
@@ -260,7 +260,9 @@ while read line; do
 done <$file
 
 header=$(head -n1 $outdir/AMPlify_results.tsv)
+
 input_count=$(grep -c '^>' $input || true)
+
 echo "Input sequences: $input" 1>&2
 echo -e "Number of input sequences: $(printf "%'d" $input_count)\n" 1>&2
 
@@ -296,6 +298,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count=$(grep -c '^>' ${outfile_nr} || true)
+
 {
 	echo "Output: ${outfile_nr}"
 	echo "Number of unique AMPs: $(printf "%'d" $count)"
@@ -333,6 +336,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_conf=$(grep -c '^>' ${outfile_conf_nr} || true)
+
 {
 	echo "Output: ${outfile_conf_nr}"
 	echo "Number of high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf})"
@@ -370,6 +374,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_short=$(grep -c '^>' ${outfile_short_nr} || true)
+
 {
 	echo "Output: ${outfile_short_nr}"
 	echo "Number of short (length <= $length) unique AMPs: $(printf "%'d" ${count_short})"
@@ -406,6 +411,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_charge=$(grep -c '^>' ${outfile_charge_nr} || true)
+
 {
 	echo "Output: ${outfile_charge_nr}"
 	echo "Number of positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_charge})"
@@ -443,6 +449,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_conf_charge=$(grep -c '^>' ${outfile_conf_charge_nr} || true)
+
 {
 	echo "Output: ${outfile_conf_charge_nr}"
 	echo "Number of confident (score >= $confidence) and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_conf_charge})"
@@ -480,6 +487,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_conf_short=$(grep -c '^>' ${outfile_conf_short_nr} || true)
+
 {
 	echo "Output: ${outfile_conf_short_nr}"
 	echo "Number of short (length <= $length) and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short})"
@@ -517,6 +525,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_short_charge=$(grep -c '^>' ${outfile_short_charge_nr} || true)
+
 {
 	echo "Output: ${outfile_short_charge_nr}"
 	echo "Number of short (length <= $length) and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_short_charge})"
@@ -554,6 +563,7 @@ echo "SUMMARY" 1>&2
 print_line
 
 count_conf_short_charge=$(grep -c '^>' ${outfile_conf_short_charge_nr} || true)
+
 {
 	echo "Output: ${outfile_conf_short_charge_nr}"
 	echo "Number of positive (charge >= $charge), short (length <= $length), and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short_charge})"
@@ -626,8 +636,8 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-end_sec=$(date '+%s')
+# end_sec=$(date '+%s')
 
-$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-echo 1>&2
+# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
+# echo 1>&2
 echo "STATUS: complete." 1>&2

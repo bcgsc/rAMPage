@@ -94,7 +94,7 @@ rm -f $outdir/TRANSLATION.DONE
 echo -e "PATH=$PATH\n" 1>&2
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
-start_sec=$(date '+%s')
+# start_sec=$(date '+%s')
 
 input=$(realpath $1)
 
@@ -167,7 +167,7 @@ if [[ "$default_name" != "$outdir" ]]; then
 		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
 	fi
 fi
-end_sec=$(date '+%s')
-$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-echo 1>&2
+# end_sec=$(date '+%s')
+# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
+# echo 1>&2
 echo "STATUS: complete." 1>&2

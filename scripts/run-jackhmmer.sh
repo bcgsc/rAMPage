@@ -127,7 +127,7 @@ rm -f $outdir/SEQUENCES_NR.FAIL
 # 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
-start_sec=$(date '+%s')
+# start_sec=$(date '+%s')
 
 logfile="$outdir/jackhmmer.log"
 echo -e "PATH=$PATH\n" | tee $logfile 1>&2
@@ -244,9 +244,9 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-end_sec=$(date '+%s')
-$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-echo 1>&2
+# end_sec=$(date '+%s')
+# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
+# echo 1>&2
 
 if [[ "$email" = true ]]; then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')

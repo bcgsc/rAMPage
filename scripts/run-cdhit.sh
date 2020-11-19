@@ -32,66 +32,67 @@ threads=2
 similarity=0.90
 output=""
 verbose=false
-while getopts :ho:s:t:v opt
-do
+while getopts :ho:s:t:v opt; do
 	case $opt in
-		h) get_help;;
-		o) output="$(realpath $OPTARG)";;
-		s) similarity="$OPTARG";;
-		t) threads="$OPTARG";;
-		v) verbose=true;;
-		\?) echo "ERROR: Invalid option: -$OPTARG" 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help;;
+	h) get_help ;;
+	o) output="$(realpath $OPTARG)" ;;
+	s) similarity="$OPTARG" ;;
+	t) threads="$OPTARG" ;;
+	v) verbose=true ;;
+	\?)
+		echo "ERROR: Invalid option: -$OPTARG" 1>&2
+		printf '%.0s=' $(seq $(tput cols)) 1>&2
+		echo 1>&2
+		get_help
+		;;
 	esac
 done
 
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [[ "$#" -eq 0 ]]
-then
+if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
-if [[ "$#" -ne 1 ]]
-then
-	echo "ERROR: Incorrect number of arguments." 1>&2; printf '%.0s=' $(seq $(tput cols)) 1>&2; echo 1>&2; get_help;
+if [[ "$#" -ne 1 ]]; then
+	echo "ERROR: Incorrect number of arguments." 1>&2
+	printf '%.0s=' $(seq $(tput cols)) 1>&2
+	echo 1>&2
+	get_help
 fi
 
 input=$(realpath $1)
 
-if [[ -z "$output" ]]
-then
+if [[ -z "$output" ]]; then
 	output=${input/.faa/.nr.faa}
 fi
 outdir=$(dirname $output)
-if [[ "$verbose" = true ]]
-then
+if [[ "$verbose" = true ]]; then
 	echo -e "PATH=$PATH\n" 1>&2
 
 	echo "HOSTNAME: $(hostname)" 1>&2
 	echo -e "START: $(date)\n" 1>&2
-	start_sec=$(date '+%s')
-fi 
+#	start_sec=$(date '+%s')
+fi
 
 echo "PROGRAM: $(command -v $RUN_CDHIT)" 1>&2
-cdhit_version=$( { $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}' | tr -d '=' ; } || true ) 
+cdhit_version=$({ $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}' | tr -d '='; } || true)
 echo -e "VERSION: $cdhit_version\n" 1>&2
 
 log=$outdir/cdhit.log
 
-echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc )% global sequence similarity..." 1>&2
+echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc)% global sequence similarity..." 1>&2
 echo -e "COMMAND: $RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>> $log\n" 1>&2
-$RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>> $log
+$RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>>$log
 
-if [[ "$verbose" = true ]]
-then
+if [[ "$verbose" = true ]]; then
 	echo -e "END: $(date)\n" 1>&2
-	end_sec=$(date '+%s')
+	#	end_sec=$(date '+%s')
 
-	if [[ "$start_sec" != "$end_sec" ]]
-	then
-		$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-		echo 1>&2
-	fi
+	# 	if [[ "$start_sec" != "$end_sec" ]]; then
+	# 		$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
+	# 		echo 1>&2
+	# 	fi
 
 	echo "STATUS: complete." 1>&2
 fi

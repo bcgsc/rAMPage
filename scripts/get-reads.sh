@@ -101,7 +101,7 @@ rm -f $outdir/READS.FAIL
 # 8 - print environment details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
-start_sec=$(date '+%s')
+# start_sec=$(date '+%s')
 
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
 echo -e "PATH=$PATH\n" 1>&2
@@ -193,10 +193,10 @@ else
 fi
 
 echo -e "\nEND: $(date)\n" 1>&2
-end_sec=$(date '+%s')
+# end_sec=$(date '+%s')
 
-$ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-echo 1>&2
+# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
+# echo 1>&2
 touch $outdir/READS.DONE
 
 org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
