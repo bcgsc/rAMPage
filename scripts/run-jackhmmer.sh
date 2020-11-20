@@ -6,6 +6,7 @@ PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tRuns jackhmmer from the HMMER package to find AMPs via homology search of protein sequences.\n \
@@ -42,9 +43,14 @@ function get_help() {
 		\t-e <E-value>\tE-value threshold\t(default = 1e-3)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\t CD-HIT global sequence similarity cut-off (default = 0.90)\n \
+		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
 		" | column -s$'\t' -t -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/homology /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
+		" | column -s $'\t' -t -L
 	} 1>&2
 
 	exit 1

@@ -5,30 +5,31 @@ PROGRAM=$(basename $0)
 # 1 - get_help function
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tUses ProP (and SignalP, if available) to predict prepropeptide cleavage sites, and obtain the mature peptide sequence.\n \
 		\n \
 		\tOUTPUT:\n \
-		\t-------\n \ 
+		\t-------\n \
 		\t  - cleaved.mature.len.faa\n \
 		\t  - CLEAVE.DONE or CLEAVE.FAIL\n \
 		\t  - CLEAVE_LEN.DONE or CLEAVE_LEN.FAIL\n \
 		\n \
 		\tEXIT CODES:\n \
-		\t-----------\n \ 
+		\t-----------\n \
 		\t  - 0: successfully completed\n \
 		\t  - 1: general error\n \
 		\t  - 2: SignalP not found\n \
 		\t  - 3: cleavage failed\n \
 		\t  - 4: length filtering failed\n \
-		\n \ 
+		\n \
 		\tFor more information on ProP: https://services.healthtech.dtu.dk/service.php?ProP-1.0\n \
 		" | column -s $'\t' -t -L
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
 		" | column -s $'\t' -t -L
 
 		echo "OPTION(S):"
@@ -41,7 +42,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/output/directory /path/to/input/fasta\n \
+		\t$PROGRAM -o /path/to/cleavage /path/to/homology/jackhmmer.nr.faa\n \
 		" | column -s $'\t' -t -L
 	} 1>&2
 	exit 1

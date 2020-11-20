@@ -5,6 +5,7 @@ PROGRAM=$(basename $0)
 # 1 - get_help function
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tQuantifies the expression of each transcript using Salmon and filters out lowly expressed transcripts specified by the given TPM cut-off.\n \
@@ -25,7 +26,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> -r <reference transcriptome> <readslist TXT file>\n \
+		\t$PROGRAM [OPTIONS] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
         " | column -s$'\t' -t -L
 
 		echo "OPTION(S):"
@@ -34,9 +35,14 @@ function get_help() {
 		\t-c <dbl>\tTPM cut-off\t(default = 0.50)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-r <FASTA file>\treference transcriptome\t(required)\n \
+		\t-r <FASTA file>\treference transcriptome (assembly)\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
         " | column -s$'\t' -t -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/filtering -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/reads.txt\n \
+		" | column -s $'\t' -t -L
 	} 1>&2
 	exit 1
 }

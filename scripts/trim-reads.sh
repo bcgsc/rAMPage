@@ -7,6 +7,7 @@ PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tPreprocesses and trims reads with fastp.\n \
@@ -41,7 +42,12 @@ function get_help() {
 		\t-o <directory>\toutput directory for trimmed reads\t(required)\n \
 		\t-p\ttrim each run in parallel\n \
 		\t-t <int>\tnumber of threads\t(default = 4)\n \
-    " | column -t -s$'\t' -L
+    	" | column -t -s$'\t' -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -i /path/to/raw_reads -o /path/to/trimmed_reads\n \
+		" | column -t -s$'\t' -L
 	} 1>&2
 	exit 1
 }

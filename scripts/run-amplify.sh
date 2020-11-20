@@ -6,6 +6,7 @@ PROGRAM=$(basename $0)
 # 1 - get_help function
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tPredicts AMP vs. non-AMP from the peptide sequence using AMPlify.\n \
@@ -26,7 +27,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
 		" | column -s $'\t' -t -L
 
 		echo "OPTION(S):"
@@ -38,6 +39,11 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tAMPlify score cut-off (i.e. keep score(sequences) >= DBL)\t(default = 0.99)\n \
 		\t-t <INT>\tnumber of threads\t(default = 8)\n \
+		" | column -s $'\t' -t -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa\n \
 		" | column -s $'\t' -t -L
 	} 1>&2
 	exit 1

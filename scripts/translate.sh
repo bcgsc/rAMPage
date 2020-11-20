@@ -5,6 +5,7 @@ PROGRAM=$(basename $0)
 # 1 - get_help function
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tTakes transcripts and translates them into protein sequences.\n \
@@ -34,6 +35,11 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <DIRECTORY>\toutput directory\t(required)\n \
         " | column -s $'\t' -t -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/translation /path/to/filtering/rnabloom.transcripts.filtered.fa\n \
+		" | column -s $'\t' -t -L
 	} 1>&2
 	exit 1
 }

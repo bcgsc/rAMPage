@@ -7,6 +7,7 @@ PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tUses RNA-Bloom to assembly trimmed reads into transcripts. Strandedness of the library is determined by the *.LIB file in the working directory. If a reference-guided assembly is desired, please place the reference transcriptome(s) (e.g. *.fna) in the working directory. In this case, the working directory is inferred to be the parent directory of your specified output directory.\n \
@@ -40,12 +41,6 @@ function get_help() {
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
         " | column -s$'\t' -t -L
 
-		# EXAMPLE
-		echo "EXAMPLE(S):"
-		echo -e "\
-		\t$PROGRAM -m 900G -t 48 readslist.txt\n \
-        " | column -s$'\t' -t -L
-
 		# reads list
 		echo "EXAMPLE READS LIST (NONSTRANDED):"
 		echo -e "\
@@ -63,6 +58,12 @@ function get_help() {
 		\t...     ...                    ...\n \
 		\t...     ...                    ...\n \
 		\t...     ...                    ...\n \
+        " | column -s$'\t' -t -L
+
+		# EXAMPLE
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/assembly /path/to/trimmed_reads/reads.txt\n \
         " | column -s$'\t' -t -L
 	} 1>&2
 	exit 1

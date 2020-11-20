@@ -5,6 +5,7 @@ PROGRAM=$(basename $0)
 # 1 - get_help function
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tGets reads for one single organism, using fasterq-dump.\n \
@@ -37,7 +38,12 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-p\tdownload each run in parallel\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
-    " | column -s$'\t' -t -L
+    	" | column -s$'\t' -t -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/raw_reads /path/to/sra/runs.txt\n \
+		" | column -s$'\t' -t -L
 	} 1>&2
 	exit 1
 }

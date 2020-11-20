@@ -6,6 +6,7 @@ PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tMakes the pooled reads lists for RNA-Bloom. Filters given TSV for relevant information.\n \
@@ -38,8 +39,8 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -d /path/to/trimmed_reads /path/to/metadata.tsv\n \
-    " | column -s$'\t' -t -L
+		\t$PROGRAM -d /path/to/trimmed_reads /path/to/sra/metadata.tsv\n \
+    	" | column -s$'\t' -t -L
 	} 1>&2
 
 	exit 1

@@ -6,6 +6,7 @@ PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tGets the SRA RUN (i.e. SRR) accessions using wget.\n \
@@ -26,7 +27,7 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM -o <output directory> <SRA accessions TXT file>\n \
+		\t$PROGRAM [OPTIONS] -o <output directory> <SRA accessions TXT file>\n \
         " | column -s$'\t' -t -L
 
 		# OPTIONS
@@ -34,7 +35,12 @@ function get_help() {
 		echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-    " | column -s$'\t' -t -L
+		" | column -s$'\t' -t -L
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/sra /path/to/accessions.txt\n \
+		" | column -s $'\t' -t -L
 	} 1>&2
 
 	exit 1
