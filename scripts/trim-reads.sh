@@ -122,6 +122,13 @@ else
 	print_error "*.END file not found. Please check that the reads have been downloaded properly."
 fi
 
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
+
 echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
 if [[ "$parallel" = true ]]; then
@@ -238,13 +245,11 @@ echo -e "\nEND: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
+echo "STATUS: DONE." 1>&2
 touch $outdir/TRIM.DONE
+
 if [[ "$email" = true ]]; then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	echo "$outdir" | mail -s "Finished trimming reads for $org" "$address"
-	echo "Email alert sent to $address." 1>&2
+	echo -e "\nEmail alert sent to $address." 1>&2
 fi
-echo "STATUS: complete." 1>&2
-# EXAMPLE
-# Subject: Finished trimming reads for SPECIES TISSUE
-# Message: $ROOT_DIR/ORDER/SPECIES/TISSUE/trimmed_reads

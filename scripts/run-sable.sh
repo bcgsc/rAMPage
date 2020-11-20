@@ -69,8 +69,8 @@ echo -e "START: $(date)" 1>&2
 echo "PROGRAM: $(command -v $RUN_SABLE)"
 echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
 
-echo "PROGRAM: $(command -v $BLAST_BIN/psiblast)" 1>&2
-echo -e "VERSION: $($BLAST_BIN/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
+echo "PROGRAM: $(command -v $BLAST_DIR/psiblast)" 1>&2
+echo -e "VERSION: $($BLAST_DIR/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
 
 fasta=$(realpath $1)
 
@@ -95,6 +95,8 @@ fi
 if [[ -s $outdir/OUT_SABLE_graph ]]; then
 	echo -e "Parsing SABLE TXT output into a TSV format...\n" 1>&2
 	$ROOT_DIR/scripts/process-sable.sh $outdir/OUT_SABLE_graph &>>$outdir/sable.log
+
+	# combine AMPlify score with this file
 else
 	touch $outdir/SABLE.FAIL
 

@@ -168,7 +168,7 @@ echo "PROGRAM: $(command -v $RUN_SABLE)"
 echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
 
 sed -i "s|export SABLE_DIR=\".\+\"|export SABLE_DIR=\"$sable_dir\"|" $RUN_SABLE
-sed -i "s|export BLAST_DIR=\".\+\"|export BLAST_DIR=\"$BLAST_BIN\"|" $RUN_SABLE
+sed -i "s|export BLAST_DIR=\".\+\"|export BLAST_DIR=\"$BLAST_DIR\"|" $RUN_SABLE
 sed -i "s|^export PRIMARY_DATABASE=\".\+\"|export PRIMARY_DATABASE=\"$sable_dir/GI_indexes/pfam_index\"|" $RUN_SABLE
 sed -i "s|export SECONDARY_DATABASE=\".\+\"|export SECONDARY_DATABASE=\"$sable_dir/GI_indexes/swissprot_index\"|" $RUN_SABLE
 sed -i "s|mkdir \$PBS_JOBID|mkdir -p \$PBS_JOBID|" $RUN_SABLE
@@ -182,12 +182,12 @@ if [[ "$(grep -c THREADS $sable_dir/sable.pl)" -eq 0 ]]; then
 fi
 
 # makeblastdb
-echo "PROGRAM: $(command -v $BLAST_BIN/makeblastdb)" 1>&2
-echo -e "VERSION: $($BLAST_BIN/makeblastdb -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
+echo "PROGRAM: $(command -v $BLAST_DIR/makeblastdb)" 1>&2
+echo -e "VERSION: $($BLAST_DIR/makeblastdb -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
 
 echo "Configuring NR database for SABLE..." 1>&2
-echo -e "COMMAND: $BLAST_BIN/makeblastdb -dbtype prot -in $outdir/nr.fasta -out $outdir/nr -logfile $outdir/makeblastdb -parse_seqids\n" 1>&2
-$BLAST_BIN/makeblastdb -dbtype prot -in $outdir/nr.fasta -out $outdir/nr -logfile $outdir/nr.log -parse_seqids
+echo -e "COMMAND: $BLAST_DIR/makeblastdb -dbtype prot -in $outdir/nr.fasta -out $outdir/nr -logfile $outdir/makeblastdb -parse_seqids\n" 1>&2
+$BLAST_DIR/makeblastdb -dbtype prot -in $outdir/nr.fasta -out $outdir/nr -logfile $outdir/nr.log -parse_seqids
 
 if [[ "$(ls $outdir/nr.*.pni 2>/dev/null | wc -l)" -gt 0 ]]; then
 	touch $outdir/SABLE_CONFIG.DONE

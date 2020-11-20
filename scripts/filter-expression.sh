@@ -128,6 +128,13 @@ echo -e "START: $(date)\n" 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
 
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
+
 readslist=$(realpath $1)
 
 echo "PROGRAM: $(command -v $RUN_SALMON)" 1>&2
@@ -227,11 +234,11 @@ echo -e "END: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
+echo "STATUS: DONE." 1>&2
+touch $outdir/FILTER.DONE
+
 if [[ "$email" = true ]]; then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	echo "$outdir" | mail -s "Finished expression filtering for $org" $address
-	echo "Email alert sent to $address." 1>&2
+	echo -e "\nEmail alert sent to $address." 1>&2
 fi
-
-echo "STATUS: complete." 1>&2
-touch $outdir/FILTER.DONE

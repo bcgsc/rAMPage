@@ -34,6 +34,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail alert\n \
+		\t-c\tallow consecutive (i.e. adjacent) segments to be recombined\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		" | column -s $'\t' -t -L
@@ -68,13 +69,16 @@ fi
 # default parameters
 email=false
 # similarity=0.90
-
+consecutive=false
 # 4 - read options
-while getopts :a:ho: opt; do
+while getopts :a:cho: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
+		;;
+	c)
+		consecutive=true
 		;;
 	h) get_help ;;
 	o)
@@ -114,6 +118,13 @@ echo -e "START: $(date)\n" 1>&2
 # start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
+
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
 
 infile=$(realpath $1)
 tempfile=$outdir/prop.out
@@ -277,13 +288,16 @@ echo -e "\
 " 1>&2
 
 echo "Combining mature_cleaved_seq.faa and recombined_seq.faa into cleaved.mature.faa..." 1>&2
-cat $outdir/mature_cleaved_seq.faa $outdir/recombined_seq.faa >$outdir/cleaved.mature.faa
+
+if [[ "$consecutive" = true ]]; then
+	cat $outdir/mature_cleaved_seq.faa $outdir/recombined_seq.faa $outdir/adjacent_seq.faa >$outdir/cleaved.mature.faa
+else
+	cat $outdir/mature_cleaved_seq.faa $outdir/recombined_seq.faa >$outdir/cleaved.mature.faa
+fi
 
 outfile=$outdir/cleaved.mature.faa
 outfile_len=$outdir/cleaved.mature.len.faa
-if [[ -s "$outfile" ]]; then
-	touch $outdir/CLEAVE.DONE
-else
+if [[ ! -s "$outfile" ]]; then
 	touch $outdir/CLEAVE.FAIL
 	echo "ERROR: Cleaving output file $outfile does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
@@ -294,6 +308,7 @@ else
 	exit 3
 fi
 
+touch $outdir/CLEAVE.DONE
 echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
@@ -308,9 +323,7 @@ echo -e "Number of sequences remaining: $(grep -c '^>' $outfile_len || true)\n" 
 
 echo -e "Output: $outfile_len\n" 1>&2
 
-if [[ -s $outfile_len ]]; then
-	touch $outdir/CLEAVE_LEN.DONE
-else
+if [[ ! -s $outfile_len ]]; then
 	touch $outdir/CLEAVE_LEN.FAIL
 	echo "ERROR: Length filtering output file $outfile_len does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
@@ -351,10 +364,11 @@ echo -e "END: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
+touch $outdir/CLEAVE_LEN.DONE
+echo "STATUS: DONE." 1>&2
+
 if [[ "$email" = true ]]; then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	echo "$outdir" | mail -s "Finished cleaving peptides for $org" $address
-	echo "Email alert sent to $address." 1>&2
+	echo -e "\nEmail alert sent to $address." 1>&2
 fi
-
-echo "STATUS: complete." 1>&2

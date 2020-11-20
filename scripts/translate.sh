@@ -91,10 +91,18 @@ rm -f $outdir/TRANSLATION.FAIL
 rm -f $outdir/TRANSLATION.DONE
 
 # 8 - print env details
-echo -e "PATH=$PATH\n" 1>&2
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 # start_sec=$(date '+%s')
+
+echo -e "PATH=$PATH\n" 1>&2
+
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
 
 input=$(realpath $1)
 
@@ -128,11 +136,6 @@ if [[ -s "rnabloom.transcripts.filtered.transdecoder.faa" ]]; then
 	num_prot=$(grep -c '^>' rnabloom.transcripts.filtered.transdecoder.faa)
 	echo "Number of transcripts: $(printf "%'d" $num_transcripts)" 1>&2
 	echo -e "Number of valid ORFs: $(printf "%'d" $num_prot)" 1>&2
-	touch $outdir/TRANSLATION.DONE
-	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Finished translating transcripts for $org with TransDecoder" $address
-	fi
 else
 	touch $outdir/TRANSLATION.FAIL
 	if [[ "$email" = true ]]; then
@@ -143,7 +146,9 @@ else
 	echo "ERROR: TransDecoder output file $outdir/rnabloom.transcripts.filtered.transdecoder.faa does not exist or is empty." 1>&2
 	exit 2
 fi
+
 cd $ROOT_DIR
+
 default_name="$(realpath -s $(dirname $outdir)/translation)"
 if [[ "$default_name" != "$outdir" ]]; then
 	count=1
@@ -167,7 +172,13 @@ if [[ "$default_name" != "$outdir" ]]; then
 		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
 	fi
 fi
-# end_sec=$(date '+%s')
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-# echo 1>&2
-echo "STATUS: complete." 1>&2
+echo -e "END: $(date)\n" 1>&2
+
+echo "STATUS: DONE." 1>&2
+touch $outdir/TRANSLATION.DONE
+
+if [[ "$email" = true ]]; then
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	echo "$outdir" | mail -s "Finished translating transcripts for $org with TransDecoder" $address
+	echo -e "\nEmail alert sent to ${address}." 1>&2
+fi

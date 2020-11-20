@@ -141,7 +141,14 @@ ntcard_dir=$NTCARD_DIR
 export PATH=${minimap2_dir}:${ntcard_dir}:${PATH}
 
 # check minimap2 and ntCard
+
 echo -e "PATH=$PATH\n"
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
 
 echo "Checking minimap2..." 1>&2
 bin=$(command -v minimap2 || true)
@@ -348,13 +355,10 @@ echo -e "END: $(date)\n" 1>&2
 # echo 1>&2
 
 touch $outdir/ASSEMBLY.DONE
+echo "STATUS: DONE." 1>&2
+
 org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 if [[ "$email" = true ]]; then
 	echo "$outdir" | mail -s "Finished assembling $org" "$address"
-	echo "Email alert sent to $address." 1>&2
+	echo -e "\nEmail alert sent to $address." 1>&2
 fi
-echo "STATUS: complete." 1>&2
-
-# EXAMPLE
-# Subject: Finished assembling SPECIES TISSUE
-# Message: $ROOT_DIR/ORDER/SPECIES/TISSUE/assembly

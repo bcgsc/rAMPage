@@ -14,6 +14,7 @@ function get_help() {
 		\t-------\n \
 		\t  - jackhmmer.nr.faa\n \
 		\t  - HOMOLOGY.DONE or HOMOLOGY.FAIL\n \
+		\t  - JACKHMMER.DONE or JACKHMMER.FAIL\n \
 		\t  - SEQUENCES.DONE or SEQUENCES.FAIL\n \
 		\t  - SEQUENCES_NR.DONE or SEQUENCES_NR.FAIL\n \
 		\n \
@@ -119,6 +120,8 @@ fi
 # 7 - remove status files
 rm -f $outdir/HOMOLOGY.DONE
 rm -f $outdir/HOMOLOGY.FAIL
+rm -f $outdir/JACKHMMER.FAIL
+rm -f $outdir/JACKHMMER.DONE
 rm -f $outdir/SEQUENCES.DONE
 rm -f $outdir/SEQEUNCES.FAIL
 rm -f $outdir/SEQUENCES_NR.DONE
@@ -132,6 +135,13 @@ echo -e "START: $(date)\n" 1>&2
 logfile="$outdir/jackhmmer.log"
 echo -e "PATH=$PATH\n" | tee $logfile 1>&2
 
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
+
 infile=$(realpath $1)
 
 echo "Running jackhmmer on ${infile}..." | tee -a $logfile 1>&2
@@ -143,6 +153,7 @@ $RUN_JACKHMMER -o $outdir/jackhmmer.out --tblout $outdir/jackhmmer.tbl --cpu $th
 
 if [[ ! -s $outdir/jackhmmer.tbl ]]; then
 	echo "ERROR: jackhmmer output file $outdir/jackhmmer.tbl does not exist or is empty." 1>&2
+	touch $outdir/JACKHMMER.FAIL
 	touch $outdir/HOMOLOGY.FAIL
 
 	if [[ "$email" = true ]]; then
@@ -155,7 +166,7 @@ if [[ ! -s $outdir/jackhmmer.tbl ]]; then
 fi
 
 echo -e "Finished running jackhmmer on $infile!\n" 1>&2
-touch $outdir/HOMOLOGY.DONE
+touch $outdir/JACKHMMER.DONE
 
 if [[ -s $outdir/jackhmmer.tbl ]]; then
 	echo "Running seqtk subseq on $outdir/jackhmmer.tbl..." 1>&2
@@ -168,6 +179,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		if [[ ! -f $outdir/jackhmmer.faa ]]; then
 			echo "ERROR: seqtk subseq output file $outdir/jackhmmer.faa does not exist." 1>&2
 			touch $outdir/SEQUENCES.FAIL
+			touch $outdir/HOMOLOGY.FAIL
 			if [[ "$email" = true ]]; then
 				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 				echo "$outdir" | mail -s "Failed to fetch sequences after homology search on $org" $address
@@ -177,7 +189,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		else
 			echo "ERROR: seqtk subseq output file $outdir/jackhmmer.faa is empty." 1>&2
 			touch $outdir/SEQUENCES.FAIL
-
+			touch $outdir/HOMOLOGY.FAIL
 			if [[ "$email" = true ]]; then
 				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 				echo "$outdir" | mail -s "No sequences remaining after homology search on $org" $address
@@ -201,6 +213,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		echo -e "Number of AMPS found (non-redundant): $(printf "%'d" $count)\n" 1>&2
 	else
 		touch $outdir/SEQUENCES_NR.FAIL
+		touch $outdir/HOMOLOGY.FAIL
 
 		if [[ "$email" = true ]]; then
 			org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
@@ -212,6 +225,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 	fi
 else
 	echo "ERROR: jackhmmer output file $outdir/jackhmmer.tbl is empty." 1>&2
+	touch $outdir/JACKHMMER.FAIL
 	touch $outdir/HOMOLOGY.FAIL
 
 	if [[ "$email" = true ]]; then
@@ -248,9 +262,11 @@ echo -e "END: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
+touch $outdir/HOMOLOGY.DONE
+echo "STATUS: DONE." 1>&2
+
 if [[ "$email" = true ]]; then
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	echo "$outdir" | mail -s "Finished homology search on $org" $address
+	echo -e "\nEmail alert sent to ${address}." 1>&2
 fi
-
-echo "STATUS: complete." 1>&2

@@ -123,6 +123,13 @@ echo -e "START: $(date)\n" 1>&2
 echo -e "PATH=$PATH\n" 1>&2
 # start_sec=$(date '+%s')
 
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
+
 input=$(realpath $1)
 
 if [[ "$input" != *.faa ]]; then
@@ -607,14 +614,6 @@ echo -e "\
 print_line
 echo 1>&2
 
-touch $outdir/AMPLIFY.DONE
-
-if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
-	echo "Email alert sent to $address." 1>&2
-fi
-
 default_name="$(realpath -s $(dirname $outdir)/amplify)"
 if [[ "$default_name" != "$outdir" ]]; then
 	if [[ -d "$default_name" ]]; then
@@ -636,8 +635,15 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
+echo "STATUS: DONE." 1>&2
+touch $outdir/AMPLIFY.DONE
+
+if [[ "$email" = true ]]; then
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
+	echo "Email alert sent to $address." 1>&2
+fi
 # end_sec=$(date '+%s')
 
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
-echo "STATUS: complete." 1>&2

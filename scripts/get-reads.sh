@@ -60,14 +60,14 @@ fi
 
 # default parameters
 threads=6
-email=""
+email=false
 parallel=false
 # 4 - read options
 while getopts :a:ho:pt: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
-		email="-a $address"
+		email=true
 		;;
 	h) get_help ;;
 	o)
@@ -106,6 +106,13 @@ echo -e "START: $(date)" 1>&2
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
 echo -e "PATH=$PATH\n" 1>&2
 
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
+
 sra=$(realpath $1)
 
 echo "PROGRAM: $(command -v $FASTERQ_DUMP)" 1>&2
@@ -118,7 +125,11 @@ if [[ "$parallel" = true ]]; then
 	while read accession; do
 		# assume that the FASTQs do not exist due to timestamping of the folders
 		echo "Initiating download of ${accession}..." 1>&2
-		$ROOT_DIR/scripts/get-accession.sh $email -t $threads -o $outdir $accession &
+		if [[ "$email" = true ]]; then
+			$ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession &
+		else
+			$ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession &
+		fi
 	done <$sra
 
 	# wait for all child processes to finish
@@ -127,7 +138,11 @@ else
 	while read accession; do
 		# assume that the FASTQs do not exist due to timestamping of the folders
 		echo "Initiating download of ${accession}..." 1>&2
-		$ROOT_DIR/scripts/get-accession.sh $email -t $threads -o $outdir $accession
+		if [[ "$email" = true ]]; then
+			$ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession
+		else
+			$ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession
+		fi
 	done <$sra
 fi
 
@@ -168,12 +183,8 @@ done <$sra
 # if fail = true, then write 'FAIL' file.
 if [[ "$fail" = true ]]; then
 	touch $outdir/READS.FAIL
-	if [[ -f "$outdir/READS.DONE" ]]; then
-		rm $outdir/READS.DONE
-	fi
-
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	if [[ ! -z $email ]]; then
+	if [[ "$email" = true ]]; then
 		echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed downloading reads for $org" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -198,14 +209,10 @@ echo -e "\nEND: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 touch $outdir/READS.DONE
+echo "STATUS: DONE." 1>&2
 
 org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-if [[ -n $email ]]; then
+if [[ "$email" = true ]]; then
 	echo "$outdir" | mail -s "Finished downloading reads for $org" "$address"
-	echo "Email alert sent to $address." 1>&2
+	echo -e "\nEmail alert sent to $address." 1>&2
 fi
-echo "STATUS: complete." 1>&2
-
-# Example
-# Subject: Finished downloading reads for SPECIES TISSUE
-# Message: $ROOT_DIR/ORDER/SPECIES/TISSUE/raw_reads
