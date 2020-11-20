@@ -48,29 +48,42 @@ A 3-column TSV file:
 |ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|
 
 ```
-anura/xlaevis/liver	SRX847156 SRX847157	nonstranded
-hymenoptera/nvitripennis/venom_ovary	SRP067692	stranded
+anura/ptoftae/skin-liver        SRX5102741-46 SRX5102761-62     nonstranded
+hymenoptera/mgulosa/venom       SRX3556750      stranded
 ```
 
-## Usage
+See `test_accesions.tsv` for an example.
 
-```
-$ cd rAMPage
-$ make
-```
+## Setup
 
-## Directory Structure
-
-
-## Installation
-
-1. Edit the paths in `scripts/config.sh`
-1. Run `scripts/config.sh`
+1. Download and install the dependencies, into `src`.
+1. Update _all_ the paths in `scripts/config.sh` to reflect dependencies in `src` and dependencies pre-installed elsewhere.
+1. Source `scripts/config.sh`.
 	```
 	$ source scripts/config.sh
 	```
 
-## Implementation
+## Usage
+
+In the repository directory, run:
+
+```
+$ make
+```
+
+To allow certain processes to run in parallel in each dataset, run:
+
+```
+$ make PARALLEL=true
+```
+
+To receive email alerts as each dataset goes through the pipeline, run:
+
+```
+$ make EMAIL=user@example.com
+```
+
+## Directory Structure
 
 
 ## Citation
