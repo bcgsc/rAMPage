@@ -52,7 +52,7 @@ anura/ptoftae/skin-liver        SRX5102741-46 SRX5102761-62     nonstranded
 hymenoptera/mgulosa/venom       SRX3556750      stranded
 ```
 
-See `test_accesions.tsv` for an example.
+See `test_accessions.tsv` for an example.
 
 ## Setup
 
