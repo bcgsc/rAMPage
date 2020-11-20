@@ -41,7 +41,7 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 ## Input
 
-A 3-column TSV file:
+A 3-column TSV file named `accessions.tsv`:
 
 | PATH | SRA ACCESSION(S) | STRANDEDNESS |
 |------|------------------|--------------|
@@ -62,6 +62,7 @@ See `test_accessions.tsv` for an example.
 	```
 	$ source scripts/config.sh
 	```
+1. Create a 3-column TSV file as specified by the `Input` section above, called `accessions.tsv`.
 
 ## Usage
 
@@ -70,6 +71,8 @@ In the repository directory, run:
 ```
 $ make
 ```
+
+By default, the input TSV file expected is `accessions.tsv`. However, other TSV files can be specified, such as the `test_accessions.tsv` file used to test the pipeline.
 
 To test the pipeline, run:
 
