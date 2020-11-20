@@ -59,8 +59,8 @@ See `test_accessions.tsv` for an example.
 1. Download and install the dependencies, into `src`.
 1. Update _all_ the paths in `scripts/config.sh` to reflect dependencies in `src` and dependencies pre-installed elsewhere.
 1. Source `scripts/config.sh`.
-	```
-	$ source scripts/config.sh
+	```shell
+	source scripts/config.sh
 	```
 1. Create a 3-column TSV file as specified by the `Input` section above, called `accessions.tsv`.
 
@@ -68,27 +68,27 @@ See `test_accessions.tsv` for an example.
 
 In the repository directory, run:
 
-```
-$ make
+```shell
+make
 ```
 
 By default, the input TSV file expected is `accessions.tsv`. However, other TSV files can be specified, such as the `test_accessions.tsv` file used to test the pipeline.
 
 To test the pipeline, run:
 
-```
-$ make TSV=test_accessions.tsv
+```shell
+make TSV=test_accessions.tsv
 ```
 
 To allow certain processes to run in parallel in each dataset, run:
 
-```
-$ make PARALLEL=true
+```shell
+make PARALLEL=true
 ```
 
 To receive email alerts as each dataset goes through the pipeline, run:
 
-```
+```shell
 $ make EMAIL=user@example.com
 ```
 
