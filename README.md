@@ -2,6 +2,18 @@
 
 Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
+## Quick Links
+
+1. [Dependencies](#dependencies)
+	1. [Basics](#basics)
+	1. [Tools](#tools)
+	1. [Optional](#optional)
+1. [Input](#input)
+1. [Setup](#setup)
+1. [Usage](#usage)
+1. [Directory Structure](#directory-structure)
+1. [Citation](#citation)
+
 ## Dependencies
 
 ### Basics
@@ -52,17 +64,17 @@ anura/ptoftae/skin-liver        SRX5102741-46 SRX5102761-62     nonstranded
 hymenoptera/mgulosa/venom       SRX3556750      stranded
 ```
 
-See `test_accessions.tsv` for an example.
+See [`test_accessions.tsv`](test_accessions.tsv) for an example.
 
 ## Setup
 
-1. Download and install the dependencies, into `src`.
-1. Update _all_ the paths in `scripts/config.sh` to reflect dependencies in `src` and dependencies pre-installed elsewhere.
-1. Source `scripts/config.sh`.
+1. Download and install the dependencies, into [`src`](src/).
+1. Update _all_ the paths in [`scripts/config.sh`](scripts/config.sh) to reflect dependencies in [`src`](src/) and dependencies pre-installed elsewhere.
+1. Source [`scripts/config.sh`](scripts/config.sh).
 	```shell
 	source scripts/config.sh
 	```
-1. Create a 3-column TSV file as specified by the `Input` section above, called `accessions.tsv`.
+1. Create a 3-column TSV file as specified by the [Input](#input) section above, called `accessions.tsv`.
 
 ## Usage
 
@@ -89,7 +101,7 @@ make PARALLEL=true
 To receive email alerts as each dataset goes through the pipeline, run:
 
 ```shell
-$ make EMAIL=user@example.com
+make EMAIL=user@example.com
 ```
 
 ## Directory Structure
