@@ -1,4 +1,4 @@
-# rAMPage: Rapid AMP Annotation and Gene Estimation
+# rAMPage: Rapid/Robust AMP Annotation and Gene Estimation
 
 Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
@@ -25,7 +25,7 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 | [fastp](https://github.com/OpenGene/fastp/releases/tag/v0.20.0) | v0.20.0|
 | [RNA-Bloom](https://github.com/bcgsc/RNA-Bloom/releases/tag/v1.3.1) |v1.3.1|
 | [salmon](https://github.com/COMBINE-lab/salmon/releases/tag/v1.3.0) | v1.3.0 |
-|[TransDecoder](https://github.com/TransDecoder/TransDecoder/releases/tag/TransDecoder-v5.5.0) |v5.5.0|
+| [TransDecoder](https://github.com/TransDecoder/TransDecoder/releases/tag/TransDecoder-v5.5.0) |v5.5.0|
 | [HMMER](https://github.com/EddyRivasLab/hmmer/releases/tag/hmmer-3.3.1) |v3.3.1|
 | [cd-hit](https://github.com/weizhongli/cdhit/releases/tag/V4.8.1) | v4.8.1|
 | [SignalP](https://services.healthtech.dtu.dk/services/SignalP-5.0/9-Downloads.php#) | v3.0
@@ -69,6 +69,12 @@ In the repository directory, run:
 
 ```
 $ make
+```
+
+To test the pipeline, run:
+
+```
+$ make TSV=test_accessions.tsv
 ```
 
 To allow certain processes to run in parallel in each dataset, run:
