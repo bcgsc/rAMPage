@@ -1,5 +1,5 @@
-#!/bin/bash
-set -uo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 PROGRAM=$(basename $0)
 
 # 1 - get_help function
@@ -92,32 +92,29 @@ if [[ -f $workdir/PAIRED.END ]]; then
 elif [[ -f $workdir/SINGLE.END ]]; then
 	single=true
 else
-	echo "ERROR: *.END file not found." 1>&2
-	printf '%.0s=' $(seq 1 $(tput cols)) 1>&2
-	echo 1>&2
-	get_help
+	print_error "*.END file not found."
 fi
 
 if [[ "$single" = false ]]; then
-	echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>> $templog\n" | tee $templog >>$logfile
+	echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>> $templog || true\n" | tee $templog >>$logfile
 
-	$RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog
-	code=$?
-	while [[ "$code" -ne 0 || "$(grep -c "ERROR" $templog)" -gt 0 ]]; do
+	$RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog || true
+#	code=$?
+	while [[ "$(grep -c "ERROR" $templog)" -gt 0 ]]; do
 		echo -e "Failed to trim ${run}. Trying again...\n" >>$logfile
-		echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>> $templog\n" >>$templog
-		$RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog
-		code=$?
+		echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>> $templog || true\n" >>$templog
+		$RUN_FASTP --disable_quality_filtering --detect_adapter_for_pe --in1 $indir/${run}_1.fastq.gz --in2 $indir/${run}_2.fastq.gz --out1 $outdir/${run}_1.paired.fastq.gz --out2 $outdir/${run}_2.paired.fastq.gz --unpaired1 $outdir/${run}_1.unpaired.fastq.gz --unpaired2 $outdir/${run}_2.unpaired.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog || true
+#		code=$?
 	done
 else
-	echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &> $templog\n" | tee $templog >>$logfile
-	$RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog
-	code=$?
-	while [[ "$code" -ne 0 || "$(grep -c "ERROR" $templog)" -gt 0 ]]; do
+	echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &> $templog || true\n" | tee $templog >>$logfile
+	$RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog || true
+#	code=$?
+	while [[ "$(grep -c "ERROR" $templog)" -gt 0 ]]; do
 		echo -e "Failed to trim ${run}. Trying again...\n" >>$logfile
-		echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>> $templog\n" >$templog
-		$RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog
-		code=$?
+		echo -e "COMMAND: $RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>> $templog || true\n" >$templog
+		$RUN_FASTP --disable_quality_filtering --in1 $indir/${run}.fastq.gz --out1 $outdir/${run}.fastq.gz --json $outdir/${run}.report.json --html $outdir/${run}.report.html --thread $threads &>>$templog || true
+#		code=$?
 	done
 fi
 

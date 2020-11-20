@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
 
@@ -66,7 +66,8 @@ fi
 infile=$(realpath $1)
 
 outfile=$(dirname $infile)/sable_output.tsv
-echo -e "Sequence ID\tSequence\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outfile
+amplify_tsv=$(dirname $(dirname $infile))/rr/AMPlify_results.tsv
+echo -e "Sequence ID\tSequence\tScore\tCharge\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outfile
 while read line; do
 	seqname=$(echo "$line" | awk '{print $2}')
 	read sequence
@@ -75,6 +76,9 @@ while read line; do
 	read rsa
 	read rsa_conf
 
+	# get AMPlify score and charge
+	score=$(grep -F "$seqname" $amplify_tsv | cut -d$'\t' -f4)
+	charge=$(grep -F "$seqname" $amplify_tsv | cut -d$'\t' -f6)
 	ss=$($ROOT_DIR/scripts/longest-ss.py "$structure")
-	echo -e "$seqname\t$sequence\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >>$outfile
+	echo -e "$seqname\t$sequence\t$score\t$charge\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >>$outfile
 done <$infile

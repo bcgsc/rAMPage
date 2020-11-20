@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
 apd3_url="http://aps.unmc.edu/AP/APD3_update_2020_release.fasta"

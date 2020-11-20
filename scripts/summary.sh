@@ -1,5 +1,5 @@
-#!/bin/bash
-set -eou pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 PROGRAM=$(basename $0)
 function get_help() {
 

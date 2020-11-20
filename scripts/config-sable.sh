@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
 # nr_fasta=$(dirname $RUN_ENTAP)/extra-db/nr.fasta
