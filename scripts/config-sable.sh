@@ -92,13 +92,10 @@ outdir=$sable_dir/nr
 mkdir -p $outdir
 # nr="ftp://ftp.ncbi.nlm.nih.gov/blast/db"
 nr="ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz"
-if [[ -f $outdir/SABLE_CONFIG.FAIL ]]; then
-	rm $outdir/SABLE_CONFIG.FAIL
-fi
 
-if [[ -f $outdir/SABLE_CONFIG.DONE ]]; then
-	rm $outdir/SABLE_CONFIG.DONE
-fi
+rm -f $outdir/CONFIG.FAIL
+rm -f $outdir/CONFIG.DONE
+
 
 # Download NCBI NR database
 filename=$(basename "$nr")
@@ -190,11 +187,11 @@ echo -e "COMMAND: $BLAST_DIR/makeblastdb -dbtype prot -in $outdir/nr.fasta -out 
 $BLAST_DIR/makeblastdb -dbtype prot -in $outdir/nr.fasta -out $outdir/nr -logfile $outdir/nr.log -parse_seqids
 
 if [[ "$(ls $outdir/nr.*.pni 2>/dev/null | wc -l)" -gt 0 ]]; then
-	touch $outdir/SABLE_CONFIG.DONE
+	touch $outdir/CONFIG.DONE
 	#	sed -i "s|export NR_DIR=\".\+\"|export NR_DIR=\"$nr_dir/nr\"|" $RUN_SABLE
 	sed -i "s|export NR_DIR=\".\+\"|export NR_DIR=\"$outdir\"|" $RUN_SABLE
 else
-	touch $outdir/SABLE_CONFIG.FAIL
+	touch $outdir/CONFIG.FAIL
 	echo "ERROR: makeblastdb for NR failed." 1>&2
 	exit 2
 fi
