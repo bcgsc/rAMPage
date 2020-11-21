@@ -8,37 +8,44 @@ FILTER_BY_LENGTH = true
 FILTER_BY_SCORE = true
 
 .PHONY = all clean config setup launch
-
+	
 all: launch
 
 # run setup.sh with all the directories to create
 setup: SETUP.DONE
 
+check: $(TSV)
+	if [[ ! -s $(TSV) ]]; then \
+		echo "$(TSV) file does not exist or is empty." 1>&2; \
+		exit 1; \
+	fi
+
 # check for CONFIG.DONE to make sure the configuration was done before
-SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV)
+SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
 	$< $(TSV)
  
-CHECK := $(wildcard $(ROOT_DIR)/*/*/*/amplify/AMPLIFY.DONE)
-launch: $(CHECK)
- 	
-$(CHECK): setup 
+launch: $(ROOT_DIR)/PIPELINE.DONE
+	
+$(ROOT_DIR)/PIPELINE.DONE: SETUP.DONE $(TSV)
 	while read sp; do \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(EMAIL) == true ]]; then \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$(sp) && cd $(ROOT_DIR)/$(sp) && make PARALLEL=true EMAIL=$(EMAIL)) & \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=true EMAIL=$(EMAIL)); \
 			else \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$(sp) && cd $(ROOT_DIR)/$(sp) && make PARALLEL=true) & \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=true); \
 			fi; \
 		else \
 			if [[ $(EMAIL) == true ]]; then \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$(sp) && cd $(ROOT_DIR)/$(sp) && make PARALLEL=false EMAIL=$(EMAIL)) & \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=false EMAIL=$(EMAIL)); \
 			else \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$(sp) && cd $(ROOT_DIR)/$(sp) && make PARALLEL=false) & \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=false); \
 			fi; \
 		fi; \
-	done < $(TSV); \
-	wait
-	touch $(ROOT_DIR)/PIPELINE.DONE
+	done < <(cut -f1 -d$$'\t' $(TSV)); \
+	
+	if [[ $$(ls */*/*/amplify/AMPLIFY.DONE | wc -l) -eq $$(wc -l $(TSV) | cut -f1 -d' ') ]]; then \
+		touch $(ROOT_DIR)/PIPELINE.DONE; \
+	fi
 
 # redundancy removal
 rr: $(ROOT_DIR)/rr/RR.DONE
@@ -133,7 +140,13 @@ $(ROOT_DIR)/sable/SABLE.DONE $(ROOT_DIR)/sable/OUT_SABLE_graph $(ROOT_DIR)/sable
 	fi
 
 clean:
-	# rm -f $(ROOT_DIR)/PIPELINE.DONE
-	rm -rf $(ROOT_DIR)/rr $(ROOT_DIR)/sable
+	rm -f $(ROOT_DIR)/PIPELINE.DONE
+	rm -f $(ROOT_DIR)/SETUP.DONE
+	rm -rf $(ROOT_DIR)/rr
+	rm -rf $(ROOT_DIR)/sable
 	rm -f $(ROOT_DIR)/logs/*
 	rm -f $(ROOT_DIR)/nohup.out
+	rm -f nohup.out
+	if [[ -f $(TSV) ]]; then \
+		rm -rf $$(cut -f1 -d/ $(TSV) | sort -u); \
+	fi
