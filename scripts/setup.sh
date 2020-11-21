@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# set -uo pipefail
 
 PROGRAM=$(basename $0)
 function get_help() {
 	# DESCRIPTION
 	{
-		echo "DESCRIPTION:"
+		echo -e "PROGRAM: $PROGRAM\n" echo "DESCRIPTION:"
 		echo -e "\
 		\tSets up directory structure for the pipeline.\n \
 		" | column -s$'\t' -t -L
@@ -64,7 +64,7 @@ if [[ -f $ROOT_DIR/SETUP.DONE ]]; then
 fi
 
 # check the master tsv
-num_invalid=$(grep -icwvf <(echo -e "stranded\nnonstranded\nagnostic") <(cut -f3 -d$'\t' $1 | sort -u))
+num_invalid=$(grep -icwvf <(echo -e "stranded\nnonstranded\nagnostic") <(cut -f3 -d$'\t' $1 | sort -u) || true)
 
 if [[ "$num_invalid" -ne 0 ]]; then
 	echo "ERROR: The third column must be 'stranded', 'nonstranded', or 'agnostic'." 1>&2
@@ -72,14 +72,16 @@ if [[ "$num_invalid" -ne 0 ]]; then
 	echo 1>&2
 	get_help
 fi
+
 mkdir -p $ROOT_DIR/logs
+
 while IFS=$'\t' read path accessions strand; do
 	# make the directory
 	mkdir -p $ROOT_DIR/${path}/logs
 
 	# make the accessions file to read later
 	$ROOT_DIR/scripts/expand-accessions.sh $accessions | tr ' ' '\n' >$ROOT_DIR/${path}/accessions.txt
-
+	#
 	# make the stranded files
 	if [[ "$strand" == [Ss][Tt][Rr][Aa][Nn][Dd][Ee][Dd] ]]; then
 		touch $ROOT_DIR/${path}/STRANDED.LIB
@@ -91,23 +93,22 @@ while IFS=$'\t' read path accessions strand; do
 
 	order=$(echo "$path" | cut -f1 -d/)
 	class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
-	#	while [[ "$?" -ne 0 ]]
-	#	do
-	class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
-	#	done
+
+	while [[ "$?" -ne 0 ]]; do
+		class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
+	done
 
 	if [[ "$class" == [Aa]mphibia ]]; then
 		touch $ROOT_DIR/${path}/AMPHIBIA.CLASS
 	elif [[ "$class" == [Ii]nsecta ]]; then
 		touch $ROOT_DIR/${path}/INSECTA.CLASS
 	fi
-
 done <$1
 
 # check
-num_libs=$(ls $ROOT_DIR/*/*/*/*.LIB | wc -l)
-num_class=$(ls $ROOT_DIR/*/*/*/*.CLASS | wc -l)
-num_lines=$(wc -l $1 | awk '{print $1}')
+num_libs=$(ls $ROOT_DIR/*/*/*/*.LIB | wc -l || true)
+num_class=$(ls $ROOT_DIR/*/*/*/*.CLASS | wc -l || true)
+num_lines=$(wc -l $1 | awk '{print $1}' || true)
 
 if [[ "$num_lines" -ne "$num_libs" ]]; then
 	echo "ERROR: Not every single directory has a .LIB file." 1>&2
