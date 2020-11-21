@@ -44,7 +44,7 @@ $(ROOT_DIR)/PIPELINE.DONE: $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/SETUP.DONE $
 		fi; \
 	done < <(cut -f1 -d$$'\t' $(TSV))
 	
-	if [[ $$(ls */*/*/amplify/AMPLIFY.DONE | wc -l) -eq $$(wc -l $(TSV) | cut -f1 -d' ') ]]; then \
+	if [[ $$(ls */*/*/amplify/AMPLIFY.DONE | wc -l) -ge $$(wc -l $(TSV) | cut -f1 -d' ') ]]; then \
 		touch $(ROOT_DIR)/PIPELINE.DONE; \
 	else \
 		touch $(ROOT_DIR)/PIPELINE.FAIL; \
