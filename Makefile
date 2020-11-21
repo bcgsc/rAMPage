@@ -1,5 +1,6 @@
 SHELL = /usr/bin/env bash
 PARALLEL = false
+# MULTI = true
 TSV = accessions.tsv
 EMAIL = ""
 
@@ -30,15 +31,15 @@ $(ROOT_DIR)/PIPELINE.DONE: SETUP.DONE $(TSV)
 	while read sp; do \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(EMAIL) == true ]]; then \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=true EMAIL=$(EMAIL)); \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && /usr/bin/time -pv make PARALLEL=true EMAIL=$(EMAIL)); \
 			else \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=true); \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && /usr/bin/time -pv make PARALLEL=true); \
 			fi; \
 		else \
 			if [[ $(EMAIL) == true ]]; then \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=false EMAIL=$(EMAIL)); \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && /usr/bin/time -pv make PARALLEL=false EMAIL=$(EMAIL)); \
 			else \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=false); \
+				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && /usr/bin/time -pv make PARALLEL=false); \
 			fi; \
 		fi; \
 	done < <(cut -f1 -d$$'\t' $(TSV)); \
