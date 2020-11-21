@@ -30,22 +30,25 @@ $(ROOT_DIR)/PIPELINE.DONE: SETUP.DONE $(TSV)
 	while read sp; do \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(EMAIL) == true ]]; then \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=true EMAIL=$(EMAIL)); \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/scripts/Makefile -C $(ROOT_DIR)/$$sp PARALLEL=true EMAIL=$(EMAIL); \
 			else \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=true); \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/scripts/Makefile PARALLEL=true; \
 			fi; \
 		else \
 			if [[ $(EMAIL) == true ]]; then \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=false EMAIL=$(EMAIL)); \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/scripts/Makefile -C $(ROOT_DIR)/$$sp PARALLEL=false EMAIL=$(EMAIL); \
 			else \
-				(cp $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/$$sp && cd $(ROOT_DIR)/$$sp && make PARALLEL=false); \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/scripts/Makefile -C $(ROOT_DIR)/$$sp PARALLEL=false; \
 			fi; \
 		fi; \
-	done < <(cut -f1 -d$$'\t' $(TSV)); \
+	done < <(cut -f1 -d$$'\t' $(TSV))
 	
 	if [[ $$(ls */*/*/amplify/AMPLIFY.DONE | wc -l) -eq $$(wc -l $(TSV) | cut -f1 -d' ') ]]; then \
 		touch $(ROOT_DIR)/PIPELINE.DONE; \
+	else \
+		touch $(ROOT_DIR)/PIPELINE.FAIL; \
 	fi
+
 
 # redundancy removal
 rr: $(ROOT_DIR)/rr/RR.DONE
