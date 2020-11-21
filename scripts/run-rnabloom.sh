@@ -297,12 +297,8 @@ echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $t
 
 ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} &>>$logfile
 
-if [[ ! -f TRANSCRIPTS_NR.DONE ]]; then
+if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 	touch $outdir/ASSEMBLY.FAIL
-	if [[ -f $outdir/ASSEMBLY.DONE ]]; then
-		rm $outdir/ASSEMBLY.DONE
-	fi
-
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	if [[ "$email" = true ]]; then
 		echo "$outdir" | mail -s "Failed assembling $org" "$address"
