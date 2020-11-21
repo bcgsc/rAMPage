@@ -377,7 +377,7 @@ OPTION(S):
        -l <INT>        length cut-off (i.e. keep len(sequences) <= INT)           (default = 50)
        -o <directory>  output directory                                           (required)
        -s <0 to 1>     AMPlify score cut-off (i.e. keep score(sequences) >= DBL)  (default = 0.99)
-       -t <INT>        number of threads                                          (default = 8)
+       -t <INT>        number of threads                                          (default = all)
 
 EXAMPLE(S):
       run-amplify.sh -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa
