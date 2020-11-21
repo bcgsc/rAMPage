@@ -193,6 +193,8 @@ if [[ -f $workdir/PAIRED.END ]]; then
 		stranded=true
 	elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
 		stranded=false
+	elif [[ -f $workdir/AGNOSTIC.LIB ]]; then
+		stranded=false
 	else
 		print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
 	fi
