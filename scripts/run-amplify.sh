@@ -38,7 +38,7 @@ function get_help() {
 		\t-l <INT>\tlength cut-off (i.e. keep len(sequences) <= INT)\t(default = 50)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tAMPlify score cut-off (i.e. keep score(sequences) >= DBL)\t(default = 0.99)\n \
-		\t-t <INT>\tnumber of threads\t(default = 8)\n \
+		\t-t <INT>\tnumber of threads\t(default = all)\n \
 		" | column -s $'\t' -t -L
 
 		echo "EXAMPLE(S):"
@@ -76,7 +76,7 @@ fi
 confidence=0.99
 length=50
 email=false
-threads=8
+# threads=8
 custom_threads=false
 charge=2
 
