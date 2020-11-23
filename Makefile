@@ -8,16 +8,16 @@ FILTER_BY_CHARGE = true
 FILTER_BY_LENGTH = true
 FILTER_BY_SCORE = true
 
-.PHONY = all clean config setup pipeline sable
+.PHONY = all setup check pipeline combine rr sable
 	
-all: sable
+all: check sable
 
 # run setup.sh with all the directories to create
 setup: SETUP.DONE
 
 check: $(TSV)
 	if [[ ! -s $(TSV) ]]; then \
-		echo "$(TSV) file does not exist or is empty." 1>&2; \
+		echo "File $(TSV) does not exist or is empty." 1>&2; \
 		exit 1; \
 	fi
 
@@ -25,134 +25,137 @@ check: $(TSV)
 SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
 	$< $(TSV)
  
-pipeline: $(ROOT_DIR)/PIPELINE.DONE
+pipeline: PIPELINE.DONE
 	
-$(ROOT_DIR)/PIPELINE.DONE: $(ROOT_DIR)/scripts/Makefile $(ROOT_DIR)/SETUP.DONE $(TSV) check
+PIPELINE.DONE: scripts/Makefile SETUP.DONE $(TSV) check
 	while read sp; do \
+		echo $$sp/logs/00-pipeline.log; \
 		if [[ $(PARALLEL) == true ]]; then \
-			if [[ $(EMAIL) == true ]]; then \
-				/usr/bin/time -pv make -f $< -C $(ROOT_DIR)/$$sp PARALLEL=true EMAIL=$(EMAIL); \
+			if [[ -n $(EMAIL) ]]; then \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log; \
 			else \
-				/usr/bin/time -pv make -f $< PARALLEL=true; \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true &> $$sp/logs/00-pipeline.log; \
 			fi; \
 		else \
-			if [[ $(EMAIL) == true ]]; then \
-				/usr/bin/time -pv make -f $< -C $(ROOT_DIR)/$$sp PARALLEL=false EMAIL=$(EMAIL); \
+			if [[ -n $(EMAIL) ]]; then \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log; \
 			else \
-				/usr/bin/time -pv make -f $< -C $(ROOT_DIR)/$$sp PARALLEL=false; \
+				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false &> $$sp/logs/00-pipeline.log; \
 			fi; \
 		fi; \
 	done < <(cut -f1 -d$$'\t' $(TSV))
-	
 	if [[ $$(ls */*/*/amplify/AMPLIFY.DONE | wc -l) -ge $$(wc -l $(TSV) | cut -f1 -d' ') ]]; then \
-		touch $(ROOT_DIR)/PIPELINE.DONE; \
+		touch PIPELINE.DONE; \
 	else \
-		touch $(ROOT_DIR)/PIPELINE.FAIL; \
+		touch PIPELINE.FAIL; \
 	fi
 
 # combine the FASTA files from all the runs
 combine: pipeline
-	cat $(ROOT_DIR)/*/*/*/amplify/AMPlify_results.tsv > $(ROOT_DIR)/rr/AMPlify_results.tsv
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.charge.nr.faa > $(ROOT_DIR)/rr/amps.charge.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.short.nr.faa > $(ROOT_DIR)/rr/amps.short.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.conf.nr.faa > $(ROOT_DIR)/rr/amps.conf.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.short.charge.nr.faa > $(ROOT_DIR)/rr/amps.short.charge.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.conf.short.nr.faa > $(ROOT_DIR)/rr/amps.conf.short.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.conf.charge.nr.faa > $(ROOT_DIR)/rr/amps.conf.charge.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.conf.short.charge.nr.faa > $(ROOT_DIR)/rr/amps.conf.short.charge.faa
-	cat $(ROOT_DIR)/*/*/*/amplify/amps.nr.faa > $(ROOT_DIR)/rr/amps.faa
+	mkdir -p rr
+	cat */*/*/amplify/AMPlify_results.tsv > rr/AMPlify_results.tsv
+	cat */*/*/amplify/amps.charge.nr.faa > rr/amps.charge.faa
+	cat */*/*/amplify/amps.short.nr.faa > rr/amps.short.faa
+	cat */*/*/amplify/amps.conf.nr.faa > rr/amps.conf.faa
+	cat */*/*/amplify/amps.short.charge.nr.faa > rr/amps.short.charge.faa
+	cat */*/*/amplify/amps.conf.short.nr.faa > rr/amps.conf.short.faa
+	cat */*/*/amplify/amps.conf.charge.nr.faa > rr/amps.conf.charge.faa
+	cat */*/*/amplify/amps.conf.short.charge.nr.faa > rr/amps.conf.short.charge.faa
+	cat */*/*/amplify/amps.nr.faa > rr/amps.faa
 
 # redundancy removal
-rr: $(ROOT_DIR)/rr/RR.DONE
+rr: rr/RR.DONE
 
-$(ROOT_DIR)/rr/RR.DONE: $(ROOT_DIR)/scripts/run-cdhit.sh combine
-	mkdir -p rr
+rr/RR.DONE: scripts/run-cdhit.sh combine
 	/usr/bin/time -pv bash -c '\
- 		$< -v $(ROOT_DIR)/rr/amps.charge.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.short.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.conf.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.short.charge.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.conf.short.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.conf.charge.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.conf.short.charge.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log; \
- 		$< $(ROOT_DIR)/rr/amps.faa \
-			&>> $(ROOT_DIR)/logs/11-redundancy_removal.log' \
- 		&>> $(ROOT_DIR)/logs/11-redundancy_removal.log
+ 		$< -v rr/amps.charge.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.short.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.conf.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.short.charge.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.conf.short.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.conf.charge.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.conf.short.charge.faa \
+			&>> logs/11-redundancy_removal.log; \
+ 		$< rr/amps.faa \
+			&>> logs/11-redundancy_removal.log' \
+ 		&>> logs/11-redundancy_removal.log
 	touch rr/RR.DONE
 
 # run sable
-sable: $(ROOT_DIR)/sable/SABLE_results.tsv $(ROOT_DIR)/sable/SABLE.DONE $(ROOT_DIR)/sable/OUT_SABLE_graph $(ROOT_DIR)/sable/SABLE_results.tsv
+sable: sable/SABLE.DONE
 
-$(ROOT_DIR)/sable/SABLE.DONE $(ROOT_DIR)/sable/OUT_SABLE_graph $(ROOT_DIR)/sable/SABLE_results.tsv: $(ROOT_DIR)/scripts/run-sable.sh rr
+sable/SABLE.DONE: scripts/run-sable.sh rr
 	if [[ -n $(EMAIL) ]]; then \
 		if [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.short.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.short.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.conf.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.conf.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.short.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.short.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.conf.short.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.conf.short.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.conf.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.conf.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.conf.short.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.conf.short.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -a $(EMAIL) -o sable $(ROOT_DIR)/rr/amps.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -a $(EMAIL) -o sable rr/amps.nr.faa \
+				&> logs/12-sable.log; \
 		fi; \
 	else \
 		if [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.short.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.short.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.conf.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.conf.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.short.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.short.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.conf.short.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.conf.short.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.conf.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.conf.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == true && $(FILTER_BY_SCORE) == true ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.conf.short.charge.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.conf.short.charge.nr.faa \
+				&> logs/12-sable.log; \
 		elif [[ $(FILTER_BY_CHARGE) == false && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == false ]]; then \
-			$< -o sable $(ROOT_DIR)/rr/amps.nr.faa \
-				&> $(ROOT_DIR)/logs/12-sable.log; \
+			$< -o sable rr/amps.nr.faa \
+				&> logs/12-sable.log; \
 		fi; \
 	fi
 
 clean:
-	rm -f $(ROOT_DIR)/PIPELINE.DONE
-	rm -f $(ROOT_DIR)/SETUP.DONE
-	rm -rf $(ROOT_DIR)/rr
-	rm -rf $(ROOT_DIR)/sable
-	rm -f $(ROOT_DIR)/logs/*
-	rm -f $(ROOT_DIR)/nohup.out
+	rm -f CONFIG.DONE
+	rm -f PIPELINE.DONE
+	rm -f PIPELINE.FAIL
+	rm -f SETUP.DONE
+	rm -rf rr
+	rm -rf sable
+	rm -f logs/*
 	rm -f nohup.out
-	if [[ -f $(TSV) ]]; then \
-		rm -rf $$(cut -f1 -d/ $(TSV) | sort -u); \
+	if [[ -s $(TSV) ]]; then \
+		for i in $$(cut -f1 -d/ $(TSV) | sort -u); do \
+			rm -rf $$i; \
+		done; \
 	fi
