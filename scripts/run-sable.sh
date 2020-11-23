@@ -90,6 +90,8 @@ if [[ ! -s $fasta ]]; then
 fi
 
 # This script differs, as it must be run in the output directory.
+echo "Predicting secondary structures using SABLE..." 1>&2
+echo -e "COMMAND: (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)\n" 1>&2
 (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)
 
 if [[ -s $outdir/OUT_SABLE_graph ]]; then
