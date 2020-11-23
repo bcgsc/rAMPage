@@ -112,8 +112,7 @@ fi
 touch $outdir/SABLE.DONE
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Successful SABLE run on $org" $address
+	echo "$outdir" | mail -s "Finished running SABLE" $address
 	echo "Email alert sent to $address." 1>&2
 fi
 
