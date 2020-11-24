@@ -75,7 +75,7 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 
 A 4 or 5-column TSV file named `accessions.tsv`:
 
-| PATH | SRA ACCESSION(S) | LIBRARY<br/>PREP | CLASS<br/>(TAXON) | REFERENCE<br/>([ftp://ftp.ncbi.nlm.nih.gov](ftp://ftp.ncbi.nlm.nih.gov))|
+| PATH | SRA ACCESSION(S) | LIBRARY<br/>PREP | CLASS<br/>(TAXON) | REFERENCE<br/>([`ftp://ftp.ncbi.nlm.nih.gov`](ftp://ftp.ncbi.nlm.nih.gov))|
 |------|------------------|--------------|---------------|-----------|
 |ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome/gz` |
 
@@ -86,16 +86,16 @@ anura/ptoftae/skin-liver   SRX5102741-46 SRX5102761-62  nonstranded  amphibia
 hymenoptera/mgulosa/venom  SRX3556750                   stranded     insecta   /genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz
 ```
 
-In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from [ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz).
+In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz`](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz).
 
-Other reference transcriptomes can be also downloaded (must be from [ftp://ftp.ncbi.nlm.nih.gov](ftp://ftp.ncbi.nlm.nih.gov/)). 
+Other reference transcriptomes can be also downloaded (must be from [`ftp://ftp.ncbi.nlm.nih.gov`](ftp://ftp.ncbi.nlm.nih.gov/)). 
 
 ### Multiple References
 
 For example, _A. mellifera_ has multiple reference transcriptomes:
 
-1. **Representative Genome**, downloaded from [ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz](ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz), or
-1. **Transcriptome Shotgun Assembly**, downloaded from [ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz) 
+1. **Representative Genome**, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz`](ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz)
+1. **Transcriptome Shotgun Assembly**, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz`](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz) 
 
 In this case, the TSV would look like this:
 
