@@ -79,12 +79,14 @@ A 4 or 5-column TSV file named `accessions.tsv`:
 |------|------------------|--------------|---------------|-----------|
 |ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome/gz` |
 
+
 An example from [`test_accessions.tsv`](test_accessions.tsv):
 
 ```
 anura/ptoftae/skin-liver   SRX5102741-46 SRX5102761-62  nonstranded  amphibia
 hymenoptera/mgulosa/venom  SRX3556750                   stranded     insecta   /genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz
 ```
+
 
 In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz`](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz).
 
@@ -145,6 +147,39 @@ make TSV=test_accessions.tsv MULTI=true PARALLEL=true EMAIL=user@example.com
 
 ## Directory Structure
 
+```
+rAMPage
+├── amp_seqs
+├── anura
+│   └── ptoftae
+│       └── skin-liver
+│           ├── amplify
+│           ├── assembly
+│           ├── cleavage
+│           ├── filtering
+│           ├── homology
+│           ├── logs
+│           ├── raw_reads
+│           ├── sra
+│           ├── translation
+│           └── trimmed_reads
+├── hymenoptera
+│   └── mgulosa
+│       └── venom
+│           ├── assembly
+│           ├── cleavage
+│           ├── filtering
+│           ├── homology
+│           ├── logs
+│           ├── raw_reads
+│           ├── sra
+│           ├── translation
+│           └── trimmed_reads
+├── logs
+├── scripts
+├── src
+└── summary
+```
 
 ## Citation
 
