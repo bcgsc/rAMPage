@@ -94,6 +94,8 @@ In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly*
 
 Other reference transcriptomes can be also downloaded (must be from [`ftp://ftp.ncbi.nlm.nih.gov`](ftp://ftp.ncbi.nlm.nih.gov/)). 
 
+
+
 ### Multiple References
 
 For example, _A. mellifera_ has multiple reference transcriptomes:
@@ -105,6 +107,20 @@ In this case, the TSV would look like this:
 
 ```
 hymenoptera/amellifera/midgut	SRX12345	stranded	insecta	/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz /genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz
+```
+
+### Sources
+
+**Representative Genomes** can be found by searching the Genome database on [NCBI](https://www.ncbi.nlm.nih.gov/genome/), using these search terms (_A. mellifera_, for example):
+
+```
+"Apis mellifera"[orgn]
+```
+
+**Transcriptome Shotgun Assemblies** can be found by searching the Nucleotide database on [NCBI](https://www.ncbi.nlm.nih.gov/nucleotide), using these search terms:
+
+```
+tsa-master[prop] "Apis mellifera"[orgn] midgut[All Fields]
 ```
 
 ## Usage
