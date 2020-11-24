@@ -9,15 +9,31 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 
 ## Quick Links
 
+1. [Setup](#setup)
 1. [Dependencies](#dependencies)
 	1. [Basics](#basics)
 	1. [Tools](#tools)
 	1. [Optional](#optional)
-1. [Setup](#setup)
 1. [Input](#input)
 1. [Usage](#usage)
 1. [Directory Structure](#directory-structure)
 1. [Citation](#citation)
+
+
+## Setup
+
+1. Clone this repository:
+	```
+	git clone https://github.com/bcgsc/rAMPage.git
+	```
+1. Download and install the dependencies (specified in the [Dependencies](#dependencies) section below), into [`rAMPage/src`](src/).
+1. Update _all_ the paths in [`rAMPage/scripts/config.sh`](scripts/config.sh) to reflect dependencies in [`rAMPage/src`](src/) and dependencies pre-installed elsewhere.
+1. Source [`scripts/config.sh`](scripts/config.sh) in the root of the repository.
+	```shell
+	cd rAMPage
+	source scripts/config.sh
+	```
+1. Create a 4 or 5-column TSV file as specified by the [Input](#input) section below, called `accessions.tsv`, in the root of the repository.
 
 ## Dependencies
 
@@ -55,17 +71,6 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 |Dependency| Tested Version |
 |----------|----------------|
 | [pigz](https://github.com/madler/pigz/releases/tag/v2.4) |v2.4|
-
-## Setup
-
-1. Download and install the dependencies, into [`src`](src/).
-1. Update _all_ the paths in [`scripts/config.sh`](scripts/config.sh) to reflect dependencies in [`src`](src/) and dependencies pre-installed elsewhere.
-1. Source [`scripts/config.sh`](scripts/config.sh).
-	```shell
-	source scripts/config.sh
-	```
-1. Create a 4 or 5-column TSV file as specified by the [Input](#input) section above, called `accessions.tsv`.
-
 ## Input
 
 A 4 or 5-column TSV file named `accessions.tsv`:
