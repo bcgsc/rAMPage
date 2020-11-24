@@ -35,14 +35,20 @@ function get_help() {
 	exit 1
 }
 
+function print_error() {
+	{
+		message="$1"
+		echo "ERROR: $message"
+		printf '%.0s=' $(seq 1 $(tput cols))
+		echo
+		get_help
+	} 1>&2
+}
 while getopts :h opt; do
 	case $opt in
 	h) get_help ;;
 	\?)
-		echo "ERROR: Invalid option: -$OPTARG" 1>&2
-		printf '%.0s=' $(seq 1 $(tput cols)) 1>&2
-		echo 1>&2
-		get_help
+		print_error "Invalid option: -$OPTARG"
 		;;
 	esac
 done
@@ -54,10 +60,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 if [[ "$#" -ne 1 ]]; then
-	echo "ERROR: Incorrect number of arguments." 1>&2
-	printf '%.0s=' $(seq 1 $(tput cols)) 1>&2
-	echo 1>&2
-	get_help
+	print_error "Incorrect number of arguments."
 fi
 if [[ -f $ROOT_DIR/SETUP.DONE ]]; then
 	rm $ROOT_DIR/SETUP.DONE
@@ -67,15 +70,18 @@ fi
 num_invalid=$(grep -icwvf <(echo -e "stranded\nnonstranded\nagnostic") <(cut -f3 -d$'\t' $1 | sort -u) || true)
 
 if [[ "$num_invalid" -ne 0 ]]; then
-	echo "ERROR: The third column must be 'stranded', 'nonstranded', or 'agnostic'." 1>&2
-	printf "%.0s=" $(seq 1 $(tput cols)) 1>&2
-	echo 1>&2
-	get_help
+	print_error "The 3rd column must be 'stranded', 'nonstranded', or 'agnostic'."
+fi
+
+num_invalid=$(grep -icwvf <(echo -e "amphibia\ninsecta") <(cut -f4 -d$'\t' $1 | sort -u) || true)
+
+if [[ "$num_invalid" -ne 0 ]]; then
+	print_error "The 4th column must be 'Amphibia' or 'Insecta'."
 fi
 
 mkdir -p $ROOT_DIR/logs
 
-while IFS=$'\t' read path accessions strand; do
+while IFS=$'\t' read path accessions strand class reference; do
 	# make the directory
 	mkdir -p $ROOT_DIR/${path}/logs
 
@@ -91,18 +97,30 @@ while IFS=$'\t' read path accessions strand; do
 		touch $ROOT_DIR/${path}/AGNOSTIC.LIB
 	fi
 
-	order=$(echo "$path" | cut -f1 -d/)
-	class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
-
-	while [[ "$?" -ne 0 ]]; do
-		class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
-	done
-
-	if [[ "$class" == [Aa]mphibia ]]; then
+	if [[ "$class" == [Aa][Mm][Pp][Hh][Ii][Bb][Ii][Aa] ]]; then
 		touch $ROOT_DIR/${path}/AMPHIBIA.CLASS
-	elif [[ "$class" == [Ii]nsecta ]]; then
+	elif [[ "$class" == [Ii][Nn][Ss][Ee][Cc][Tt][Aa] ]]; then
 		touch $ROOT_DIR/${path}/INSECTA.CLASS
 	fi
+	if [[ -n "$reference" ]]
+	then
+		for i in $reference; do
+			$ROOT_DIR/scripts/dl-ref.sh -o $ROOT_DIR/${path} $i &> $ROOT_DIR/${path}/logs/00-reference.log
+		done
+	fi
+
+#	order=$(echo "$path" | cut -f1 -d/)
+# 	class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
+# 
+# 	while [[ "$?" -ne 0 ]]; do
+# 		class=$($ROOT_DIR/scripts/get-class.sh $order 2>/dev/null)
+# 	done
+
+#	if [[ "$class" == [Aa]mphibia ]]; then
+#		touch $ROOT_DIR/${path}/AMPHIBIA.CLASS
+#	elif [[ "$class" == [Ii]nsecta ]]; then
+#		touch $ROOT_DIR/${path}/INSECTA.CLASS
+#	fi
 done <$1
 
 # check
