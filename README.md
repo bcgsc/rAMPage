@@ -55,6 +55,7 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 |Dependency| Tested Version |
 |----------|----------------|
 | [SRA toolkit](https://github.com/ncbi/sra-tools/releases/tag/2.10.5) | v2.10.5 |
+| [EDirect](https://www.ncbi.nlm.nih.gov/books/NBK179288/) | v13.8 |
 | [fastp](https://github.com/OpenGene/fastp/releases/tag/v0.20.0) | v0.20.0|
 | [RNA-Bloom](https://github.com/bcgsc/RNA-Bloom/releases/tag/v1.3.1) |v1.3.1|
 | [salmon](https://github.com/COMBINE-lab/salmon/releases/tag/v1.3.0) | v1.3.0 |
@@ -71,13 +72,14 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 |Dependency| Tested Version |
 |----------|----------------|
 | [pigz](https://github.com/madler/pigz/releases/tag/v2.4) |v2.4|
+
 ## Input
 
 A 4 or 5-column TSV file named `accessions.tsv`:
 
 | PATH | SRA ACCESSION(S) | LIBRARY<br/>PREP | CLASS<br/>(TAXON) | REFERENCE<br/>([`ftp://ftp.ncbi.nlm.nih.gov`](ftp://ftp.ncbi.nlm.nih.gov))|
 |------|------------------|--------------|---------------|-----------|
-|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome/gz` |
+|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome.gz` |
 
 
 An example from [`test_accessions.tsv`](test_accessions.tsv):
