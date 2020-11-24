@@ -2,14 +2,19 @@
 
 Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
+
+## Description
+
+rAMPage is a _de novo_ AMP discovery pipeline...TODO
+
 ## Quick Links
 
 1. [Dependencies](#dependencies)
 	1. [Basics](#basics)
 	1. [Tools](#tools)
 	1. [Optional](#optional)
-1. [Input](#input)
 1. [Setup](#setup)
+1. [Input](#input)
 1. [Usage](#usage)
 1. [Directory Structure](#directory-structure)
 1. [Citation](#citation)
@@ -34,7 +39,6 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 |Dependency| Tested Version |
 |----------|----------------|
 | [SRA toolkit](https://github.com/ncbi/sra-tools/releases/tag/2.10.5) | v2.10.5 |
-| [EDirect](https://www.ncbi.nlm.nih.gov/books/NBK179288/) | v13.8 |
 | [fastp](https://github.com/OpenGene/fastp/releases/tag/v0.20.0) | v0.20.0|
 | [RNA-Bloom](https://github.com/bcgsc/RNA-Bloom/releases/tag/v1.3.1) |v1.3.1|
 | [salmon](https://github.com/COMBINE-lab/salmon/releases/tag/v1.3.0) | v1.3.0 |
@@ -52,25 +56,6 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 |----------|----------------|
 | [pigz](https://github.com/madler/pigz/releases/tag/v2.4) |v2.4|
 
-## Input
-
-A 5-column TSV file named `accessions.tsv`:
-
-| PATH | SRA ACCESSION(S) | STRANDEDNESS | CLASS (TAXON) | REFERENCE (ftp://ftp.ncbi.nlm.nih.gov)|
-|------|------------------|--------------|---------------|-----------|
-|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome/gz` |
-
-```
-anura/ptoftae/skin-liver   SRX5102741-46 SRX5102761-62  nonstranded  amphibia
-hymenoptera/mgulosa/venom  SRX3556750                   stranded     insecta   /genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz
-```
-
-In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz.
-
-Other reference transcriptomes can be also downloaded (must be from ftp://ftp.ncbi.nlm.nih.gov). For example, the reference transcriptome for _A. mellifera_ consists of transcripts from the **Representative Genome**, downloaded from ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz.
-
-See [`test_accessions.tsv`](test_accessions.tsv) for an example.
-
 ## Setup
 
 1. Download and install the dependencies, into [`src`](src/).
@@ -79,7 +64,39 @@ See [`test_accessions.tsv`](test_accessions.tsv) for an example.
 	```shell
 	source scripts/config.sh
 	```
-1. Create a 3-column TSV file as specified by the [Input](#input) section above, called `accessions.tsv`.
+1. Create a 4 or 5-column TSV file as specified by the [Input](#input) section above, called `accessions.tsv`.
+
+## Input
+
+A 4 or 5-column TSV file named `accessions.tsv`:
+
+| PATH | SRA ACCESSION(S) | LIBRARY<br/>PREP | CLASS<br/>(TAXON) | REFERENCE<br/>([ftp://ftp.ncbi.nlm.nih.gov](ftp://ftp.ncbi.nlm.nih.gov))|
+|------|------------------|--------------|---------------|-----------|
+|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome/gz` |
+
+An example from [`test_accessions.tsv`](test_accessions.tsv):
+
+```
+anura/ptoftae/skin-liver   SRX5102741-46 SRX5102761-62  nonstranded  amphibia
+hymenoptera/mgulosa/venom  SRX3556750                   stranded     insecta   /genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz
+```
+
+In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from [ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz).
+
+Other reference transcriptomes can be also downloaded (must be from [ftp://ftp.ncbi.nlm.nih.gov](ftp://ftp.ncbi.nlm.nih.gov/)). 
+
+### Multiple References
+
+For example, _A. mellifera_ has multiple reference transcriptomes:
+
+1. **Representative Genome**, downloaded from [ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz](ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz), or
+1. **Transcriptome Shotgun Assembly**, downloaded from [ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz) 
+
+In this case, the TSV would look like this:
+
+```
+hymenoptera/amellifera/midgut	SRX12345	stranded	insecta	/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz /genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz
+```
 
 ## Usage
 
@@ -89,24 +106,36 @@ In the repository directory, run:
 make
 ```
 
-By default, the input TSV file expected is `accessions.tsv`. However, other TSV files can be specified, such as the `test_accessions.tsv` file used to test the pipeline.
+By default, the input TSV file expected is `accessions.tsv`. However, other TSV files can be specified, such as the `test_accessions.tsv` file used to test the rAMPage.
 
-To test the pipeline, run:
+To test rAMPage, run:
 
 ```shell
 make TSV=test_accessions.tsv
 ```
 
-To allow certain processes to run in parallel in each dataset, run:
+To run multiple datasets in parallel, run:
+
+```shell
+make MULTI=true
+```
+
+To allow parallel processes to run _in each dataset_, run:
 
 ```shell
 make PARALLEL=true
 ```
 
-To receive email alerts as each dataset goes through the pipeline, run:
+To receive email alerts as _each dataset_ goes throuih rAMPage, run:
 
 ```shell
 make EMAIL=user@example.com
+```
+
+### Examples
+
+```
+make TSV=test_accessions.tsv MULTI=true PARALLEL=true EMAIL=user@example.com
 ```
 
 ## Directory Structure
