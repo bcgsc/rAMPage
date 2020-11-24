@@ -54,16 +54,20 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 ## Input
 
-A 3-column TSV file named `accessions.tsv`:
+A 5-column TSV file named `accessions.tsv`:
 
-| PATH | SRA ACCESSION(S) | STRANDEDNESS |
-|------|------------------|--------------|
-|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|
+| PATH | SRA ACCESSION(S) | STRANDEDNESS | CLASS (TAXON) | REFERENCE (ftp://ftp.ncbi.nlm.nih.gov)|
+|------|------------------|--------------|---------------|-----------|
+|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome/gz` |
 
 ```
-anura/ptoftae/skin-liver        SRX5102741-46 SRX5102761-62     nonstranded
-hymenoptera/mgulosa/venom       SRX3556750      stranded
+anura/ptoftae/skin-liver   SRX5102741-46 SRX5102761-62  nonstranded  amphibia
+hymenoptera/mgulosa/venom  SRX3556750                   stranded     insecta   /genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz
 ```
+
+In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz.
+
+Other reference transcriptomes can be also downloaded (must be from ftp://ftp.ncbi.nlm.nih.gov). For example, the reference transcriptome for _A. mellifera_ consists of transcripts from the **Representative Genome**, downloaded from ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz.
 
 See [`test_accessions.tsv`](test_accessions.tsv) for an example.
 
