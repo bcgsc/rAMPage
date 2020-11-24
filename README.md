@@ -179,6 +179,9 @@ rAMPage
 │           ├── translation
 │           └── trimmed_reads
 ├── logs
+├── rr
+├── sable
+│   └── OUT_SABLE
 ├── scripts
 ├── src
 └── summary
