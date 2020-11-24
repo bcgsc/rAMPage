@@ -18,8 +18,8 @@ all: amplify
 amplify: amplify/amps.conf.short.charge.nr.faa
 
 amplify/amps.conf.short.charge.nr.faa amplify/AMPLIFY.DONE: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.faa $(ROOT_DIR)/scripts/get-runtime.sh $(ROOT_DIR)/scripts/run-cdhit.sh cleavage/CLEAVE.DONE
-	@echo "STAGE 10: AMPLIFY" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 10: AMPLIFY: $$(realpath logs/10-amplify.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.faa &> logs/10-amplify.log; \
 	else \
 		/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.faa; \
@@ -29,8 +29,8 @@ amplify/amps.conf.short.charge.nr.faa amplify/AMPLIFY.DONE: $(ROOT_DIR)/scripts/
 cleavage: cleavage/cleaved.mature.len.faa
 
 cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE: $(ROOT_DIR)/scripts/cleave.sh homology/jackhmmer.nr.faa $(ROOT_DIR)/scripts/get-runtime.sh homology/HOMOLOGY.DONE
-	@echo "STAGE 09: PROPEPTIDE CLEAVAGE" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs/09-cleavage.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		/usr/bin/time -pv $< -a $(EMAIL) -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
 	else \
 		/usr/bin/time -pv $< -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
@@ -40,8 +40,8 @@ cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE: $(ROOT_DIR)/scripts/cleave
 homology: homology/jackhmmer.nr.faa
 
 homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/get-runtime.sh $(TAXON_CLASS) $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSLATION.DONE
-	@echo "STAGE 08: HOMOLOGY SEARCH" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 08: HOMOLOGY SEARCH: $$(realpath translation/rnabloom.transcripts.filtered.transdecoder.faa)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		/usr/bin/time -pv $< -a $(EMAIL) -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 	else \
 		/usr/bin/time -pv $< -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
@@ -51,8 +51,8 @@ homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE: $(ROOT_DIR)/scripts/run-jackhm
 translation: translation/rnabloom.transcripts.filtered.transdecoder.faa
 
 translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATION.DONE: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa $(ROOT_DIR)/scripts/get-runtime.sh filtering/FILTER.DONE
-	@echo "STAGE 07: IN SILICO TRANSLATION" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 07: IN SILICO TRANSLATION: $$(realpath logs/07-translation.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		/usr/bin/time -pv $< -a $(EMAIL) -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
 	else \
 		/usr/bin/time -pv $< -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
@@ -62,8 +62,8 @@ translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATI
 filtering: filtering/rnabloom.transcripts.filtered.fa
 
 filtering/rnabloom.transcripts.filtered.fa filtering/FILTER.DONE: $(ROOT_DIR)/scripts/filter-expression.sh assembly/rnabloom.transcripts.all.fa trimmed_reads/reads.txt $(ROOT_DIR)/scripts/get-runtime.sh assembly/ASSEMBLY.DONE
-	@echo "STAGE 06: EXPRESSION FILTERING" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 06: EXPRESSION FILTERING: $$(realpath logs/06-filtering.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/reads.txt &> logs/06-filtering.log; \
 	else \
 		/usr/bin/time -pv $< -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/reads.txt &> logs/06-filtering.log; \
@@ -74,8 +74,8 @@ filtering/rnabloom.transcripts.filtered.fa filtering/FILTER.DONE: $(ROOT_DIR)/sc
 assembly: assembly/rnabloom.transcripts.all.fa
 
 assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE: $(ROOT_DIR)/scripts/run-rnabloom.sh trimmed_reads/reads.txt $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/READSLIST.DONE
-	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY: $$(realpath logs/05-assembly.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/reads.txt &> logs/05-assembly.log; \
 	else \
 		/usr/bin/time -pv $< -o assembly -t $(THREADS) trimmed_reads/reads.txt &> logs/05-assembly.log; \
@@ -85,8 +85,8 @@ assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE: $(ROOT_DIR)/scripts
 readslist: trimmed_reads/reads.txt
 
 trimmed_reads/reads.txt trimmed_reads/READSLIST.DONE: $(ROOT_DIR)/scripts/make-reads-list.sh sra/metadata.tsv $(TRIMMED_READS) $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/TRIM.DONE
-	@echo "STAGE 04: MAKING A READS LIST" 1>&2
-	/usr/bin/time -pv $< -d trimmed_reads sra/metadata.tsv &> logs/04-readslist.log
+	@echo "STAGE 04: MAKING A READS LIST: $$(realpath logs/04-readslist.log)" 1>&2
+	@/usr/bin/time -pv $< -d trimmed_reads sra/metadata.tsv &> logs/04-readslist.log
 
 # 3. trim the reads
 trim: $(TRIMMED_READS) trimmed_reads/TRIM.DONE
@@ -95,8 +95,8 @@ trim: $(TRIMMED_READS) trimmed_reads/TRIM.DONE
 #	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
 
 trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(RAW_READS) $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
-	@echo "STAGE 03: TRIMMING READS" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 03: TRIMMING READS: $$(realpath logs/03-trimmed_reads.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p &> logs/03-trimmed_reads.log; \
 		else \
@@ -118,8 +118,8 @@ reads: $(RAW_READS) raw_reads/READS.DONE
 #	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
 
 raw_reads/READS.DONE: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
-	@echo "STAGE 02: DOWNLOADING READS" 1>&2
-	if [[ -n $(EMAIL) ]]; then \
+	@echo "STAGE 02: DOWNLOADING READS: $$(realpath logs/02-raw_reads.log)" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o raw_reads -p sra/runs.txt &> logs/02-raw_reads.log; \
 		else \
@@ -138,9 +138,9 @@ raw_reads/READS.DONE: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-a
 accessions: sra/runs.txt sra/metadata.tsv
 
 sra/runs.txt sra/metadata.tsv sra/RUNS.DONE sra/METADATA.DONE: $(ROOT_DIR)/scripts/get-runs.sh accessions.txt $(ROOT_DIR)/scripts/get-runtime.sh # $(ROOT_DIR)/CONFIG.DONE $(ROOT_DIR)/SETUP.DONE
-	@echo "STAGE 01: DOWNLOADING METADATA" 1>&2
-	/usr/bin/time -pv $< -o sra accessions.txt &> logs/01-sra.log
+	@echo "STAGE 01: DOWNLOADING METADATA: $$(realpath logs/01-sra.log)" 1>&2
+	@/usr/bin/time -pv $< -o sra accessions.txt &> logs/01-sra.log
 
 clean:
-	rm -f logs/* 2> /dev/null
-	rm -rf sra raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out
+	@rm -f logs/* 2> /dev/null
+	@rm -rf sra raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out
