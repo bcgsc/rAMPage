@@ -1,6 +1,8 @@
 # AMP Sequences
 
-This directory holds the AMP sequences collated on July 20, 2020, using the script [`scripts/homology-db.sh`](../scripts/homology-db.sh). The sequences were downloaded from APD3, DADP, and NCBI.
+This directory holds the AMP sequences collated on July 20, 2020, using the script [`rAMPage/scripts/homology-db.sh`](../scripts/homology-db.sh). The sequences were downloaded from APD3, DADP, and NCBI.
+
+**Note**: The `rAMpage/scripts/homology-db.sh` script requires the [EDirect](https://www.ncbi.nlm.nih.gov/books/NBK179288/) dependency.
 
 ### APD3: Antimicrobial Peptide Database 3
 
