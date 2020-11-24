@@ -23,6 +23,7 @@ check: $(TSV)
 
 # check for CONFIG.DONE to make sure the configuration was done before
 SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
+	@echo "STAGE: SETUP" 1>&2
 	$< $(TSV)
  
 pipeline: PIPELINE.DONE
@@ -85,6 +86,7 @@ combine: pipeline
 rr: rr/RR.DONE
 
 rr/RR.DONE: scripts/run-cdhit.sh combine
+	@echo "STAGE: REDUNDANCY REMOVAL" 1>&2
 	/usr/bin/time -pv bash -c '\
  		$< -v rr/amps.charge.faa \
 			&>> logs/11-redundancy_removal.log; \
@@ -109,6 +111,7 @@ rr/RR.DONE: scripts/run-cdhit.sh combine
 sable: sable/SABLE.DONE
 
 sable/SABLE.DONE: scripts/run-sable.sh rr
+	@echo "STAGE: SABLE" 1>&2
 	if [[ -n $(EMAIL) ]]; then \
 		if [[ $(FILTER_BY_CHARGE) == true && $(FILTER_BY_LENGTH) == false && $(FILTER_BY_SCORE) == false ]]; then \
 			$< -a $(EMAIL) -o sable rr/amps.charge.nr.faa \
