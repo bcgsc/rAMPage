@@ -25,6 +25,7 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 | GNU `sed` | v4.8 |
 | GNU `grep` | v3.4 |
 | GNU `make` | v4.3 |
+| GNU `column` | 2.36 |
 | `python` | v3.7.7
 <!-- - [ ] Perl v5.32.0 -->
 
