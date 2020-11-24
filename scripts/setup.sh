@@ -102,11 +102,16 @@ while IFS=$'\t' read path accessions strand class reference; do
 	elif [[ "$class" == [Ii][Nn][Ss][Ee][Cc][Tt][Aa] ]]; then
 		touch $ROOT_DIR/${path}/INSECTA.CLASS
 	fi
+
+
 	if [[ -n "$reference" ]]
 	then
 		for i in $reference; do
-			$ROOT_DIR/scripts/dl-ref.sh -o $ROOT_DIR/${path} $i &> $ROOT_DIR/${path}/logs/00-reference.log
+			$ROOT_DIR/scripts/dl-ref.sh -o $ROOT_DIR/${path} $i &>> $ROOT_DIR/${path}/logs/00-reference.log
 		done
+		echo "STAGE 00: SETUP: $ROOT_DIR/${path}/logs/00-reference.log" >> $ROOT_DIR/${path}/logs/00-pipeline.log
+	else
+		echo "STAGE 00: SETUP: no reference transcriptome" >> $ROOT_DIR/${path}/logs/00-pipeline.log
 	fi
 
 #	order=$(echo "$path" | cut -f1 -d/)
