@@ -2,14 +2,13 @@
 
 export ROOT_DIR=$(pwd)
 
-if [[ -f $ROOT_DIR/CONFIG.DONE ]]
-then
+if [[ -f $ROOT_DIR/CONFIG.DONE ]]; then
 	rm $ROOT_DIR/CONFIG.DONE
 fi
 
-## FOR DOWNLOADING METADATA
-# export RUN_ESEARCH=$ROOT_DIR/src/edirect/13.8/bin/esearch
-# export RUN_EFETCH=$ROOT_DIR/src/edirect/13.8/bin/efetch
+## FOR DOWNLOADING REFERENCE AMP SEQUENCES
+export RUN_ESEARCH=$ROOT_DIR/src/edirect/13.8/bin/esearch
+export RUN_EFETCH=$ROOT_DIR/src/edirect/13.8/bin/efetch
 
 ## FOR DOWNLOADING READS
 export FASTERQ_DUMP=$ROOT_DIR/src/sratoolkit.2.10.5-centos_linux64/bin/fasterq-dump
