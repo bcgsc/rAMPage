@@ -1,6 +1,6 @@
 SHELL = /usr/bin/env bash
 PARALLEL = false
-# MULTI = true
+MULTI = true
 TSV = accessions.tsv
 EMAIL = ""
 
@@ -28,22 +28,40 @@ SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
 pipeline: PIPELINE.DONE
 	
 PIPELINE.DONE: scripts/Makefile SETUP.DONE $(TSV) check
-	while read sp; do \
-		echo $$sp/logs/00-pipeline.log; \
-		if [[ $(PARALLEL) == true ]]; then \
-			if [[ -n $(EMAIL) ]]; then \
-				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log; \
+	if [[ $(MULTI) == true ]]; then \
+		while read sp; do \
+			if [[ $(PARALLEL) == true ]]; then \
+				if [[ -n $(EMAIL) ]]; then \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log & \
+				else \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true &> $$sp/logs/00-pipeline.log & \
+				fi; \
 			else \
-				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true &> $$sp/logs/00-pipeline.log; \
+				if [[ -n $(EMAIL) ]]; then \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log & \
+				else \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false &> $$sp/logs/00-pipeline.log & \
+				fi; \
 			fi; \
-		else \
-			if [[ -n $(EMAIL) ]]; then \
-				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log; \
+		done < <(cut -f1 -d$$'\t' $(TSV)); \
+		wait; \
+	else \
+		while read sp; do \
+			if [[ $(PARALLEL) == true ]]; then \
+				if [[ -n $(EMAIL) ]]; then \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log; \
+				else \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=true &> $$sp/logs/00-pipeline.log; \
+				fi; \
 			else \
-				/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false &> $$sp/logs/00-pipeline.log; \
+				if [[ -n $(EMAIL) ]]; then \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false EMAIL=$(EMAIL) &> $$sp/logs/00-pipeline.log; \
+				else \
+					/usr/bin/time -pv make -f $(ROOT_DIR)/$< -C $$sp PARALLEL=false &> $$sp/logs/00-pipeline.log; \
+				fi; \
 			fi; \
-		fi; \
-	done < <(cut -f1 -d$$'\t' $(TSV))
+		done < <(cut -f1 -d$$'\t' $(TSV)); \
+	fi
 	if [[ $$(ls */*/*/amplify/AMPLIFY.DONE | wc -l) -ge $$(wc -l $(TSV) | cut -f1 -d' ') ]]; then \
 		touch PIPELINE.DONE; \
 	else \
