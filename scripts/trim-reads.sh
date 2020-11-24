@@ -202,7 +202,7 @@ if [[ "$fail" = true ]]; then
 		echo "Email alert sent to $address." 1>&2
 	fi
 	echo "Failed to trim: ${failed_accs[*]}" 1>&2
-	echo "STATUS: failed." 1>&2
+	echo "STATUS: FAILED." 1>&2
 	exit 2
 fi
 

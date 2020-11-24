@@ -94,5 +94,5 @@ if [[ "$verbose" = true ]]; then
 	# 		echo 1>&2
 	# 	fi
 
-	echo "STATUS: complete." 1>&2
+	echo "STATUS: DONE." 1>&2
 fi

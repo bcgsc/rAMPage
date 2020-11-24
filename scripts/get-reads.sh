@@ -196,7 +196,7 @@ if [[ "$fail" = true ]]; then
 	fi
 
 	echo "Failed to download: ${failed_accs[*]}" 1>&2
-	echo "STATUS: failed." 1>&2
+	echo "STATUS: FAILED." 1>&2
 	exit 2
 fi
 

@@ -163,5 +163,5 @@ echo -e "END: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
-echo "STATUS: complete." 1>&2
+echo "STATUS: DONE." 1>&2
 touch $outdir/AMP_DATABASE.DONE
