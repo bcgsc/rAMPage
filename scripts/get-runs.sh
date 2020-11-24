@@ -102,13 +102,19 @@ echo -e "PATH=$PATH\n" 1>&2
 accessions=$(cat $1)
 
 echo "Downloading run info..." 1>&2
+echo "PROGRAM: $(command -v curl)" 1>&2
+echo -e "VERSION: $(curl -V | head -n1 | awk '{print $2}')\n" 1>&2
+
 for i in $accessions; do
-	while [[ ! -s $outdir/temp.${i}.csv ]]; do
-		wget --tries=inf -o "$outdir/${i}.wget.log" -O "$outdir/temp.${i}.csv" "http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=${i}" || true
-	done
+	# while [[ ! -s $outdir/temp.${i}.csv ]]; do
+	# 	wget --tries=inf -o "$outdir/${i}.wget.log" -O "$outdir/temp.${i}.csv" "http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=${i}" || true
+	# done
+
+	(cd $outdir && curl -L -o temp.${i}.csv "http://trace.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?save=efetch&db=sra&rettype=runinfo&term=${i}" &>${i}.curl.log)
 done
 
-cat $outdir/*.wget.log >$outdir/wget.log
+# cat $outdir/*.wget.log >$outdir/wget.log
+cat $outdir/*.curl.log >$outdir/curl.log
 
 # get SRR numbers
 cat $outdir/temp*.csv >$outdir/RunInfoTable.csv
@@ -120,7 +126,8 @@ echo "Downloading SRA Run accessions to $outdir/runs.txt..." 1>&2
 cut -f1 -d, $outdir/RunInfoTable.csv | sort -u | sed '/^$/d' | grep -v 'Run' >$outdir/runs.txt
 
 rm $outdir/temp*.csv
-rm $outdir/*.wget.log
+# rm $outdir/*.wget.log
+rm $outdir/*.curl.log
 
 echo "Fetching metadata..." 1>&2
 $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions
