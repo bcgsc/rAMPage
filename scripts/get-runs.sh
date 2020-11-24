@@ -160,3 +160,4 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 touch $outdir/RUNS.DONE
+echo "STATUS: Done." 1>&2
