@@ -68,6 +68,7 @@ fi
 threads=6
 email=false
 parallel=false
+outdir=""
 # 4 - read options
 while getopts :a:ho:pt: opt; do
 	case $opt in
@@ -78,7 +79,6 @@ while getopts :a:ho:pt: opt; do
 	h) get_help ;;
 	o)
 		outdir="$(realpath $OPTARG)"
-		mkdir -p $outdir
 		;;
 	p) parallel=true ;;
 	t) threads="$OPTARG" ;;
@@ -94,6 +94,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
@@ -191,7 +197,8 @@ if [[ "$fail" = true ]]; then
 	touch $outdir/READS.FAIL
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	if [[ "$email" = true ]]; then
-		echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed downloading reads for $org" "$address"
+		#		echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed downloading reads for $org" "$address"
+		echo "${outdir}: ${failed_accs[*]}" | mail -s "STAGE 02: DOWNLOADING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 
@@ -217,8 +224,9 @@ echo -e "\nEND: $(date)\n" 1>&2
 touch $outdir/READS.DONE
 echo "STATUS: DONE." 1>&2
 
-org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 if [[ "$email" = true ]]; then
-	echo "$outdir" | mail -s "Finished downloading reads for $org" "$address"
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	#	echo "$outdir" | mail -s "Finished downloading reads for $org" "$address"
+	echo "$outdir" | mail -s "STAGE 02: DOWNLOADING READS: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

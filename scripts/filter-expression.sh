@@ -67,6 +67,7 @@ fi
 email=false
 threads=2
 cutoff=0.50
+outdir=""
 
 # 4 - read options
 while getopts :a:c:ho:r:t: opt; do
@@ -79,7 +80,6 @@ while getopts :a:c:ho:r:t: opt; do
 	h) get_help ;;
 	o)
 		outdir="$(realpath $OPTARG)"
-		mkdir -p $outdir
 		;;
 	r) ref="$OPTARG" ;;
 	t) threads="$OPTARG" ;;
@@ -95,6 +95,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -f "$ref" ]]; then
 	print_error "Given reference transcriptome $ref does not exist."
 elif [[ ! -s "$ref" ]]; then
@@ -190,8 +196,9 @@ if [[ ! -s $outdir/rnabloom.transcripts.filtered.fa ]]; then
 	echo "ERROR: Salmon output file $outdir/rnabloom.transcripts.filtered.fa does not exist or is empty." 1>&2
 
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Failed expression filtering $org" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		echo "$outdir" | mail -s "STAGE 06: EXPRESSION FILTERING: FAILED" $address
+		# echo "$outdir" | mail -s "Failed expression filtering $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 2
@@ -244,7 +251,8 @@ echo "STATUS: DONE." 1>&2
 touch $outdir/FILTER.DONE
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Finished expression filtering for $org" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	echo "$outdir" | mail -s "STAGE 06: EXPRESSION FILTERING: SUCCESS" $address
+	# echo "$outdir" | mail -s "Finished expression filtering for $org" $address
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

@@ -61,6 +61,7 @@ fi
 
 # default options
 email=false
+outdir=""
 
 # 4 - read options
 while getopts :a:ho: opt; do
@@ -72,7 +73,6 @@ while getopts :a:ho: opt; do
 	h) get_help ;;
 	o)
 		outdir=$(realpath $OPTARG)
-		mkdir -p $outdir
 		;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -86,6 +86,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
@@ -145,8 +151,9 @@ if [[ -s "rnabloom.transcripts.filtered.transdecoder.faa" ]]; then
 else
 	touch $outdir/TRANSLATION.FAIL
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Failed translating transcripts for $org TransDecoder" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		echo "$outdir" | mail -s "STAGE 07: TRANSLATION: FAILED" $address
+		# echo "$outdir" | mail -s "Failed translating transcripts for $org TransDecoder" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	echo "ERROR: TransDecoder output file $outdir/rnabloom.transcripts.filtered.transdecoder.faa does not exist or is empty." 1>&2
@@ -184,7 +191,8 @@ echo "STATUS: DONE." 1>&2
 touch $outdir/TRANSLATION.DONE
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Finished translating transcripts for $org with TransDecoder" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	# echo "$outdir" | mail -s "Finished translating transcripts for $org with TransDecoder" $address
+	echo "$outdir" | mail -s "STAGE 07: TRANSLATION: SUCCESS" $address
 	echo -e "\nEmail alert sent to ${address}." 1>&2
 fi

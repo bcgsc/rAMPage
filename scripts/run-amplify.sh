@@ -79,6 +79,7 @@ email=false
 # threads=8
 custom_threads=false
 charge=2
+outdir=""
 
 # 4 - read options
 while getopts :a:c:hl:o:s:t: opt; do
@@ -93,7 +94,6 @@ while getopts :a:c:hl:o:s:t: opt; do
 	l) length="$OPTARG" ;;
 	o)
 		outdir=$(realpath $OPTARG)
-		mkdir -p $outdir
 		;;
 	t)
 		threads="$OPTARG"
@@ -113,6 +113,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
@@ -219,8 +225,9 @@ echo -e "Output: $file\n" 1>&2
 if [[ ! -s $file ]]; then
 	touch $outdir/AMPLIFY.FAIL
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Failed AMPlify run on $org" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		echo "$outdir" | mail -s "STAGE 10: AMPLIFY: FAILED" $address
+		# echo "$outdir" | mail -s "Failed AMPlify run on $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	echo "ERROR: AMPlify output file $file does not exist or is empty!" 1>&2
@@ -645,8 +652,9 @@ echo "STATUS: DONE." 1>&2
 touch $outdir/AMPLIFY.DONE
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	echo "$outdir" | mail -s "STAGE 10: AMPLIFY: SUCCESS" $address
+	# echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
 	echo "Email alert sent to $address." 1>&2
 fi
 # end_sec=$(date '+%s')

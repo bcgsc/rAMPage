@@ -63,13 +63,13 @@ if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
+outdir=""
 # 4 - read options
 while getopts :ho: opt; do
 	case $opt in
 	h) get_help ;;
 	o)
 		outdir=$(realpath $OPTARG)
-		mkdir -p $outdir
 		;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -83,6 +83,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then

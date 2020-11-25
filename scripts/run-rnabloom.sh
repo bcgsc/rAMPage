@@ -90,6 +90,7 @@ threads=8
 custom_threads=false
 memory_bool=false
 email=false
+outdir=""
 
 # 4 - read options
 while getopts :a:hm:o:t: opt; do
@@ -105,7 +106,6 @@ while getopts :a:hm:o:t: opt; do
 		;;
 	o)
 		outdir="$(realpath $OPTARG)"
-		mkdir -p $outdir
 		;;
 	t)
 		threads="$OPTARG"
@@ -122,6 +122,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
@@ -301,9 +307,10 @@ ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt
 
 if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 	touch $outdir/ASSEMBLY.FAIL
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	if [[ "$email" = true ]]; then
-		echo "$outdir" | mail -s "Failed assembling $org" "$address"
+		# echo "$outdir" | mail -s "Failed assembling $org" "$address"
+		echo "$outdir" | mail -s "STAGE 05: ASSEMBLY: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 fi
@@ -356,8 +363,8 @@ echo -e "END: $(date)\n" 1>&2
 touch $outdir/ASSEMBLY.DONE
 echo "STATUS: DONE." 1>&2
 
-org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 if [[ "$email" = true ]]; then
-	echo "$outdir" | mail -s "Finished assembling $org" "$address"
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	echo "$outdir" | mail -s "STAGE 05: ASSEMBLY: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

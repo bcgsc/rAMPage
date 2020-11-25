@@ -73,6 +73,7 @@ fi
 threads=4
 email=false
 parallel=false
+outdir=""
 # 4 - read options
 while getopts :a:hi:o:pt: opt; do
 	case $opt in
@@ -84,7 +85,6 @@ while getopts :a:hi:o:pt: opt; do
 	i) indir=$(realpath $OPTARG) ;;
 	o)
 		outdir=$(realpath $OPTARG)
-		mkdir -p $outdir
 		;;
 	p) parallel=true ;;
 	t) threads="$OPTARG" ;;
@@ -100,6 +100,12 @@ if [[ "$#" -ne 0 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ ! -d $indir ]]; then
 	print_error "Input directory $indir does not exist."
 fi
@@ -197,8 +203,9 @@ if [[ "$fail" = true ]]; then
 	fi
 
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		# echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
+		echo "${outdir}: ${failed_accs[*]}" | mail -s "STAGE 03: TRIMMING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 	echo "Failed to trim: ${failed_accs[*]}" 1>&2
@@ -209,6 +216,14 @@ fi
 if ls $workdir/core.* &>/dev/null; then
 	echo "ERROR: Core dumped." 1>&2
 	rm $workdir/core.*
+	if [[ "$email" = true ]]; then
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		# echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
+		echo "${outdir}: ${failed_accs[*]}" | mail -s "STAGE 03: TRIMMING READS: FAILED" "$address"
+		echo "Email alert sent to $address." 1>&2
+	fi
+	echo "Failed to trim: ${failed_accs[*]}" 1>&2
+	echo "STATUS: FAILED." 1>&2
 	exit 3
 fi
 
@@ -255,7 +270,8 @@ echo "STATUS: DONE." 1>&2
 touch $outdir/TRIM.DONE
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Finished trimming reads for $org" "$address"
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	# echo "$outdir" | mail -s "Finished trimming reads for $org" "$address"
+	echo "$outdir" | mail -s "STAGE 03: TRIMMING READS: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

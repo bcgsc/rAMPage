@@ -71,6 +71,7 @@ fi
 email=false
 # similarity=0.90
 consecutive=false
+outdir=""
 # 4 - read options
 while getopts :a:cho: opt; do
 	case $opt in
@@ -84,7 +85,6 @@ while getopts :a:cho: opt; do
 	h) get_help ;;
 	o)
 		outdir="$(realpath $OPTARG)"
-		mkdir -p $outdir
 		;;
 		#		s) similarity="$OPTARG";;
 	\?)
@@ -101,6 +101,11 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
@@ -174,6 +179,12 @@ else
 	signalp=false
 	signalp_opt=""
 	echo "ERROR: SignalP program not found. Please download SignalP into $ROOT_DIR/src, and source $ROOT_DIR/scripts/config.sh from the $ROOT_DIR, so that the RUN_SIGNALP environment variable is re-exported." 1>&2
+	if [[ "$email" = true ]]; then
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
+		echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: FAILED" $address
+		echo "Email alert sent to $address." 1>&2
+	fi
 	exit 2
 #	echo -e "SignalP program not found. Proceeding without SignalP.\n" 1>&2
 fi
@@ -302,8 +313,9 @@ if [[ ! -s "$outfile" ]]; then
 	touch $outdir/CLEAVE.FAIL
 	echo "ERROR: Cleaving output file $outfile does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
+		echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 3
@@ -328,8 +340,9 @@ if [[ ! -s $outfile_len ]]; then
 	touch $outdir/CLEAVE_LEN.FAIL
 	echo "ERROR: Length filtering output file $outfile_len does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Failed filtering out long sequences for $org" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: SUCCESS" $address
+		# echo "$outdir" | mail -s "Failed filtering out long sequences for $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 4
@@ -369,7 +382,8 @@ touch $outdir/CLEAVE_LEN.DONE
 echo "STATUS: DONE." 1>&2
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "Finished cleaving peptides for $org" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	# echo "$outdir" | mail -s "Finished cleaving peptides for $org" $address
+	echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: SUCCESS" $address
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi
