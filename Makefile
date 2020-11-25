@@ -23,7 +23,8 @@ check: $(TSV)
 
 # check for CONFIG.DONE to make sure the configuration was done before
 SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
-	@echo "STAGE 00: SETUP" 1>&2 @$< $(TSV)
+	@echo "STAGE 00: SETUP" 1>&2
+	@$< $(TSV)
  
 pipeline: PIPELINE.DONE
 	
