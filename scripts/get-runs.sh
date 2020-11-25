@@ -33,6 +33,7 @@ function get_help() {
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
+		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		" | column -s$'\t' -t -L
@@ -63,10 +64,15 @@ if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
+email=false
 outdir=""
 # 4 - read options
-while getopts :ho: opt; do
+while getopts :a:ho: opt; do
 	case $opt in
+	a)
+		address="$OPTARG"
+		email=true
+		;;
 	h) get_help ;;
 	o)
 		outdir=$(realpath $OPTARG)
@@ -93,6 +99,13 @@ if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
+fi
+
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
 fi
 
 # 7 - remove status files
@@ -136,7 +149,10 @@ rm $outdir/temp*.csv
 rm $outdir/*.curl.log
 
 echo "Fetching metadata..." 1>&2
+
+echo -e "COMMAND: $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions\n" 1>&2
 $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions
+
 echo -e "END: $(date)\n" 1>&2
 # end_sec=$(date '+%s')
 
@@ -167,3 +183,8 @@ fi
 
 touch $outdir/RUNS.DONE
 echo "STATUS: DONE." 1>&2
+
+if [[ "$email" = true ]]; then
+	echo "$outdir" | mail -s "STAGE 01: DOWNLOADING METADATA: SUCCESS" "$address"
+	echo -e "\nEmail alert sent to $address." 1>&2
+fi

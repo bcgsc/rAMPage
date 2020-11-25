@@ -157,6 +157,7 @@ if [[ "$parallel" = true ]]; then
 			fi
 		fi
 		echo "Trimming ${run}..." 1>&2
+		echo "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &" 1>&2
 		$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
 	done <$(dirname $indir)/sra/runs.txt
 	wait
@@ -174,6 +175,7 @@ else
 			fi
 		fi
 		echo "Trimming ${run}..." 1>&2
+		echo "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run" 1>&2
 		$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
 	done <$(dirname $indir)/sra/runs.txt
 fi

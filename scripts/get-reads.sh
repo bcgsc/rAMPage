@@ -138,8 +138,10 @@ if [[ "$parallel" = true ]]; then
 		# assume that the FASTQs do not exist due to timestamping of the folders
 		echo "Initiating download of ${accession}..." 1>&2
 		if [[ "$email" = true ]]; then
+			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession &" 1>&2
 			$ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession &
 		else
+			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession &" 1>&2
 			$ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession &
 		fi
 	done <$sra
@@ -151,8 +153,10 @@ else
 		# assume that the FASTQs do not exist due to timestamping of the folders
 		echo "Initiating download of ${accession}..." 1>&2
 		if [[ "$email" = true ]]; then
+			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession" 1>&2
 			$ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession
 		else
+			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession" 1>&2
 			$ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession
 		fi
 	done <$sra

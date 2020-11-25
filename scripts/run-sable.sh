@@ -101,7 +101,8 @@ echo -e "COMMAND: (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threa
 (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)
 
 if [[ -s $outdir/OUT_SABLE_graph ]]; then
-	echo -e "Parsing SABLE TXT output into a TSV format...\n" 1>&2
+	echo "Parsing SABLE TXT output into a TSV format..." 1>&2
+	echo -e "COMMAND: $ROOT_DIR/scripts/process-sable.sh $outdir/OUT_SABLE_graph &>>$outdir/sable.log\n" 1>&2
 	$ROOT_DIR/scripts/process-sable.sh $outdir/OUT_SABLE_graph &>>$outdir/sable.log
 
 	# combine AMPlify score with this file
@@ -109,8 +110,9 @@ else
 	touch $outdir/SABLE.FAIL
 
 	if [[ "$email" = true ]]; then
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "Failed SABLE run on $org" $address
+		#		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		#		echo "$outdir" | mail -s "Failed SABLE run on $org" $address
+		echo "$outdir" | mail -s "STAGE 12: SABLE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 
@@ -120,7 +122,8 @@ fi
 touch $outdir/SABLE.DONE
 
 if [[ "$email" = true ]]; then
-	echo "$outdir" | mail -s "Finished running SABLE" $address
+	#	echo "$outdir" | mail -s "Finished running SABLE" $address
+	echo "$outdir" | mail -s "STAGE 12: SABLE: SUCCESS"
 	echo "Email alert sent to $address." 1>&2
 fi
 

@@ -283,6 +283,7 @@ done
 # Sambina's cleaving script
 echo "Cleaving peptides..." 1>&2
 # start_cleave=$(date '+%s')
+echo -e "COMMAND: $ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir\n" 1>&2
 $ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir
 # end_cleave=$(date '+%s')
 # $ROOT_DIR/scripts/get-runtime.sh $start_cleave $end_cleave

@@ -23,8 +23,7 @@ check: $(TSV)
 
 # check for CONFIG.DONE to make sure the configuration was done before
 SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
-	@echo "STAGE 00: SETUP" 1>&2
-	@$< $(TSV)
+	@echo "STAGE 00: SETUP" 1>&2 @$< $(TSV)
  
 pipeline: PIPELINE.DONE
 	
@@ -106,6 +105,11 @@ rr/RR.DONE: scripts/run-cdhit.sh combine
  		$< rr/amps.faa \
 			&>> logs/11-redundancy_removal.log' \
  		&>> logs/11-redundancy_removal.log
+	@if [[ -n $(EMAIL) ]]; then \
+		if command -v mail &> /dev/null; then \
+			echo $$(realpath rr) | mail -s "STAGE 11: REDUNDANCY REMOVAL: SUCCESS" $(EMAIL); \
+		fi; \
+	fi
 	@touch rr/RR.DONE
 
 # run sable

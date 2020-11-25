@@ -33,6 +33,7 @@ function get_help() {
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
+		\t-a <address>\temail alert\n \
 		\t-d <directory>\tInput directory (trimmed reads) and output directory for reads list\t(required)\n \
 		\t-h\tShow this help menu\n \
         " | column -s$'\t' -t -L
@@ -63,10 +64,14 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 dir=""
-
+email=false
 # 4 - read options
-while getopts :d:h opt; do
+while getopts :a:d:h opt; do
 	case $opt in
+	a)
+		address="$OPTARG"
+		email=true
+		;;
 	d) dir="$(realpath $OPTARG)" ;;
 	h) get_help ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
@@ -93,6 +98,13 @@ if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
 	print_error "input file $(realpath $1) is empty."
+fi
+
+if command -v mail &>/dev/null; then
+	email=true
+else
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
 fi
 
 # 7 - remove status files
@@ -240,3 +252,8 @@ echo -e "END: $(date)\n" 1>&2
 # fi
 echo "STATUS: DONE." 1>&2
 touch $dir/READSLIST.DONE
+
+if [[ "$email" = true ]]; then
+	echo "$dir" | mail -s "STAGE 04: MAKING A READS LIST: SUCCESS" "$address"
+	echo -e "\nEmail alert sent to $address." 1>&2
+fi
