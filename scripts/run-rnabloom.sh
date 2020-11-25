@@ -37,7 +37,7 @@ function get_help() {
 		\t-a <address>\temail alert\n \
 		\t-h\tshow help menu\n \
 		\t-m <int K/M/G>\tallotted memory for Java (e.g. 500G)\n \
-		\t-o <directory>\toutput directory\n \
+		\t-o <directory>\toutput directory\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
         " | column -s$'\t' -t -L
 

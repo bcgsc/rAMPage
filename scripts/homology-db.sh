@@ -41,6 +41,7 @@ function print_error() {
 
 # 3 - doesn't take arguments so no check needed
 
+outdir=""
 # 4 - get options
 while getopts :ho: opt; do
 	case $opt in
@@ -59,11 +60,15 @@ shift $((OPTIND - 1))
 
 # 5 - incorrect number
 if [[ "$#" -ne 0 ]]; then
-	print_line "Incorrect number of arguments."
+	print_error "Incorrect number of arguments."
 fi
 
 # 6 - check inputs - no inputs to check
-
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
 # 7 - do not remove status files, only want this done ONCE
 
 # 8 - print env

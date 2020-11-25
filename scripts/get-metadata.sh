@@ -41,12 +41,13 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # 4 - get options
+outdir=""
 while getopts :ho: opt; do
 	case $opt in
 	h) get_help ;;
 	o) outdir="$(realpath $OPTARG)" ;;
 	\?)
-		print_line "Invalid option: -$OPTARG"
+		print_error "Invalid option: -$OPTARG"
 		;;
 	esac
 done
@@ -55,11 +56,15 @@ shift $((OPTIND - 1))
 
 # 5 - wrong arguments given
 if [[ "$#" -lt 1 ]]; then
-	print_line "Incorrect number of arguments."
+	print_error "Incorrect number of arguments."
 fi
 
 # 6 - check input files - no filesa
-
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
 # 7 - check status files
 if [[ -f $outdir/METADATA.DONE ]]; then
 	rm $outdir/METADATA.DONE

@@ -68,6 +68,7 @@ email=false
 threads=2
 cutoff=0.50
 outdir=""
+ref=""
 
 # 4 - read options
 while getopts :a:c:ho:r:t: opt; do
@@ -99,6 +100,10 @@ if [[ -n $outdir ]]; then
 	print_error "Required argument -o <output directory> missing."
 else
 	mkdir -p $outdir
+fi
+
+if [[ -n $ref ]]; then
+	print_error "Required argument -r <reference transcriptome> missing."
 fi
 
 if [[ ! -f "$ref" ]]; then

@@ -54,14 +54,14 @@ function print_error() {
 if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
-# 4 - get options
 
+outdir=""
+# 4 - get options
 while getopts :ho: opt; do
 	case $opt in
 	h) get_help ;;
 	o)
-		outdir="$OPTARG"
-		mkdir -p $outdir
+		outdir="$(realpath $OPTARG)"
 		;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -75,6 +75,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - no input files to check, check if URL works
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ "$1" =~ ^/ ]]; then
 	path=$1
 else

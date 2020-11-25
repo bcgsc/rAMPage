@@ -33,7 +33,7 @@ function get_help() {
 		echo -e "\
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
-		\t-o <DIRECTORY>\toutput directory\t(required)\n \
+		\t-o <directory>\toutput directory\t(required)\n \
         " | column -s $'\t' -t -L
 
 		echo "EXAMPLE(S):"

@@ -29,6 +29,7 @@ function get_help() {
 
 threads=8
 email=false
+outdir=""
 while getopts :a:ho:t: opt; do
 	case $opt in
 	a)
@@ -38,7 +39,6 @@ while getopts :a:ho:t: opt; do
 	h) get_help ;;
 	o)
 		outdir=$(realpath $OPTARG)
-		mkdir -p $outdir
 		;;
 	t) threads=$OPTARG ;;
 	\?)
@@ -61,6 +61,12 @@ if [[ "$#" -ne 1 ]]; then
 	printf '%.0s=' $(seq $(tput cols)) 1>&2
 	echo 1>&2
 	get_help
+fi
+
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
 fi
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2

@@ -51,6 +51,8 @@ fi
 threads=2
 custom_threads=false
 email=false
+outdir=""
+
 while getopts :a:ho:t: opt; do
 	case $opt in
 	a)
@@ -77,6 +79,12 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input arguments
+if [[ -n $outdir ]]; then
+	print_error "Required argument -o <output directory> missing."
+else
+	mkdir -p $outdir
+fi
+
 if [[ "$1" == *RR* ]]; then
 	accession=$1
 else

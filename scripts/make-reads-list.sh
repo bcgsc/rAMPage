@@ -62,6 +62,8 @@ if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
+dir=""
+
 # 4 - read options
 while getopts :d:h opt; do
 	case $opt in
@@ -79,6 +81,10 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
+if [[ -n $dir ]]; then
+	print_error "Required argument -d <I/O directory> missing."
+fi
+
 if [[ ! -d $dir ]]; then
 	print_error "Given directory $dir does not exist."
 fi
