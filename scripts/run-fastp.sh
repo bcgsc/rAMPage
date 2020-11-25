@@ -70,11 +70,11 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files - input are not files
-if [[ -n $indir ]]; then
+if [[ -z $indir ]]; then
 	print_error "Required argument -i <input directory> missing."
 fi
 
-if [[ -n $outdir ]]; then
+if [[ -z $outdir ]]; then
 	print_error "Required argument -o <output directory> missing."
 else
 	mkdir -p $outdir

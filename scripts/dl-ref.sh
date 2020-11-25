@@ -75,7 +75,7 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - no input files to check, check if URL works
-if [[ -n $outdir ]]; then
+if [[ -z $outdir ]]; then
 	print_error "Required argument -o <output directory> missing."
 else
 	mkdir -p $outdir

@@ -79,7 +79,7 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input arguments
-if [[ -n $outdir ]]; then
+if [[ -z $outdir ]]; then
 	print_error "Required argument -o <output directory> missing."
 else
 	mkdir -p $outdir

@@ -63,7 +63,7 @@ if [[ "$#" -ne 1 ]]; then
 	get_help
 fi
 
-if [[ -n $outdir ]]; then
+if [[ -z $outdir ]]; then
 	print_error "Required argument -o <output directory> missing."
 else
 	mkdir -p $outdir
