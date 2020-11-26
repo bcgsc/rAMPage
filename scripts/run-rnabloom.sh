@@ -150,9 +150,7 @@ export PATH=${minimap2_dir}:${ntcard_dir}:${PATH}
 # check minimap2 and ntCard
 
 echo -e "PATH=$PATH\n"
-if command -v mail &>/dev/null; then
-	email=true
-else
+if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi

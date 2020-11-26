@@ -125,9 +125,7 @@ echo -e "START: $(date)\n" 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
 
-if command -v mail &>/dev/null; then
-	email=true
-else
+if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi

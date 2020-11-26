@@ -86,7 +86,7 @@ if [[ "$#" -ne 1 ]]; then
 fi
 
 # 6 - check input files
-if [[ -n $dir ]]; then
+if [[ -z $dir ]]; then
 	print_error "Required argument -d <I/O directory> missing."
 fi
 
@@ -100,9 +100,7 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "input file $(realpath $1) is empty."
 fi
 
-if command -v mail &>/dev/null; then
-	email=true
-else
+if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi

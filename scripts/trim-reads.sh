@@ -134,9 +134,7 @@ else
 	print_error "*.END file not found. Please check that the reads have been downloaded properly."
 fi
 
-if command -v mail &>/dev/null; then
-	email=true
-else
+if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi

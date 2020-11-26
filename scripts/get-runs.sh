@@ -101,9 +101,7 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
 fi
 
-if command -v mail &>/dev/null; then
-	email=true
-else
+if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi
