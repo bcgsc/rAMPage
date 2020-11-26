@@ -197,10 +197,11 @@ done <$sra
 # if fail = true, then write 'FAIL' file.
 if [[ "$fail" = true ]]; then
 	touch $outdir/READS.FAIL
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
 	if [[ "$email" = true ]]; then
 		#		echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed downloading reads for $org" "$address"
-		echo "${outdir}: ${failed_accs[*]}" | mail -s "STAGE 02: DOWNLOADING READS: FAILED" "$address"
+		echo "${outdir}: ${failed_accs[*]}" | mail -s "${org^}: STAGE 02: DOWNLOADING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 
@@ -227,8 +228,9 @@ touch $outdir/READS.DONE
 echo "STATUS: DONE." 1>&2
 
 if [[ "$email" = true ]]; then
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
 	#	echo "$outdir" | mail -s "Finished downloading reads for $org" "$address"
-	echo "$outdir" | mail -s "STAGE 02: DOWNLOADING READS: SUCCESS" "$address"
+	echo "$outdir" | mail -s "${org^}: STAGE 02: DOWNLOADING READS: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

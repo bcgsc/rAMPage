@@ -150,7 +150,8 @@ else
 	touch $outdir/TRANSLATION.FAIL
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "STAGE 07: TRANSLATION: FAILED" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 07: TRANSLATION: FAILED" $address
 		# echo "$outdir" | mail -s "Failed translating transcripts for $org TransDecoder" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -191,6 +192,7 @@ touch $outdir/TRANSLATION.DONE
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished translating transcripts for $org with TransDecoder" $address
-	echo "$outdir" | mail -s "STAGE 07: TRANSLATION: SUCCESS" $address
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 07: TRANSLATION: SUCCESS" $address
 	echo -e "\nEmail alert sent to ${address}." 1>&2
 fi

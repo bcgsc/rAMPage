@@ -180,7 +180,8 @@ else
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
-		echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: FAILED" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 2
@@ -314,7 +315,8 @@ if [[ ! -s "$outfile" ]]; then
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
-		echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: FAILED" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 3
@@ -340,7 +342,8 @@ if [[ ! -s $outfile_len ]]; then
 	echo "ERROR: Length filtering output file $outfile_len does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: SUCCESS" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: SUCCESS" $address
 		# echo "$outdir" | mail -s "Failed filtering out long sequences for $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -383,6 +386,7 @@ echo "STATUS: DONE." 1>&2
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished cleaving peptides for $org" $address
-	echo "$outdir" | mail -s "STAGE 09: CLEAVAGE: SUCCESS" $address
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: SUCCESS" $address
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

@@ -224,7 +224,8 @@ if [[ ! -s $file ]]; then
 	touch $outdir/AMPLIFY.FAIL
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "STAGE 10: AMPLIFY: FAILED" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 10: AMPLIFY: FAILED" $address
 		# echo "$outdir" | mail -s "Failed AMPlify run on $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -651,7 +652,8 @@ touch $outdir/AMPLIFY.DONE
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "STAGE 10: AMPLIFY: SUCCESS" $address
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 10: AMPLIFY: SUCCESS" $address
 	# echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
 	echo "Email alert sent to $address." 1>&2
 fi

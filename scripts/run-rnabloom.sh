@@ -308,7 +308,8 @@ if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	if [[ "$email" = true ]]; then
 		# echo "$outdir" | mail -s "Failed assembling $org" "$address"
-		echo "$outdir" | mail -s "STAGE 05: ASSEMBLY: FAILED" "$address"
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 05: ASSEMBLY: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 fi
@@ -363,6 +364,7 @@ echo "STATUS: DONE." 1>&2
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "STAGE 05: ASSEMBLY: SUCCESS" "$address"
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 05: ASSEMBLY: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

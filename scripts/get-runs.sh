@@ -183,6 +183,7 @@ touch $outdir/RUNS.DONE
 echo "STATUS: DONE." 1>&2
 
 if [[ "$email" = true ]]; then
-	echo "$outdir" | mail -s "STAGE 01: DOWNLOADING METADATA: SUCCESS" "$address"
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 01: DOWNLOADING METADATA: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

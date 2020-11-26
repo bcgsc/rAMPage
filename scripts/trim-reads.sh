@@ -205,7 +205,8 @@ if [[ "$fail" = true ]]; then
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
-		echo "${outdir}: ${failed_accs[*]}" | mail -s "STAGE 03: TRIMMING READS: FAILED" "$address"
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "${outdir}: ${failed_accs[*]}" | mail -s "${org^}: STAGE 03: TRIMMING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 	echo "Failed to trim: ${failed_accs[*]}" 1>&2
@@ -217,9 +218,10 @@ if ls $workdir/core.* &>/dev/null; then
 	echo "ERROR: Core dumped." 1>&2
 	rm $workdir/core.*
 	if [[ "$email" = true ]]; then
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
-		echo "${outdir}: ${failed_accs[*]}" | mail -s "STAGE 03: TRIMMING READS: FAILED" "$address"
+		echo "${outdir}: ${failed_accs[*]}" | mail -s "${org^}: STAGE 03: TRIMMING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 	echo "Failed to trim: ${failed_accs[*]}" 1>&2
@@ -272,6 +274,7 @@ touch $outdir/TRIM.DONE
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished trimming reads for $org" "$address"
-	echo "$outdir" | mail -s "STAGE 03: TRIMMING READS: SUCCESS" "$address"
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 03: TRIMMING READS: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

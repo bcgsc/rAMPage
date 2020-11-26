@@ -252,6 +252,7 @@ echo "STATUS: DONE." 1>&2
 touch $dir/READSLIST.DONE
 
 if [[ "$email" = true ]]; then
-	echo "$dir" | mail -s "STAGE 04: MAKING A READS LIST: SUCCESS" "$address"
+	org=$(echo "$dir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$dir" | mail -s "${org^}: STAGE 04: MAKING A READS LIST: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

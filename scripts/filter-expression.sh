@@ -200,7 +200,8 @@ if [[ ! -s $outdir/rnabloom.transcripts.filtered.fa ]]; then
 
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "STAGE 06: EXPRESSION FILTERING: FAILED" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 06: EXPRESSION FILTERING: FAILED" $address
 		# echo "$outdir" | mail -s "Failed expression filtering $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -255,7 +256,8 @@ touch $outdir/FILTER.DONE
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	echo "$outdir" | mail -s "STAGE 06: EXPRESSION FILTERING: SUCCESS" $address
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 06: EXPRESSION FILTERING: SUCCESS" $address
 	# echo "$outdir" | mail -s "Finished expression filtering for $org" $address
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

@@ -167,7 +167,8 @@ if [[ ! -s $outdir/jackhmmer.tbl ]]; then
 
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		echo "$outdir" | mail -s "STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 		# echo "$outdir" | mail -s "Failed homology search on $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -192,7 +193,8 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 			touch $outdir/HOMOLOGY.FAIL
 			if [[ "$email" = true ]]; then
 				# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-				echo "$outdir" | mail -s "STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+				echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 				# echo "$outdir" | mail -s "Failed to fetch sequences after homology search on $org" $address
 				echo "Email alert sent to $address." 1>&2
 			fi
@@ -203,7 +205,8 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 			touch $outdir/HOMOLOGY.FAIL
 			if [[ "$email" = true ]]; then
 				# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-				echo "$outdir" | mail -s "STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+				echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 				# echo "$outdir" | mail -s "No sequences remaining after homology search on $org" $address
 				echo "Email alert sent to $address." 1>&2
 			fi
@@ -229,7 +232,8 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 
 		if [[ "$email" = true ]]; then
 			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-			echo "$outdir" | mail -s "STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+			org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+			echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 			# echo "$outdir" | mail -s "Failed redundancy removal after homology search on $org" $address
 			echo "Email alert sent to $address." 1>&2
 		fi
@@ -244,7 +248,8 @@ else
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "$outdir" | mail -s "Failed homology search on $org" $address
-		echo "$outdir" | mail -s "STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
+		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 
@@ -282,6 +287,7 @@ echo "STATUS: DONE." 1>&2
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished homology search on $org" $address
-	echo "$outdir" | mail -s "STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
+	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
 	echo -e "\nEmail alert sent to ${address}." 1>&2
 fi
