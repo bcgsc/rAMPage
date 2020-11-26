@@ -25,6 +25,11 @@ check: $(TSV)
 SETUP.DONE: scripts/setup.sh CONFIG.DONE $(TSV) check
 	@echo "STAGE 00: SETUP" 1>&2
 	@$< $(TSV)
+	@if [[ -n $(EMAIL) ]]; then \
+		if command -v mail &> /dev/null; then \
+			mail -s "STAGE 00: SETUP: SUCCESS" $(EMAIL); \
+		fi; \
+	fi
  
 pipeline: PIPELINE.DONE
 	
@@ -173,7 +178,6 @@ sable/SABLE.DONE: scripts/run-sable.sh rr
 	fi
 
 clean: check
-	@rm -f CONFIG.DONE
 	@rm -f PIPELINE.DONE
 	@rm -f PIPELINE.FAIL
 	@rm -f SETUP.DONE
