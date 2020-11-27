@@ -135,20 +135,20 @@ tempfile=$outdir/prop.out
 
 echo "PROGRAM: $(command -v $RUN_PROP)" 1>&2
 echo -e "VERSION: 1.0c\n" 1>&2
-prop_dir=$(dirname $RUN_PROP)
+propdir=$(dirname $RUN_PROP)
 
-if [[ -f "$prop_dir/CONFIG.DONE" ]]; then
+if [[ -f "$propdir/CONFIG.DONE" ]]; then
 	config=false
-	echo -e "ProP and SignalP have been pre-configured. Skipping configuration. If this is not the case, please delete the $prop_dir/CONFIG.DONE file to trigger a reconfiguration of ProP and SignalP.\n" 1>&2
+	echo -e "ProP and SignalP have been pre-configured. Skipping configuration. If this is not the case, please delete the $propdir/CONFIG.DONE file to trigger a reconfiguration of ProP and SignalP.\n" 1>&2
 else
 	config=true
 fi
 
 if [[ "$config" == true ]]; then
-	permissions=$(ls -ld $prop_dir/tmp | awk '{print $1}')
-	owner=$(ls -ld $prop_dir/tmp | awk '{print $3}')
+	permissions=$(ls -ld $propdir/tmp | awk '{print $1}')
+	owner=$(ls -ld $propdir/tmp | awk '{print $3}')
 	if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
-		chmod 1777 $prop_dir/tmp
+		chmod 1777 $propdir/tmp
 	fi
 fi
 # echo -e "VERSION: $(echo $RUN_PROP | grep -o prop\-[0-9]\.[0-9]. | cut -f2 -d-)\n" 1>&2
@@ -193,7 +193,6 @@ if [[ "$signalp" = true ]]; then
 fi
 
 if [[ "$config" = true ]]; then
-	propdir=$(dirname $RUN_PROP)
 	if [[ ! -f $propdir/CONFIG.DONE ]]; then
 		echo -e "Configuring ProP...\n" 1>&2
 		sed -i "s|setenv\tPROPHOME.*|setenv\tPROPHOME\t$propdir|" $RUN_PROP
