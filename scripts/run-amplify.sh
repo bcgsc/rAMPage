@@ -620,7 +620,7 @@ echo -e "\
 	$(basename $outfile_charge_nr)\t$count_charge\n \
 	$(basename $outfile_conf_charge_nr)\t$count_conf_charge\n \
 	$(basename $outfile_conf_short_nr)\t$count_conf_short\n \
-	$(basename $outfile_conf_short_nr)\t$count_short_charge\n \
+	$(basename $outfile_short_charge_nr)\t$count_short_charge\n \
 	$(basename $outfile_conf_short_charge_nr)\t$count_conf_short_charge\n \
 	" | column -s $'\t' -t 1>&2
 print_line
