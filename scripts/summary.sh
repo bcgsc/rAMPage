@@ -86,7 +86,19 @@ fi
 timestamp=$(date '+%Y%m%d_%H%M%S')
 outfile=$ROOT_DIR/summary/summary_table-${timestamp}.tsv
 # echo -e "Path\tAccession\tNumber of Reads\tNumber of Transcripts\tNumber of Annotated Sequences\tNumber of Potential AMPs (nhmmer)" | tee $outfile
-echo -e "Path\tNumber of Trimmed Reads\tNumber of Transcripts\tNumber of Transcripts After Filtering\tNumber of Valid ORFs\tNumber of Potential AMPs (using HMMs)\tNumber of Potential AMPs (using HMMs then AMPlify)\tNumber of Short Unique Potential AMPs (length <= 50)\tNumber of Confident Unique Potential AMPs (score >= 0.99)\tNumber of Positive Unique AMPs (charge >=2)\tNumber of Confident and Short Unique Potential AMPs\tNumber of Confident, Short, and Positive unique AMPs" | tee $outfile
+echo -e "Path\t \
+Number of Trimmed Reads\t \
+Number of Transcripts\t \
+Number of Transcripts After Filtering\t \
+Number of Valid ORFs\tNumber of Potential AMPs (using HMMs)\t \
+Number of Potential AMPs (using HMMs then AMPlify)\t \
+Number of Short Unique Potential AMPs (length <= 50)\t \
+Number of Confident Unique Potential AMPs (score >= 0.99)\t \
+Number of Positive Unique Potential AMPs (charge >=2)\t \
+Number of Confident and Short Unique Potential AMPs\t \
+Number of Confident and Positive Unique Potential AMPs\t \
+Number of Short and Positive Unique Potential AMPs\t \
+Number of Confident, Short, and Positive Unique AMPs" | tee $outfile
 
 if [[ "$commandline" = false ]]; then
 	while read path; do #	while IFS=$'\t' read path accession
@@ -157,14 +169,17 @@ if [[ "$commandline" = false ]]; then
 				amplify_count="NA"
 				amplify_conf="NA"
 				amplify_charge="NA"
+				amplify_conf_charge="NA"
 				amplify_short="NA"
+				amplify_short_charge="NA"
 				amplify_conf_short="NA"
 				amplify_conf_short_charge="NA"
 			else
 				amplify_conf=$(awk '/Number of high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_short=$(awk '/Number of short \(length <= [0-9]+\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_charge=$(awk '/Number of positive \(charge >= -?[0-9]+\) unique AMPs:/ {print $NF}' $amplify_log)
-				amplify_conf_short=$(awk '/Number of short \(length <= [0-9]+\) and high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
+				amplify_conf_charge=$(awk '/Number of high confidence \(score >= [0-9]\.?[0-9]*\) and positive \(charge >= -?[0-9]+\) unique AMPS:/ {print $NF}' $amplify_log)
+				amplify_short_charge=$(awk '/Number of short \(length <= [0-9]+\) and high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_conf_short_charge=$(awk '/Number of positive \(charge >= -?[0-9]+\), short \(length <= [0-9]+\), and high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 			fi
 		else
@@ -176,7 +191,7 @@ if [[ "$commandline" = false ]]; then
 			amplify_conf_short_charge="NA"
 		fi
 		# Final line
-		echo -e "$path\t$num_reads\t$num_transcripts\t$num_filter\t$num_annotated\t$jackhmmer_count\t$amplify_count\t$amplify_short\t$amplify_conf\t$amplify_charge\t$amplify_conf_short\t$amplify_conf_short_charge" | tee -a $outfile
+		echo -e "$path\t$num_reads\t$num_transcripts\t$num_filter\t$num_annotated\t$jackhmmer_count\t$amplify_count\t$amplify_short\t$amplify_conf\t$amplify_charge\t$amplify_conf_short\t$amplify_conf_charge\t$amplify_short_charge\t$amplify_conf_short_charge" | tee -a $outfile
 
 		#	echo -e "$path\t$accession\t$num_reads\t$num_transcripts\t$num_annotated\t$nhmmer_count" | tee -a $outfile
 		#	done < <(cut -f1,2 -d$'\t' $1)
@@ -252,12 +267,16 @@ else
 				amplify_conf="NA"
 				amplify_short="NA"
 				amplify_charge="NA"
+				amplify_conf_charge="NA"
+				amplify_short_charge="NA"
 				amplify_conf_short="NA"
 				amplify_conf_short_charge="NA"
 			else
 				amplify_conf=$(awk '/Number of high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_short=$(awk '/Number of short \(length <= [0-9]+\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_charge=$(awk '/Number of positive \(charge >= -?[0-9]+\) unique AMPs:/ {print $NF}' $amplify_log)
+				amplify_conf_charge=$(awk '/Number of high confidence \(score >= [0-9]\.?[0-9]*\) and positive \(charge >= -?[0-9]+\) unique AMPS:/ {print $NF}' $amplify_log)
+				amplify_short_charge=$(awk '/Number of short \(length <= [0-9]+\) and high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_conf_short=$(awk '/Number of short \(length <= [0-9]+\) and high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 				amplify_conf_short_charge=$(awk '/Number of positive \(charge >= -?[0-9]+\), short \(length <= [0-9]+\), and high-confidence \(score >= [0-9]\.?[0-9]*\) unique AMPs:/ {print $NF}' $amplify_log)
 
@@ -267,11 +286,13 @@ else
 			amplify_conf="NA"
 			amplify_charge="NA"
 			amplify_short="NA"
+			amplify_conf_charge="NA"
+			amplify_short_charge="NA"
 			amplify_conf_short="NA"
 			amplify_conf_short_charge="NA"
 		fi
 		# Final line
-		echo -e "$path\t$num_reads\t$num_transcripts\t$num_filter\t$num_annotated\t$jackhmmer_count\t$amplify_count\t$amplify_short\t$amplify_conf\t$amplify_charge\t$amplify_conf_short\t$amplify_conf_short_charge" | tee -a $outfile
+		echo -e "$path\t$num_reads\t$num_transcripts\t$num_filter\t$num_annotated\t$jackhmmer_count\t$amplify_count\t$amplify_short\t$amplify_conf\t$amplify_charge\t$amplify_conf_short\t$amplify_conf_charge\t$amplify_short_charge\t$amplify_conf_short_charge" | tee -a $outfile
 
 		#	echo -e "$path\t$accession\t$num_reads\t$num_transcripts\t$num_annotated\t$nhmmer_count" | tee -a $outfile
 	done
