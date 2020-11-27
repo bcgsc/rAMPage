@@ -1,5 +1,6 @@
-SHELL = /usr/bin/env bash
+SHELL := /usr/bin/env bash -euo pipefail -c
 THREADS = 48
+INPUT = input.txt
 PARALLEL = false
 EMAIL = ""
 
@@ -10,7 +11,7 @@ REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 RAW_READS := $(wildcard raw_reads/*.fastq.gz)
 TRIMMED_READS := $(wildcard trimmed_reads/*.paired.fastq.gz)
 
-.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean
+.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions check clean
 # final
 all: amplify
 
@@ -96,9 +97,6 @@ trimmed_reads/reads.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/make
 # 3. trim the reads
 trim: $(TRIMMED_READS) trimmed_reads/TRIM.DONE
 
-# trimmed_reads/%.paired.fastq.gz: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/%.fastq.gz $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
-#	$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log
-
 trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(RAW_READS) $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
 	@echo "STAGE 03: TRIMMING READS: $$(realpath logs/03-trimmed_reads.log)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
@@ -115,42 +113,16 @@ trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/r
 		fi; \
 	fi
 
-# 2. download reads
-reads: $(RAW_READS) raw_reads/READS.DONE
+reads: raw_reads/READS.DONE
 
-# Use the DONE file INSTEAD of wildcard
-# raw_reads/%.fastq.gz: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
-#	$< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log
+raw_reads/READS.DONE: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) check
+	@echo "STAGE 02: GETTING READS: $$(realpath logs/02-raw_reads.log)" 1>&2
+	@$< $(INPUT) &> logs/02-raw_reads.log
 
-raw_reads/READS.DONE: $(ROOT_DIR)/scripts/get-reads.sh $(ROOT_DIR)/scripts/get-accession.sh sra/runs.txt $(ROOT_DIR)/scripts/get-runtime.sh sra/RUNS.DONE sra/METADATA.DONE
-	@echo "STAGE 02: DOWNLOADING READS: $$(realpath logs/02-raw_reads.log)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
-		if [[ $(PARALLEL) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o raw_reads -p sra/runs.txt &> logs/02-raw_reads.log; \
-		else \
-			/usr/bin/time -pv $< -a $(EMAIL) -o raw_reads sra/runs.txt &> logs/02-raw_reads.log; \
-		fi; \
-	else \
-		if [[ $(PARALLEL) == true ]]; then \
-			/usr/bin/time -pv $< -o raw_reads -p sra/runs.txt &> logs/02-raw_reads.log; \
-		else \
-			/usr/bin/time -pv $< -o raw_reads sra/runs.txt &> logs/02-raw_reads.log; \
-		fi; \
-	fi
-
-
-# 1. get runs
-accessions: sra/runs.txt sra/metadata.tsv
-
-sra/runs.txt sra/metadata.tsv sra/RUNS.DONE sra/METADATA.DONE &: $(ROOT_DIR)/scripts/get-runs.sh accessions.txt $(ROOT_DIR)/scripts/get-runtime.sh # $(ROOT_DIR)/CONFIG.DONE $(ROOT_DIR)/SETUP.DONE
-	@echo "STAGE 01: DOWNLOADING METADATA: $$(realpath logs/01-sra.log)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
-		/usr/bin/time -pv $< -a $(EMAIL) -o sra accessions.txt &> logs/01-sra.log; \
-	else \
-		/usr/bin/time -pv $< -o sra accessions.txt &> logs/01-sra.log; \
-	fi
-
+check: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
+	@echo "STAGE 01: CHECK DEPENDENCIES $$(realpath logs/01-check.log)" 1>&2
+	@$< | tee logs/01-check.log 1>&2
 
 clean:
 	@rm -f logs/* 2> /dev/null
-	@rm -rf sra raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out
+	@rm -rf raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out
