@@ -2,6 +2,11 @@
 
 export ROOT_DIR=$(pwd)
 
+if [[ $ROOT_DIR != */rAMPage* ]]; then
+	echo "The script scripts/config.sh must be sourced from the root of the rAMPage repository." 1>&2
+	exit 1
+fi
+
 if [[ -f $ROOT_DIR/CONFIG.DONE ]]; then
 	rm $ROOT_DIR/CONFIG.DONE
 fi

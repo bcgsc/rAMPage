@@ -143,44 +143,26 @@ echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
 if [[ "$parallel" = true ]]; then
 	echo -e "Trimming each accession in parallel...\n" 1>&2
-	while read run; do
-		if [[ "$single" = false ]]; then
-			if [[ ! -f "$indir/${run}_1.fastq.gz" || ! -f "$indir/${run}_2.fastq.gz" ]] && [[ -f "$indir/${run}.fastq.gz" ]]; then
-				echo -e "\nRun ${run} contains single-end reads. Paired-end reads are prioritized over single-end reads. Therefore single-end reads are skipped and not trimmed.\n" 1>&2
-				sed -i "/$run/d" $(dirname $indir)/sra/runs.txt
-				sed -i "/$run/d" $(dirname $indir)/sra/metadata.tsv
-				sed -i "/$run/d" $(dirname $indir)/sra/RunInfoTable.csv
-				echo "$run" >>$(dirname $indir)/sra/skipped.txt
-				continue
-			fi
-		fi
+	for i in $(ls $indir/*.fastq.gz | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
+		run=$(basename $i)
 		echo "Trimming ${run}..." 1>&2
 		echo "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &" 1>&2
 		$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
-	done <$(dirname $indir)/sra/runs.txt
+	done
 	wait
 else
-
-	while read run; do
-		if [[ "$single" = false ]]; then
-			if [[ ! -f "$indir/${run}_1.fastq.gz" || ! -f "$indir/${run}_2.fastq.gz" ]] && [[ -f "$indir/${run}.fastq.gz" ]]; then
-				echo -e "\nRun ${run} contains single-end reads. Paired-end reads are prioritized over single-end reads. Therefore single-end reads are skipped and not trimmed.\n" 1>&2
-				sed -i "/$run/d" $(dirname $indir)/sra/runs.txt
-				sed -i "/$run/d" $(dirname $indir)/sra/metadata.tsv
-				sed -i "/$run/d" $(dirname $indir)/sra/RunInfoTable.csv
-				echo "$run" >>$(dirname $indir)/sra/skipped.txt
-				continue
-			fi
-		fi
+	for i in $(ls $indir/*.fastq.gz | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
+		run=$(basename $i)
 		echo "Trimming ${run}..." 1>&2
 		echo "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run" 1>&2
 		$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
-	done <$(dirname $indir)/sra/runs.txt
+	done
 fi
 
 fail=false
 failed_accs=()
-while read run; do
+for i in $(ls $indir/*.fastq.gz | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
+	run=$(basename $i)
 	if [[ "$single" = true ]]; then
 		if [[ ! -s $outdir/${run}.fastq.gz ]]; then
 			fail=true
@@ -192,8 +174,7 @@ while read run; do
 			failed_accs+=(${run})
 		fi
 	fi
-
-done <$(dirname $indir)/sra/runs.txt
+done
 
 if [[ "$fail" = true ]]; then
 	touch $outdir/TRIM.FAIL

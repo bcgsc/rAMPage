@@ -76,15 +76,16 @@ fi
 num_cols=$(awk '{print NF}' $input | sort -u)
 if [[ "$num_cols" -eq 2 ]]; then
 	paired=false
+	touch SINGLE.END
 elif [[ "$num_cols" -eq 3 ]]; then
 	paired=true
+	touch PAIRED.END
 else
 	print_error "There are too many columns in the input TXT file."
 fi
 
 # this script is ONLY run as a part of the Makefile, so it will run in the "working directory" CLASS/SPECIES/TISSUE
 mkdir -p raw_reads
-
 # parse through the input txt and copy reads to the raw_reads dir if they aren't already there
 if [[ "$paired" = true ]]; then
 	while read pool read1 read2; do
@@ -102,7 +103,7 @@ if [[ "$paired" = true ]]; then
 				echo "$(basename ${read2}) already in $(realpath raw_reads)..." 1>&2
 			fi
 		else
-			print_error "Reads $(basename ${read1}) and $(basename ${read2}) in the input file do not exist or are empty."
+			print_error "Reads ${read1} and ${read2} in the input file do not exist or are empty."
 			exit 1
 		fi
 	done <$input
@@ -116,7 +117,7 @@ else
 				echo "$(basename ${read1}) already in $(realpath raw_reads)..." 1>&2
 			fi
 		else
-			print_error "Reads $(basename ${read1}) in the input file do not exist or are empty."
+			print_error "Reads ${read1} in the input file do not exist or are empty."
 			exit 1
 		fi
 	done <$input
