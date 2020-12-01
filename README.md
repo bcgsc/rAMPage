@@ -33,7 +33,45 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 	cd rAMPage
 	source scripts/config.sh
 	```
-1. Create a 4 or 5-column TSV file as specified by the [Input](#input) section below, called `accessions.tsv`, in the root of the repository.
+1. Create working directories for each dataset using this convention: `taxonomic-class/species/tissue_condition`
+	- **NOTE**: the top-level parent directory _must_ correspond to the taxonomic class of the dataset. This class is used to choose which file in `amp_seqs` to use for homology search.
+	- e.g. _M. gulosa_: `insecta/mgulosa/venom-gland`
+	- e.g. _P. toftae_: `amphibia/ptoftae/skin-liver`
+1. Move all reads and reference FASTA files to the respective working directories for each dataset. See below for an example.
+1. Create a 2 or 3-column space-delimited text file as specified by the [Input](#input) section below, called `input.txt`, in the working directory of each dataset.
+
+At the end of setup, you should have a directory structure similar to below (excludes other directories, like `scripts/`):
+
+```
+rAMPage
+├── amphibia
+│   └── ptoftae
+│       └── skin-liver
+│           ├── input.txt
+│           ├── SRR8288040_1.fastq.gz
+│           ├── SRR8288040_2.fastq.gz
+│           ├── SRR8288041_1.fastq.gz
+│           ├── SRR8288041_2.fastq.gz
+│           ├── SRR8288056_1.fastq.gz
+│           ├── SRR8288056_2.fastq.gz
+│           ├── SRR8288057_1.fastq.gz
+│           ├── SRR8288057_2.fastq.gz
+│           ├── SRR8288058_1.fastq.gz
+│           ├── SRR8288058_2.fastq.gz
+│           ├── SRR8288059_1.fastq.gz
+│           ├── SRR8288059_2.fastq.gz
+│           ├── SRR8288060_1.fastq.gz
+│           ├── SRR8288060_2.fastq.gz
+│           ├── SRR8288061_1.fastq.gz
+│           └── SRR8288061_2.fastq.gz
+└── insecta
+    └── mgulosa
+        └── venom
+            ├── input.txt
+            ├── SRR6466797_1.fastq.gz
+            ├── SRR6466797_2.fastq.gz
+            └── tsa.GGFG.1.fsa_nt.gz
+```
 
 ## Dependencies
 
@@ -76,41 +114,63 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 
 ## Input
 
-A 4 or 5-column TSV file named `accessions.tsv`:
+A 2 or 3-column space-delimited text file named `input.txt`, located in the working directory of each dataset. If you are using single-end reads, the text file will only have 2 columns.
 
-| PATH | SRA ACCESSION(S) | LIBRARY<br/>PREP | CLASS<br/>(TAXON) | REFERENCE<br/>([`ftp://ftp.ncbi.nlm.nih.gov`](ftp://ftp.ncbi.nlm.nih.gov))|
-|------|------------------|--------------|---------------|-----------|
-|ORDER/SPECIES/TISSUE|SRX12345-67|nonstranded|class| `/path/to/reference/transcriptome.gz` |
+#### Example: _M. gulosa_
 
+| TISSUE or CONDITION | READ 1 | READ 2 |
+|---------------------|--------|--------|
+| venom | SRR6466797_1.fastq.gz | SRR6466797_2.fastq.gz |
 
-An example from [`test_accessions.tsv`](test_accessions.tsv):
+`insecta/mgulosa/venom/input.txt`:
 
 ```
-anura/ptoftae/skin-liver   SRX5102741-46 SRX5102761-62  nonstranded  amphibia
-hymenoptera/mgulosa/venom  SRX3556750                   stranded     insecta   /genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz
+venom SRR6466797_1.fastq.gz SRR6466797_2.fastq.gz
 ```
 
+#### Example: _P. toftae_
+
+| TISSUE or CONDITION | READ 1 | READ 2 |
+|---------------------|--------|--------|
+|KST695_liver|SRR8288040_1.fastq.gz|SRR8288040_2.fastq.gz|
+|KST695_skin|SRR8288041_1.fastq.gz|SRR8288041_2.fastq.gz|
+|KST688_liver|SRR8288056_1.fastq.gz|SRR8288056_2.fastq.gz|
+|KST685_skin|SRR8288057_1.fastq.gz|SRR8288057_2.fastq.gz|
+|KST685_liver|SRR8288058_1.fastq.gz|SRR8288058_2.fastq.gz|
+|KST687_skin|SRR8288059_1.fastq.gz|SRR8288059_2.fastq.gz|
+|KST687_liver|SRR8288060_1.fastq.gz|SRR8288060_2.fastq.gz|
+|KST688_skin|SRR8288061_1.fastq.gz|SRR8288061_2.fastq.gz|
+
+`amphibia/ptoftae/skin-liver/input.txt`:
+
+```
+KST695_liver SRR8288040_1.fastq.gz SRR8288040_2.fastq.gz
+KST695_skin SRR8288041_1.fastq.gz SRR8288041_2.fastq.gz
+KST688_liver SRR8288056_1.fastq.gz SRR8288056_2.fastq.gz
+KST685_skin SRR8288057_1.fastq.gz SRR8288057_2.fastq.gz
+KST685_liver SRR8288058_1.fastq.gz SRR8288058_2.fastq.gz
+KST687_skin SRR8288059_1.fastq.gz SRR8288059_2.fastq.gz
+KST687_liver SRR8288060_1.fastq.gz SRR8288060_2.fastq.gz
+KST688_skin SRR8288061_1.fastq.gz SRR8288061_2.fastq.gz
+```
+
+### Reference Transcriptomes
+
+To use a reference transcriptome for the assembly stage with RNA-Bloom, put the reference in the working directory or use the `-r` option of `scripts/rAMPage.sh`.
+
+```
+insecta/mgulosa/venom
+├── input.txt
+├── SRR6466797_1.fastq.gz
+├── SRR6466797_2.fastq.gz
+└── tsa.GGFG.1.fsa_nt.gz
+```
 
 In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz`](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz).
 
-Other reference transcriptomes can be also downloaded (must be from [`ftp://ftp.ncbi.nlm.nih.gov`](ftp://ftp.ncbi.nlm.nih.gov/)). 
+Multiple references can be used as long as they are placed in the working directory.
 
-
-
-### Multiple References
-
-For example, _A. mellifera_ has multiple reference transcriptomes:
-
-1. **Representative Genome**, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz`](ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz)
-1. **Transcriptome Shotgun Assembly**, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz`](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz) 
-
-In this case, the TSV would look like this:
-
-```
-hymenoptera/amellifera/midgut	SRX12345	stranded	insecta	/genomes/all/GCF/003/254/395/GCF_003254395.2_Amel_HAv3.1/GCF_003254395.2_Amel_HAv3.1_rna.fna.gz /genbank/tsa/G/tsa.GAZV.1.fsa_nt.gz
-```
-
-### Sources
+### Sources of References
 
 **Representative Genomes** can be found by searching the Genome database on [NCBI](https://www.ncbi.nlm.nih.gov/genome/), using these search terms (_A. mellifera_, for example):
 
@@ -126,82 +186,69 @@ tsa-master[prop] "Apis mellifera"[orgn] midgut[All Fields]
 
 ## Usage
 
-In the repository directory, run:
+The `rAMPage.sh` script in `scripts/` runs the pipeline using a `Makefile`.
+
+```
+DESCRIPTION:
+      Runs the rAMPage pipeline, using the Makefile.
+      
+USAGE(S):
+      rAMPage.sh [-s] [-o <output directory>] [-r <reference>] <input reads TXT file>
+      
+OPTIONS:
+       -a <address>    email alert                    
+       -h              show help menu                 
+       -o <directory>  output directory               (default = directory of input reads TXT file)
+       -p              run processes in parallel      
+       -r <FASTA.gz>   reference transcriptome        (accepted multiple times, *.fna.gz *.fsa_nt.gz)
+       -s              stranded library construction  (default = nonstranded)
+       -t <INT>        number of threads              (default = 48)
+                                                      
+EXAMPLE(S):
+      rAMPage.sh -s -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
+      
+INPUT EXAMPLE:
+       tissue /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz
+       tissue /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz
+```
+
+### Running from the root of the repository
+
+Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-make
+scripts/rAMPage.sh -s -o insecta/mgulosa/venom -r insecta/mgulosa/venom/tsa.GGFG.1.fsa_nt.gz insecta/mgulosa/venom/input.txt
 ```
 
-By default, the input TSV file expected is `accessions.tsv`. However, other TSV files can be specified, such as the `test_accessions.tsv` file used to test the rAMPage.
+In the example above, the `-o insecta/mgulosa/venom` argument is _optional_, since the default will be set as parent directory of the `input.txt` file. This option is a safeguard for the scenario where `input.txt` is _not_ located in the working directory. In this case, the `-o` option will move `input.txt` and provided references to the working directory.
 
-To test rAMPage, run:
+rAMPage will use all `*.fsa_nt*` and `*.fna*` files located in the working directory as references in the assembly stage, _regardless of if the `-r` option is used or not._ This option is a safeguard for the scenario where the references provided are _not_ located in the working directory. In this case, the `-r` option will _move_ the references to the working directory.
+
+### Running from the working directory of the dataset
+
+Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-make TSV=test_accessions.tsv
+$ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz input.txt
 ```
 
-To run multiple datasets in parallel, run:
+### Running multiple datasets simultaneously
 
-```shell
-make MULTI=true
-```
-
-To allow parallel processes to run _in each dataset_, run:
-
-```shell
-make PARALLEL=true
-```
-
-To receive email alerts as _each dataset_ goes throuih rAMPage, run:
-
-```shell
-make EMAIL=user@example.com
-```
-
-### Examples
-
-```
-make TSV=test_accessions.tsv MULTI=true PARALLEL=true EMAIL=user@example.com
-```
+TODO
 
 ## Directory Structure
 
 ```
 rAMPage
-├── amp_seqs
-├── anura
+├── amphibia
 │   └── ptoftae
 │       └── skin-liver
-│           ├── amplify
-│           ├── assembly
-│           ├── cleavage
-│           ├── filtering
-│           ├── homology
-│           ├── logs
-│           ├── raw_reads
-│           ├── sra
-│           ├── translation
-│           └── trimmed_reads
-├── hymenoptera
+├── amp_seqs
+├── insecta
 │   └── mgulosa
 │       └── venom
-│           ├── amplify
-│           ├── assembly
-│           ├── cleavage
-│           ├── filtering
-│           ├── homology
-│           ├── logs
-│           ├── raw_reads
-│           ├── sra
-│           ├── translation
-│           └── trimmed_reads
-├── logs
-├── rr
-├── sable
-│   └── OUT_SABLE
 ├── scripts
-├── src
-└── summary
+└── src
 ```
 
 ## Citation
