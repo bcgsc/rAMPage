@@ -143,19 +143,23 @@ echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
 if [[ "$parallel" = true ]]; then
 	echo -e "Trimming each accession in parallel...\n" 1>&2
-	for i in $(ls $indir/*.fastq.gz | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
-		run=$(basename $i)
-		echo "Trimming ${run}..." 1>&2
-		echo "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &" 1>&2
-		$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+	for i in $(find $indir -maxdepth 1 -name "*.fastq.gz" | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
+		if [[ -n $i ]]; then
+			run=$(basename $i)
+			echo "Trimming ${run}..." 1>&2
+			echo "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &" 1>&2
+			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+		fi
 	done
 	wait
 else
-	for i in $(ls $indir/*.fastq.gz | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
-		run=$(basename $i)
-		echo "Trimming ${run}..." 1>&2
-		echo "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run" 1>&2
-		$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+	for i in $(find $indir -maxdepth 1 -name "*.fastq.gz" | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
+		if [[ -n $i ]]; then
+			run=$(basename $i)
+			echo "Trimming ${run}..." 1>&2
+			echo "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run" 1>&2
+			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+		fi
 	done
 fi
 
