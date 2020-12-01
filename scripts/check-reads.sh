@@ -15,6 +15,13 @@ function get_help() {
 		echo -e "\
 		\t$PROGRAM [OPTIONS] <input.txt>\n
 		" | column -s $'\t' -t -L
+
+		echo "OPTION(S):"
+		echo -e "\
+		\t-a <address>\temail alert\n \
+		\t-h\tshow help menu\n \
+		\t-t <INT> number of threads (for compression, if needed)\n \
+		" | column -s $'\t' -t -L
 	} 1>&2
 }
 
@@ -34,10 +41,20 @@ if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
+email=false
+custom_threads=false
 # 4 -  get opts
-while getopts :h opt; do
+while getopts :ha:t: opt; do
 	case $opt in
+	a)
+		address="$OPTARG"
+		email=true
+		;;
 	h) get_help ;;
+	t)
+		threads="$OPTARG"
+		custom_threads=true
+		;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -84,21 +101,31 @@ else
 	print_error "There are too many columns in the input TXT file."
 fi
 
+if ! command -v mail &>/dev/null; then
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
 # this script is ONLY run as a part of the Makefile, so it will run in the "working directory" CLASS/SPECIES/TISSUE
 mkdir -p raw_reads
+
 # parse through the input txt and copy reads to the raw_reads dir if they aren't already there
 if [[ "$paired" = true ]]; then
 	while read pool read1 read2; do
+		# check if the reads in the given paths exist
 		if [[ -s "$(realpath ${read1} 2>/dev/null)" && -s "$(realpath ${read2} 2>/dev/null)" ]]; then
 			if [[ ! -s "raw_reads/$(basename ${read1})" ]]; then
-				echo "Copying $(basename ${read1}) into $(realpath raw_reads)..." 1>&2
-				cp ${read1} raw_reads/$(basename ${read1})
+				echo "Moving $(basename ${read1}) into $(realpath raw_reads)..." 1>&2
+				newname=$(realpath raw_reads/$(basename ${read1}))
+				mv ${read1} ${newname}
+				sed -i "s|${read1}|${newname}|" $input
 			else
 				echo "$(basename ${read1}) already in $(realpath raw_reads)..." 1>&2
 			fi
 			if [[ ! -s "raw_reads/$(basename ${read2})" ]]; then
-				echo "Copying $(basename ${read2}) into $(realpath raw_reads)..." 1>&2
-				cp ${read2} raw_reads/$(basename ${read2})
+				echo "Moving $(basename ${read2}) into $(realpath raw_reads)..." 1>&2
+				newname=$(realpath raw_reads/$(basename ${read2}))
+				mv ${read2} ${newname}
+				sed -i "s|${read2}|${newname}|" $input
 			else
 				echo "$(basename ${read2}) already in $(realpath raw_reads)..." 1>&2
 			fi
@@ -111,8 +138,11 @@ else
 	while read pool read1; do
 		if [[ -s "$(realpath ${read1} 2>/dev/null)" ]]; then
 			if [[ ! -s "raw_reads/$(basename ${read1})" ]]; then
-				echo "Copying $(basename ${read1}) into $(realpath raw_reads)..." 1>&2
-				cp ${read1} raw_reads/$(basename ${read1})
+				echo "Moving $(basename ${read1}) into $(realpath raw_reads)..." 1>&2a
+				newname=$(realpath raw_reads/$(basename ${read1}))
+				mv ${read1} ${newname}
+				sed -i "s|${read1}|${newname}|" $input
+
 			else
 				echo "$(basename ${read1}) already in $(realpath raw_reads)..." 1>&2
 			fi
@@ -123,5 +153,26 @@ else
 	done <$input
 fi
 
+if command -v pigz &>/dev/null; then
+	if [[ "$custom_threads" = true ]]; then
+		compress="pigz -p $threads"
+	else
+		compress=pigz
+	fi
+else
+	compress=gzip
+fi
+
+for i in $(realpath raw_reads/*.f*q); do
+	${compress} $i
+	sed -i "s|${i}|${i}.gz|" $input
+done 2>/dev/null
+
 touch raw_reads/READS.DONE
 echo -e "\nSTATUS: DONE." 1>&2
+
+if [[ "$email" = true ]]; then
+	org=$(realpath raw_reads | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	realpath raw_reads | mail -s "${org^}: STAGE 02: GETTING READS: SUCCESS" "$address"
+	echo -e "\nEmail alert sent to $address." 1>&2
+fi
