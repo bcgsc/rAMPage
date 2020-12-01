@@ -303,6 +303,10 @@ echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $t
 
 ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} &>>$logfile
 
+if [[ "${#references[@]}" -ne 0 ]]; then
+	${compress} ${references[*]} 2>/dev/null
+fi
+
 if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 	touch $outdir/ASSEMBLY.FAIL
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
