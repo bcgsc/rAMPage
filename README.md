@@ -33,7 +33,8 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 	cd rAMPage
 	source scripts/config.sh
 	```
-1. Create working directories for each dataset using this convention: `taxonomic-class/species/tissue_condition`
+1. Create working directories for each dataset using this convention: 
+	`taxonomic-class/species/tissue-or-condition`
 	- **NOTE**: the top-level parent directory _must_ correspond to the taxonomic class of the dataset. This class is used to choose which file in `amp_seqs` to use for homology search.
 	- e.g. _M. gulosa_: `insecta/mgulosa/venom-gland`
 	- e.g. _P. toftae_: `amphibia/ptoftae/skin-liver`
@@ -114,11 +115,19 @@ rAMPage
 
 ## Input
 
-A 2 or 3-column space-delimited text file named `input.txt`, located in the working directory of each dataset. If you are using single-end reads, the text file will only have 2 columns.
+A 2 or 3-column space-delimited text file named `input.txt`, located in the working directory of each dataset.
+
+| Column | Attribute |
+|--------|-----------|
+| 1 | Pooling ID: generally a condition, tissue, or sex, etc. |
+| 2 | Path to read 1 |
+| 3 | Path to read 2 (if paired-end reads) |
+
+Read paths in this input text file should be relative to the location of the input text file.
 
 #### Example: _M. gulosa_
 
-| TISSUE or CONDITION | READ 1 | READ 2 |
+| POOLING ID | READ 1 | READ 2 |
 |---------------------|--------|--------|
 | venom | SRR6466797_1.fastq.gz | SRR6466797_2.fastq.gz |
 
@@ -130,7 +139,7 @@ venom SRR6466797_1.fastq.gz SRR6466797_2.fastq.gz
 
 #### Example: _P. toftae_
 
-| TISSUE or CONDITION | READ 1 | READ 2 |
+| POOLING ID | READ 1 | READ 2 |
 |---------------------|--------|--------|
 |KST695_liver|SRR8288040_1.fastq.gz|SRR8288040_2.fastq.gz|
 |KST695_skin|SRR8288041_1.fastq.gz|SRR8288041_2.fastq.gz|
