@@ -62,42 +62,42 @@ translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATI
 # 6. filter expression 
 filtering: filtering/rnabloom.transcripts.filtered.fa
 
-filtering/rnabloom.transcripts.filtered.fa filtering/FILTER.DONE &: $(ROOT_DIR)/scripts/filter-expression.sh assembly/rnabloom.transcripts.all.fa trimmed_reads/reads.txt $(ROOT_DIR)/scripts/get-runtime.sh assembly/ASSEMBLY.DONE
+filtering/rnabloom.transcripts.filtered.fa filtering/FILTER.DONE &: $(ROOT_DIR)/scripts/filter-expression.sh assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt $(ROOT_DIR)/scripts/get-runtime.sh assembly/ASSEMBLY.DONE
 	@echo "STAGE 06: EXPRESSION FILTERING: $$(realpath logs/06-filtering.log)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
-		/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/reads.txt &> logs/06-filtering.log; \
+		/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
 	else \
-		/usr/bin/time -pv $< -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/reads.txt &> logs/06-filtering.log; \
+		/usr/bin/time -pv $< -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
 	fi
 
 
 # 5. assembly
 assembly: assembly/rnabloom.transcripts.all.fa
 
-assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE &: $(ROOT_DIR)/scripts/run-rnabloom.sh trimmed_reads/reads.txt $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/READSLIST.DONE
+assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE &: $(ROOT_DIR)/scripts/run-rnabloom.sh trimmed_reads/readslist.txt $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/READSLIST.DONE
 	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY: $$(realpath logs/05-assembly.log)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
-		/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/reads.txt &> logs/05-assembly.log; \
+		/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
 	else \
-		/usr/bin/time -pv $< -o assembly -t $(THREADS) trimmed_reads/reads.txt &> logs/05-assembly.log; \
+		/usr/bin/time -pv $< -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
 	fi
 
 # 4. make a reads list
-readslist: trimmed_reads/reads.txt
+readslist: trimmed_reads/readslist.txt
 
-trimmed_reads/reads.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/make-reads-list.sh sra/metadata.tsv $(TRIMMED_READS) $(LIB) $(END) $(ROOT_DIR)/scripts/get-runtime.sh trimmed_reads/TRIM.DONE
+trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/build-reads-list.sh $(INPUT) $(TRIMMED_READS) $(LIB) $(END) trimmed_reads/TRIM.DONE
 	@echo "STAGE 04: MAKING A READS LIST: $$(realpath logs/04-readslist.log)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
-		/usr/bin/time -pv $< -a $(EMAIL) -d trimmed_reads sra/metadata.tsv &> logs/04-readslist.log; \
+		/usr/bin/time -pv $< -a $(EMAIL) -i trimmed_reads $(INPUT) &> logs/04-readslist.log; \
 	else \
-		/usr/bin/time -pv $< -d trimmed_reads sra/metadata.tsv &> logs/04-readslist.log; \
+		/usr/bin/time -pv $< -i trimmed_reads $(INPUT) &> logs/04-readslist.log; \
 	fi
 
 
 # 3. trim the reads
-trim: $(TRIMMED_READS) trimmed_reads/TRIM.DONE
+trim: trimmed_reads/TRIM.DONE
 
-trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(RAW_READS) $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
+trimmed_reads/TRIM.DONE input.trimmed.txt &: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(RAW_READS) $(ROOT_DIR)/scripts/get-runtime.sh raw_reads/READS.DONE
 	@echo "STAGE 03: TRIMMING READS: $$(realpath logs/03-trimmed_reads.log)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
@@ -115,7 +115,7 @@ trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/r
 
 reads: raw_reads/READS.DONE
 
-raw_reads/READS.DONE: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) check
+raw_reads/READS.DONE input.raw.txt &: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) check
 	@echo "STAGE 02: GETTING READS: $$(realpath logs/02-raw_reads.log)" 1>&2
 	@$< $(INPUT) &> logs/02-raw_reads.log
 
@@ -125,4 +125,4 @@ check: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
 
 clean:
 	@rm -f logs/* 2> /dev/null
-	@rm -rf raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out
+	@rm -rf $(END) $(LIB) $(TAXON_CLASS) trimmed_reads assembly filtering translation homology cleavage amplify nohup.out
