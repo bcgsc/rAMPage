@@ -1,5 +1,54 @@
 #!/usr/bin/env bash
 
+# 1 - get_help function
+function get_help() {
+	{
+		# DESCRIPTION
+		echo "DESCRIPTION:"
+		echo -e "\
+		\tChecks that all the dependencies required are have been configured.\n
+		" | column -s $'\t' -t -L
+
+		echo "USAGE(S):"
+		echo -e "\
+		\t$PROGRAM [OPTIONS]\n \
+		" | column -s $'\t' -t -L
+
+		echo "OPTION(S):"
+		echo -e "\
+		\t-a <address>\temail alert\n \
+		\t-h\tshow help menu\n \
+		" | column -s $'\t' -t -L
+
+	} 1>&2
+
+	exit 1
+}
+
+# 2 - print_error function
+function print_error() {
+	{
+		message="$1"
+		echo "ERROR: $message"
+		printf '%.0s=' $(seq 1 $(tput cols))
+		echo
+		get_help
+	} 1>&2
+}
+email=false
+while getopts :ha: opt; do
+	case $opt in
+	h) get_help ;;
+	a)
+		address="$OPTARG"
+		email=true
+		;;
+	\?) print_error "Invalid option: -$OPTARG" ;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
 function check() {
 	path=$1
 	name=$2
@@ -66,3 +115,14 @@ fi
 	check $RUN_SABLE "SABLE" $count
 	check_dir $BLAST_DIR "BLAST+" $count
 } | column -s$'\t' -t 1>&2
+
+if ! command -v mail &>/dev/null; then
+	email=false
+	echo -e "System does not have email set up.\n" 1>&2
+fi
+
+if [[ "$email" = true ]]; then
+	org=$(pwd | awk -F "/" '{print $(NF-1)}' | sed 's/^./&. /')
+	pwd | mail -s "${org^}: STAGE 01: CHECK DEPENDENCIES: SUCCESS" "$address"
+	echo -e "\nEmail alert sent to $address." 1>&2
+fi
