@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+args="$PROGRAM $*"
+
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 
 # 1 - get_help function
 function get_help() {
@@ -22,12 +33,12 @@ function get_help() {
 		\t  - 2: filtering failed\n \
 		\n \
 		\tFor more information: https://combine-lab.github.io/salmon/\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		echo "OPTION(S):"
 		echo -e "\
@@ -36,24 +47,38 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-r <FASTA file>\treference transcriptome (assembly)\t(required)\n \
+		\t-s\tstrand-specific library construction (default = false) \n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -o /path/to/filtering -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/reads.txt\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
+}
+
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -69,9 +94,10 @@ threads=2
 cutoff=0.50
 outdir=""
 ref=""
+stranded=false
 
 # 4 - read options
-while getopts :a:c:ho:r:t: opt; do
+while getopts :a:c:ho:r:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -83,6 +109,7 @@ while getopts :a:c:ho:r:t: opt; do
 		outdir="$(realpath $OPTARG)"
 		;;
 	r) ref="$OPTARG" ;;
+	s) stranded=true ;;
 	t) threads="$OPTARG" ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -117,33 +144,37 @@ if [[ ! -f $(realpath $1) ]]; then
 elif [[ ! -s $(realpath $1) ]]; then
 	print_error "input file $(realpath $1) is empty."
 fi
-workdir=$(dirname $outdir)
-if [[ -f $workdir/STRANDED.LIB ]]; then
-	stranded=true
-elif [[ -f $workdir/NONSTRANDED.LIB || -f $workdir/AGNOSTIC.LIB ]]; then
-	stranded=false
-else
-	print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
-fi
 
-if [[ -f $workdir/PAIRED.END ]]; then
-	paired=true
-elif [[ -f $workdir/SINGLE.END ]]; then
-	paired=false
-else
-	print_error "*.END file not found."
-fi
+# workdir=$(dirname $outdir)
+# if [[ -f $workdir/STRANDED.LIB ]]; then
+# 	stranded=true
+# elif [[ -f $workdir/NONSTRANDED.LIB || -f $workdir/AGNOSTIC.LIB ]]; then
+# 	stranded=false
+# else
+# 	print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
+# fi
+
+# if [[ -f $workdir/PAIRED.END ]]; then
+# 	paired=true
+# elif [[ -f $workdir/SINGLE.END ]]; then
+# 	paired=false
+# else
+# 	print_error "*.END file not found."
+# fi
 
 # 7 - remove status files
-rm -f $outdir/FILTER.DONE
-rm -f $outdir/FILTER.FAIL
+rm -f $outdir/FILTERING.DONE
+rm -f $outdir/FILTERING.FAIL
 
 # 8 - print env details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s')
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
 
-echo -e "PATH=$PATH\n" 1>&2
+	echo -e "PATH=$PATH\n"
+
+	echo -e "CALL: $args (wd: $(pwd))\n"
+} 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false
@@ -151,6 +182,53 @@ if ! command -v mail &>/dev/null; then
 fi
 
 readslist=$(realpath $1)
+
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+else
+	species=$SPECIES
+fi
+
+if [[ ! -v PAIRED ]]; then
+	# infer paired from the readslist
+	num_cols=$(awk '{print NF}' $readslist | sort -u)
+	if [[ "$num_cols" -eq 2 ]]; then
+		paired=false
+		#		touch SINGLE.END
+	elif [[ "$num_cols" -eq 3 ]]; then
+		paired=true
+		#		touch PAIRED.END
+	else
+		print_error "There are too many columns in the input TXT file."
+	fi
+else
+	paired=$PAIRED
+fi
+
+if [[ ! -v STRANDED ]]; then
+	if [[ "$paired" = true ]]; then
+		# check column 2 to see if it's _2 or _1
+		if awk '{print $2}' $readslist | grep "_1.fastq.gz" &>/dev/null; then
+			stranded=false
+		elif awk '{print $2}' $readslist | grep "_2.fastq.gz" &>/dev/null; then
+			stranded=true
+			# if inferral doesn't work, falls on -s option
+			#		else
+			#			print_error "Strandedness of the library could not be inferred from the reads list." 1>&2
+		fi
+	else
+		stranded=false
+	fi
+else
+	stranded=$STRANDED
+fi
 
 echo "PROGRAM: $(command -v $RUN_SALMON)" 1>&2
 echo -e "VERSION: $($RUN_SALMON --version 2>&1 | awk '{print $NF}')\n" 1>&2
@@ -195,13 +273,13 @@ echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var)
 $RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if($4>=var) print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
 
 if [[ ! -s $outdir/rnabloom.transcripts.filtered.fa ]]; then
-	touch $outdir/FILTER.FAIL
+	touch $outdir/FILTERING.FAIL
 	echo "ERROR: Salmon output file $outdir/rnabloom.transcripts.filtered.fa does not exist or is empty." 1>&2
 
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 06: EXPRESSION FILTERING: FAILED" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 06: EXPRESSION FILTERING: FAILED" $address
 		# echo "$outdir" | mail -s "Failed expression filtering $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -251,13 +329,17 @@ echo -e "END: $(date)\n" 1>&2
 # $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
-echo "STATUS: DONE." 1>&2
-touch $outdir/FILTER.DONE
+echo -e "STATUS: DONE.\n" 1>&2
+touch $outdir/FILTERING.DONE
+
+echo "Output: $outdir/rnabloom.transcripts.filtered.fa" 1>&2
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-	echo "$outdir" | mail -s "${org^}: STAGE 06: EXPRESSION FILTERING: SUCCESS" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	# echo "$outdir" | mail -s "${species^}: STAGE 06: EXPRESSION FILTERING: SUCCESS" $address
+	echo "$outdir" | mail -s "${species}: STAGE 06: EXPRESSION FILTERING: SUCCESS" $address
 	# echo "$outdir" | mail -s "Finished expression filtering for $org" $address
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

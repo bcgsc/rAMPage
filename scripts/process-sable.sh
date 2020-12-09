@@ -2,23 +2,33 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
+
 # 1 - get_help
 function get_help() {
 	{
-		echo "DESCRIPTION:" 1>&2
+		echo "DESCRIPTION:"
 		echo -e "\
 		\tParses the raw SABLE output into a TSV file.\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] <SABLE Output TXT file>\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-h\tshow this help menu\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
 }
@@ -64,9 +74,18 @@ elif [[ ! -s $(realpath $1) ]]; then
 fi
 
 infile=$(realpath $1)
+outdir=$(dirname $infile)
+outfile=$outdir/SABLE_results.tsv
 
-outfile=$(dirname $infile)/sable_output.tsv
-amplify_tsv=$(dirname $(dirname $infile))/rr/AMPlify_results.tsv
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+amplify_tsv=$workdir/amplify/AMPlify_results.conf.short.charge.nr.tsv
+echo $infile $outdir $outfile $workdir $amplify_tsv
+# amplify_tsv=$(dirname $(dirname $infile))/rr/AMPlify_results.tsv
 echo -e "Sequence ID\tSequence\tScore\tCharge\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outfile
 while read line; do
 	seqname=$(echo "$line" | awk '{print $2}')

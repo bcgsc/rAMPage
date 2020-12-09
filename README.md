@@ -226,7 +226,7 @@ INPUT EXAMPLE:
 Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-scripts/rAMPage.sh -s -o insecta/mgulosa/venom -r insecta/mgulosa/venom/tsa.GGFG.1.fsa_nt.gz insecta/mgulosa/venom/input.txt
+scripts/rAMPage.sh -s -o insecta/mgulosa/venom -r insecta/mgulosa/venom/tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa insecta/mgulosa/venom/input.txt
 ```
 
 In the example above, the `-o insecta/mgulosa/venom` argument is _optional_, since the default will be set as parent directory of the `input.txt` file. This option is a safeguard for the scenario where `input.txt` is _not_ located in the working directory. In this case, the `-o` option will move `input.txt` and provided references to the working directory.
@@ -238,7 +238,7 @@ rAMPage will use all `*.fsa_nt*` and `*.fna*` files located in the working direc
 Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-$ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz input.txt
+$ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa input.txt
 ```
 
 ### Running multiple datasets simultaneously

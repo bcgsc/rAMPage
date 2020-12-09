@@ -3,6 +3,17 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+args="$PROGRAM $*"
+
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
 	# DESCRIPTION
@@ -23,13 +34,13 @@ function get_help() {
 		\t  - 1: general error\n \
 		\n \
 		\tFor more information: https://github.com/bcgsc/RNA-Bloom\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		#  USAGE
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <reads list>\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# OPTION
 		echo "OPTION(S):"
@@ -38,44 +49,58 @@ function get_help() {
 		\t-h\tshow help menu\n \
 		\t-m <int K/M/G>\tallotted memory for Java (e.g. 500G)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
+		\t-s\tstrand-specific library construction (default = false)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# reads list
 		echo "EXAMPLE READS LIST (NONSTRANDED):"
 		echo -e "\
-		\ttissue1 path/to/read1.fastq.gz path/to/read2.fastq.gz\n \
-		\ttissue2 path/to/read1.fastq.gz path/to/read2.fastq.gz\n \
-		\t...     ...                    ...\n \
-		\t...     ...                    ...\n \
-		\t...     ...                    ...\n \
-        " | column -s$'\t' -t -L
+		\ttissue1 /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz\n \
+		\ttissue2 /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz\n \
+		\t...     ...                       ...\n \
+		\t...     ...                       ...\n \
+		\t...     ...                       ...\n \
+        " | table
 
 		echo "EXAMPLE READS LIST (STRANDED):"
 		echo -e "\
-		\ttissue1 path/to/read2.fastq.gz path/to/read1.fastq.gz\n \
-		\ttissue2 path/to/read2.fastq.gz path/to/read1.fastq.gz\n \
-		\t...     ...                    ...\n \
-		\t...     ...                    ...\n \
-		\t...     ...                    ...\n \
-        " | column -s$'\t' -t -L
+		\ttissue1 /path/to/readA_2.fastq.gz /path/to/readB_1.fastq.gz\n \
+		\ttissue2 /path/to/readB_2.fastq.gz /path/to/readB_1.fastq.gz\n \
+		\t...     ...                       ...\n \
+		\t...     ...                       ...\n \
+		\t...     ...                       ...\n \
+        " | table
 
 		# EXAMPLE
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/assembly /path/to/trimmed_reads/reads.txt\n \
-        " | column -s$'\t' -t -L
+		\t$PROGRAM -o /path/to/assembly /path/to/trimmed_reads/readslist.txt\n \
+        " | table
 	} 1>&2
 	exit 1
+}
+
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -91,9 +116,9 @@ custom_threads=false
 memory_bool=false
 email=false
 outdir=""
-
+stranded=false
 # 4 - read options
-while getopts :a:hm:o:t: opt; do
+while getopts :a:hm:o:st: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -107,6 +132,7 @@ while getopts :a:hm:o:t: opt; do
 	o)
 		outdir="$(realpath $OPTARG)"
 		;;
+	s) stranded=true ;;
 	t)
 		threads="$OPTARG"
 		custom_threads=true
@@ -139,17 +165,20 @@ rm -f $outdir/ASSEMBLY.DONE
 rm -f $outdir/ASSEMBLY.FAIL
 
 # 8 - print env details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s')
-
+# check minimap2 and ntCard
 minimap2_dir=$MINIMAP_DIR
 ntcard_dir=$NTCARD_DIR
 export PATH=${minimap2_dir}:${ntcard_dir}:${PATH}
 
-# check minimap2 and ntCard
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
 
-echo -e "PATH=$PATH\n"
+	echo -e "PATH=$PATH\n"
+
+	echo -e "CALL: $args (wd: $(pwd))\n"
+} 1>&2
+
 if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
@@ -187,34 +216,79 @@ if [[ "$java_version" != 1.8* ]]; then
 	print_error "RNA-Bloom requires Java SE Runtime Environment (JRE) 8. Version detected: $java_version"
 fi
 
-workdir=$(dirname $outdir)
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+else
+	species=$SPECIES
+fi
+
 readslist=$(realpath $1)
 
-if [[ -f $workdir/PAIRED.END ]]; then
-	single=false
-	echo "Paired-end reads detected!" 1>&2
-	if [[ -f $workdir/STRANDED.LIB ]]; then
-		stranded=true
-	elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
-		stranded=false
-	elif [[ -f $workdir/AGNOSTIC.LIB ]]; then
-		stranded=false
+if [[ ! -v PAIRED ]]; then
+	# infer paired from the readslist
+	num_cols=$(awk '{print NF}' $readslist | sort -u)
+	if [[ "$num_cols" -eq 2 ]]; then
+		paired=false
+		#		touch SINGLE.END
+	elif [[ "$num_cols" -eq 3 ]]; then
+		paired=true
+		#		touch PAIRED.END
 	else
-		print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
-	fi
-elif [[ -f $workdir/SINGLE.END ]]; then
-	single=true
-	echo "Single-end reads detected!" 1>&2
-	if [[ -f $workdir/STRANDED.LIB ]]; then
-		stranded=true
-	elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
-		stranded=false
-	else
-		print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
+		print_error "There are too many columns in the input TXT file."
 	fi
 else
-	print_error "*.END file not found. Please check that the reads have been downloaded correctly."
+	paired=$PAIRED
 fi
+
+if [[ ! -v STRANDED ]]; then
+	if [[ "$paired" = true ]]; then
+		# check column 2 to see if it's _2 or _1
+		if awk '{print $2}' $readslist | grep "_1.fastq.gz" &>/dev/null; then
+			stranded=false
+		elif awk '{print $2}' $readslist | grep "_2.fastq.gz" &>/dev/null; then
+			stranded=true
+			# if inferral doesn't work, falls on -s option
+			#		else
+			#			print_error "Strandedness of the library could not be inferred from the reads list." 1>&2
+		fi
+	else
+		stranded=false
+	fi
+else
+	stranded=$STRANDED
+fi
+# if [[ -f $workdir/PAIRED.END ]]; then
+# 	paired=true
+# 	echo "Paired-end reads detected!" 1>&2
+# 	if [[ -f $workdir/STRANDED.LIB ]]; then
+# 		stranded=true
+# 	elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
+# 		stranded=false
+# 	elif [[ -f $workdir/AGNOSTIC.LIB ]]; then
+# 		stranded=false
+# 	else
+# 		print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
+# 	fi
+# elif [[ -f $workdir/SINGLE.END ]]; then
+# 	paired=false
+# 	echo "Single-end reads detected!" 1>&2
+# 	if [[ -f $workdir/STRANDED.LIB ]]; then
+# 		stranded=true
+# 	elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
+# 		stranded=false
+# 	else
+# 		print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
+# 	fi
+# else
+# 	print_error "*.END file not found. Please check that the reads have been downloaded correctly."
+# fi
 
 if [[ "$memory_bool" == true ]]; then
 	rnabloom_jar="$JAVA_EXEC ${memory} -jar $RUN_RNABLOOM"
@@ -273,7 +347,7 @@ else
 	echo -e "Reference transcriptome(s) detected: ${basename_refs[*]}\n" 1>&2
 fi
 
-if [[ "$single" = true ]]; then
+if [[ "$paired" = false ]]; then
 	reads_opt="-left $(awk '{print $2}' $readslist)"
 	revcomp_opt=""
 	mergepool_opt=""
@@ -312,8 +386,8 @@ if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	if [[ "$email" = true ]]; then
 		# echo "$outdir" | mail -s "Failed assembling $org" "$address"
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 05: ASSEMBLY: FAILED" "$address"
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 05: ASSEMBLY: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
 fi
@@ -330,6 +404,18 @@ echo -e "Total number of assembled non-redundant transcripts: $tx_total\n" 1>&2
 
 # rename to reflect current directory
 label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="_"}{gsub(/_/, "-", $NF); print $(NF-1), $NF}')
+if [[ -f $outdir/rnabloom.transcripts.nr.fa ]]; then
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.nr.fa
+else
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.fa
+fi
+
+if [[ -f $outdir/rnabloom.transcripts.short.nr.fa ]]; then
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.short.nr.fa
+else
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.short.fa
+fi
+
 sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.all.fa
 
 echo -e "Assembly: $outdir/rnabloom.transcripts.all.fa\n" 1>&2
@@ -364,11 +450,15 @@ echo -e "END: $(date)\n" 1>&2
 # echo 1>&2
 
 touch $outdir/ASSEMBLY.DONE
-echo "STATUS: DONE." 1>&2
+echo -e "STATUS: DONE.\n" 1>&2
+
+echo "Output: $outdir/rnabloom.transcripts.all.fa" 1>&2
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-	echo "$outdir" | mail -s "${org^}: STAGE 05: ASSEMBLY: SUCCESS" "$address"
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	# echo "$outdir" | mail -s "${species}: STAGE 05: ASSEMBLY: SUCCESS" "$address"
+	echo "$outdir" | mail -s "${species}: STAGE 05: ASSEMBLY: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

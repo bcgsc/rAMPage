@@ -68,4 +68,5 @@ taxon=$1
 echo "Searching for the 'class' rank  with the given taxon..." 1>&2
 echo -e "COMMAND: $RUN_ESEARCH -db taxonomy -query $taxon < /dev/null | $RUN_EFETCH -format native -mode xml | grep -w -B1 class | head -n1 | awk -v FS='>|<' '{print \$3}'" 1>&2
 class=$($RUN_ESEARCH -db taxonomy -query $taxon < /dev/null | $RUN_EFETCH -format native -mode xml | grep -w -B1 class | head -n1 | awk -v FS=">|<" '{print $3}')
-echo "${class,,}"
+# echo "${class,,}"
+echo "${class}" | sed 's/.\+/\L&/'   

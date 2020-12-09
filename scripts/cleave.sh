@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+args="$PROGRAM $*"
 
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
 	{
@@ -25,12 +35,12 @@ function get_help() {
 		\t  - 4: length filtering failed\n \
 		\n \
 		\tFor more information on ProP: https://services.healthtech.dtu.dk/service.php?ProP-1.0\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
@@ -38,12 +48,12 @@ function get_help() {
 		\t-c\tallow consecutive (i.e. adjacent) segments to be recombined\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -o /path/to/cleavage /path/to/homology/jackhmmer.nr.faa\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
 
@@ -51,13 +61,25 @@ function get_help() {
 	#		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n \
 }
 
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -119,11 +141,14 @@ rm -f $outdir/CLEAVE_LEN.DONE
 rm -f $outdir/CLEAVE_LEN.FAIL
 
 # 8 - print env details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s')
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
 
-echo -e "PATH=$PATH\n" 1>&2
+	echo -e "PATH=$PATH\n"
+
+	echo -e "CALL: $args (wd: $(pwd))\n"
+} 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false
@@ -133,10 +158,24 @@ fi
 infile=$(realpath $1)
 tempfile=$outdir/prop.out
 
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+else
+	species=$SPECIES
+fi
+
 echo "PROGRAM: $(command -v $RUN_PROP)" 1>&2
 echo -e "VERSION: 1.0c\n" 1>&2
 propdir=$(dirname $RUN_PROP)
 
+# check if this needs to be checked
 if [[ -f "$propdir/CONFIG.DONE" ]]; then
 	config=false
 	echo -e "ProP and SignalP have been pre-configured. Skipping configuration. If this is not the case, please delete the $propdir/CONFIG.DONE file to trigger a reconfiguration of ProP and SignalP.\n" 1>&2
@@ -152,78 +191,78 @@ if [[ "$config" == true ]]; then
 	fi
 fi
 # echo -e "VERSION: $(echo $RUN_PROP | grep -o prop\-[0-9]\.[0-9]. | cut -f2 -d-)\n" 1>&2
+# this should have been moved to config-signalp.sh
+# if command -v $RUN_SIGNALP &>/dev/null; then
+# 	signalp=true
+# 	signalp_opt="-s"
+# 	echo -e "SignalP program detected. Proceeding with SignalP.\n" 1>&2
+# 	if [[ "$config" = true ]]; then
+# 		signal_dir=$(dirname $RUN_SIGNALP)
+# 		if [[ ! -f "$signal_dir/CONFIG.DONE" ]]; then
+# 			sed -i "s|^SIGNALP=.*|SIGNALP=$signal_dir|" $RUN_SIGNALP
+# 			sed -i "s|^SH=.*|SH=$SHELL|" $RUN_SIGNALP
+# 			permissions=$(ls -ld $signal_dir/tmp | awk '{print $1}')
+# 			owner=$(ls -ld $signal_dir/tmp | awk '{print $3}')
+# 			if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
+# 				chmod 1777 $signal_dir/tmp
+# 			fi
+# 			touch $signal_dir/CONFIG.DONE
+# 		else
+# 			echo -e "SignalP has been previously configured.\n" 1>&2
+# 		fi
+#
+# 	fi
+# else
+# 	signalp=false
+# 	signalp_opt=""
+# 	echo "ERROR: SignalP program not found. Please download SignalP into $ROOT_DIR/src, and source $ROOT_DIR/scripts/config.sh from the $ROOT_DIR, so that the RUN_SIGNALP environment variable is re-exported." 1>&2
+# 	if [[ "$email" = true ]]; then
+# 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+# 		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
+# 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+# 		echo "$outdir" | mail -s "${species^}: STAGE 09: CLEAVAGE: FAILED" $address
+# 		echo "Email alert sent to $address." 1>&2
+# 	fi
+# 	exit 2
+# #	echo -e "SignalP program not found. Proceeding without SignalP.\n" 1>&2
+# fi
+# if [[ "$signalp" = true ]]; then
+echo "PROGRAM: $(command -v $RUN_SIGNALP)" 1>&2
+echo -e "VERSION: $($RUN_SIGNALP -v)\n" 1>&2
+# fi
 
-if command -v $RUN_SIGNALP &>/dev/null; then
-	signalp=true
-	signalp_opt="-s"
-	echo -e "SignalP program detected. Proceeding with SignalP.\n" 1>&2
-	if [[ "$config" = true ]]; then
-		signal_dir=$(dirname $RUN_SIGNALP)
-		if [[ ! -f "$signal_dir/CONFIG.DONE" ]]; then
-			sed -i "s|^SIGNALP=.*|SIGNALP=$signal_dir|" $RUN_SIGNALP
-			sed -i "s|^SH=.*|SH=$SHELL|" $RUN_SIGNALP
-			permissions=$(ls -ld $signal_dir/tmp | awk '{print $1}')
-			owner=$(ls -ld $signal_dir/tmp | awk '{print $3}')
-			if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
-				chmod 1777 $signal_dir/tmp
-			fi
-			touch $signal_dir/CONFIG.DONE
-		else
-			echo -e "SignalP has been previously configured.\n" 1>&2
-		fi
-
-	fi
-else
-	signalp=false
-	signalp_opt=""
-	echo "ERROR: SignalP program not found. Please download SignalP into $ROOT_DIR/src, and source $ROOT_DIR/scripts/config.sh from the $ROOT_DIR, so that the RUN_SIGNALP environment variable is re-exported." 1>&2
-	if [[ "$email" = true ]]; then
-		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: FAILED" $address
-		echo "Email alert sent to $address." 1>&2
-	fi
-	exit 2
-#	echo -e "SignalP program not found. Proceeding without SignalP.\n" 1>&2
-fi
-if [[ "$signalp" = true ]]; then
-	echo "PROGRAM: $(command -v $RUN_SIGNALP)" 1>&2
-	echo -e "VERSION: $($RUN_SIGNALP -v)\n" 1>&2
-fi
-
-if [[ "$config" = true ]]; then
-	if [[ ! -f $propdir/CONFIG.DONE ]]; then
-		echo -e "Configuring ProP...\n" 1>&2
-		sed -i "s|setenv\tPROPHOME.*|setenv\tPROPHOME\t$propdir|" $RUN_PROP
-
-		awkbin=$(command -v awk)
-		sed -i "s|setenv AWK.*|setenv AWK $awkbin|" $RUN_PROP
-		sed -i 's/^AWK=.*/AWK=awk/' $RUN_SIGNALP
-		sed -i "s|AWK=/.*|AWK=$awkbin|" $RUN_SIGNALP
-
-		echobin=$(which echo)
-		sed -i "s|setenv ECHO.*|setenv ECHO \"$echobin -e\"|" $RUN_PROP
-
-		gnuplot=$(command -v gnuplot 2>/dev/null || true)
-		if [[ ! -z $gnuplot ]]; then
-			sed -i "s|setenv GNUPLOT.*|setenv GNUPLOT $gnuplot|" $RUN_PROP
-			sed -i "s|PLOTTER=/.*|PLOTTER=$gnuplot|" $RUN_SIGNALP
-		fi
-
-		ppmtogifbin=$(command -v ppmtogif 2>/dev/null || true)
-		if [[ ! -z $ppmtogifbin ]]; then
-			sed -i "s|setenv PPM2GIF.*|setenv PPM2GIF $ppmtogifbin|" $RUN_PROP
-			sed -i "s|PPMTOGIF=/.*|PPMTOGIF=$ppmtogifbin|" $RUN_SIGNALP
-		fi
-
-		if [[ "$signalp" = true ]]; then
-			sed -i "s|setenv SIGNALP.*|setenv SIGNALP $RUN_SIGNALP|" $RUN_PROP
-		fi
-	else
-		echo -e "ProP has been previously configured.\n" 1>&2
-	fi
-fi
+# if [[ "$config" = true ]]; then
+# 	if [[ ! -f $propdir/CONFIG.DONE ]]; then
+# 		echo -e "Configuring ProP...\n" 1>&2
+# 		sed -i "s|setenv\tPROPHOME.*|setenv\tPROPHOME\t$propdir|" $RUN_PROP
+#
+# 		awkbin=$(command -v awk)
+# 		sed -i "s|setenv AWK.*|setenv AWK $awkbin|" $RUN_PROP
+# 		sed -i 's/^AWK=.*/AWK=awk/' $RUN_SIGNALP
+# 		sed -i "s|AWK=/.*|AWK=$awkbin|" $RUN_SIGNALP
+#
+# 		echobin=$(which echo)
+# 		sed -i "s|setenv ECHO.*|setenv ECHO \"$echobin -e\"|" $RUN_PROP
+#
+# 		gnuplot=$(command -v gnuplot 2>/dev/null || true)
+# 		if [[ ! -z $gnuplot ]]; then
+# 			sed -i "s|setenv GNUPLOT.*|setenv GNUPLOT $gnuplot|" $RUN_PROP
+# 			sed -i "s|PLOTTER=/.*|PLOTTER=$gnuplot|" $RUN_SIGNALP
+# 		fi
+#
+# 		ppmtogifbin=$(command -v ppmtogif 2>/dev/null || true)
+# 		if [[ ! -z $ppmtogifbin ]]; then
+# 			sed -i "s|setenv PPM2GIF.*|setenv PPM2GIF $ppmtogifbin|" $RUN_PROP
+# 			sed -i "s|PPMTOGIF=/.*|PPMTOGIF=$ppmtogifbin|" $RUN_SIGNALP
+# 		fi
+#
+# 		if [[ "$signalp" = true ]]; then
+# 			sed -i "s|setenv SIGNALP.*|setenv SIGNALP $RUN_SIGNALP|" $RUN_PROP
+# 		fi
+# 	else
+# 		echo -e "ProP has been previously configured.\n" 1>&2
+# 	fi
+# fi
 
 if [[ "$(grep -c "|" $infile)" -gt 0 ]]; then
 	echo -e "NOTE: Pipes detected in sequence headers will be converted to underscores for ProP.\n" 1>&2
@@ -232,10 +271,10 @@ fi
 
 # RUN PROP and get output
 echo "Predicting cleavage sites..." 1>&2
-echo "COMMAND: $RUN_PROP -p $signalp_opt $infile > $tempfile" 1>&2
+echo "COMMAND: $RUN_PROP -p -s $infile > $tempfile" 1>&2
 # start_sec_temp=$(date '+%s')
 
-$RUN_PROP -p $signalp_opt $infile >$tempfile
+$RUN_PROP -p -s $infile >$tempfile
 # end_sec_temp=$(date '+%s')
 
 cp $tempfile $outdir/prop.raw.out
@@ -314,8 +353,8 @@ if [[ ! -s "$outfile" ]]; then
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: FAILED" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 09: CLEAVAGE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 3
@@ -341,8 +380,8 @@ if [[ ! -s $outfile_len ]]; then
 	echo "ERROR: Length filtering output file $outfile_len does not exist or is empty." 1>&2
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: SUCCESS" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 09: CLEAVAGE: SUCCESS" $address
 		# echo "$outdir" | mail -s "Failed filtering out long sequences for $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -380,12 +419,15 @@ echo -e "END: $(date)\n" 1>&2
 # echo 1>&2
 
 touch $outdir/CLEAVE_LEN.DONE
-echo "STATUS: DONE." 1>&2
+echo -e "STATUS: DONE.\n" 1>&2
 
+echo "Output: $outdir/cleaved.mature.len.faa" 1>&2
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished cleaving peptides for $org" $address
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-	echo "$outdir" | mail -s "${org^}: STAGE 09: CLEAVAGE: SUCCESS" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	# echo "$outdir" | mail -s "${species^}: STAGE 09: CLEAVAGE: SUCCESS" $address
+	echo "$outdir" | mail -s "${species}: STAGE 09: CLEAVAGE: SUCCESS" $address
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

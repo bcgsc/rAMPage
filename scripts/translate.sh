@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+args="$PROGRAM $*"
 
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
 	{
@@ -22,35 +32,47 @@ function get_help() {
 		\t  - 2: translation failed\n \
 		\n \
 		\tFor more information: http://transdecoder.github.io\n \
-        " | column -s $'\t' -t -L
+        " | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
-        " | column -s $'\t' -t -L
+        " | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-        " | column -s $'\t' -t -L
+        " | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -o /path/to/translation /path/to/filtering/rnabloom.transcripts.filtered.fa\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
 }
 
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -103,11 +125,14 @@ rm -f $outdir/TRANSLATION.FAIL
 rm -f $outdir/TRANSLATION.DONE
 
 # 8 - print env details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s')
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
 
-echo -e "PATH=$PATH\n" 1>&2
+	echo -e "PATH=$PATH\n"
+
+	echo -e "CALL: $args (wd: $(pwd))\n"
+} 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false
@@ -115,6 +140,19 @@ if ! command -v mail &>/dev/null; then
 fi
 
 input=$(realpath $1)
+
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+else
+	species=$SPECIES
+fi
 
 cd $outdir
 
@@ -150,8 +188,8 @@ else
 	touch $outdir/TRANSLATION.FAIL
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 07: TRANSLATION: FAILED" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 07: TRANSLATION: FAILED" $address
 		# echo "$outdir" | mail -s "Failed translating transcripts for $org TransDecoder" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -186,13 +224,17 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 echo -e "END: $(date)\n" 1>&2
 
-echo "STATUS: DONE." 1>&2
+echo -e "STATUS: DONE.\n" 1>&2
 touch $outdir/TRANSLATION.DONE
+
+echo "Output: $outdir/rnabloom.transcripts.filtered.transdecoder.faa" 1>&2
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished translating transcripts for $org with TransDecoder" $address
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-	echo "$outdir" | mail -s "${org^}: STAGE 07: TRANSLATION: SUCCESS" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	echo "$outdir" | mail -s "${species}: STAGE 07: TRANSLATION: SUCCESS" $address
+	# echo "$outdir" | mail -s "${species^}: STAGE 07: TRANSLATION: SUCCESS" $address
 	echo -e "\nEmail alert sent to ${address}." 1>&2
 fi

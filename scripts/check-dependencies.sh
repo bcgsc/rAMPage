@@ -1,37 +1,65 @@
 #!/usr/bin/env bash
+PROGRAM=$(basename $0)
+
+args="$PROGRAM $*"
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L 1>&2
+	else
+		{
+			cat | column -s $'\t' -t
+			echo
+		} 1>&2
+	fi
+}
 
 # 1 - get_help function
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		# DESCRIPTION
 		echo "DESCRIPTION:"
 		echo -e "\
-		\tChecks that all the dependencies required are have been configured.\n
-		" | column -s $'\t' -t -L
+		\tChecks that all the dependencies required are have been configured.\n \
+		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS]\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail alert\n \
 		\t-h\tshow help menu\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 	} 1>&2
 
 	exit 1
 }
 
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
+
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -53,10 +81,10 @@ function check() {
 	path=$1
 	name=$2
 	if ! command -v $path &>/dev/null; then
-		printf "%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
 		exit 1
 	else
-		printf "%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
 	fi
 	((count++))
 }
@@ -65,10 +93,10 @@ function check_dir() {
 	dir=$1
 	name=$2
 	if [[ ! -d $dir ]]; then
-		printf "%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
 		exit 1
 	else
-		printf "%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
 	fi
 	((count++))
 }
@@ -77,10 +105,10 @@ function check_jar() {
 	jar=$1
 	name=$2
 	if [[ ! -e $jar ]]; then
-		printf "%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
 		exit 1
 	else
-		printf "%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
 	fi
 	((count++))
 }
@@ -89,40 +117,92 @@ count=1
 
 total=$(($(grep -c 'export' $ROOT_DIR/scripts/config.sh) - 1))
 
-if [[ -z $ROOT_DIR || ! -f $ROOT_DIR/CONFIG.DONE ]]; then
+if [[ ! -v ROOT_DIR || ! -f $ROOT_DIR/CONFIG.DONE ]]; then
 	echo "The script scripts/config.sh still needs to be sourced." 1>&2
 	exit 1
 fi
 
 {
-	check $RUN_ESEARCH "esearch" $count
-	check $RUN_EFETCH "efetch" $count
-	check $FASTERQ_DUMP "fasterq-dump" $count
-	check $RUN_FASTP "fastp" $count
-	check_jar $RUN_RNABLOOM "RNA-Bloom" $count
-	check_dir $NTCARD_DIR "ntCard" $count
-	check_dir $MINIMAP_DIR "minimap2" $count
-	check $JAVA_EXEC "Java" $count
-	check $RUN_CDHIT "CD-HIT" $count
-	check $RUN_SEQTK "seqtk" $count
-	check $RUN_SALMON "salmon" $count
-	check $TRANSDECODER_LONGORFS "TransDecoder.LongOrfs" $count
-	check $TRANSDECODER_PREDICT "TransDecoder.Predict" $count
-	check $RUN_JACKHMMER "jackhmmer" $count
-	check $RUN_SIGNALP "SignalP" $count
-	check $RUN_PROP "ProP" $count
-	check $RUN_AMPLIFY "AMPlify" $count
-	check $RUN_SABLE "SABLE" $count
-	check_dir $BLAST_DIR "BLAST+" $count
-} | column -s$'\t' -t 1>&2
+	check $RUN_ESEARCH "esearch" $count || exit 1
+	check $RUN_EFETCH "efetch" $count || exit 1
+	check $FASTERQ_DUMP "fasterq-dump" $count || exit 1
+	check $RUN_FASTP "fastp" $count || exit 1
+	check_jar $RUN_RNABLOOM "RNA-Bloom" $count || exit 1
+	check_dir $NTCARD_DIR "ntCard" $count || exit 1
+	check_dir $MINIMAP_DIR "minimap2" $count || exit 1
+	check $JAVA_EXEC "Java" $count || exit 1
+	check $RUN_CDHIT "CD-HIT" $count || exit 1
+	check $RUN_SEQTK "seqtk" $count || exit 1
+	check $RUN_SALMON "salmon" $count || exit 1
+	check $TRANSDECODER_LONGORFS "TransDecoder.LongOrfs" $count || exit 1
+	check $TRANSDECODER_PREDICT "TransDecoder.Predict" $count || exit 1
+	check $RUN_JACKHMMER "jackhmmer" $count || exit 1
+	check $RUN_SIGNALP "SignalP" $count || exit 1
+	check $RUN_PROP "ProP" $count || exit 1
+	check $RUN_AMPLIFY "AMPlify" $count || exit 1
+	check $RUN_SABLE "SABLE" $count || exit 1
+	check_dir $BLAST_DIR "BLAST+" $count || exit 1
+} | column -s$'\t' -t #1>&2
+
+if [[ ! -v STRANDED || ! -v PAIRED || ! -v CLASS || ! -v SPECIES || ! -v WORKDIR ]]; then
+	# echo "Variable \$STRANDED not exported from scripts/rAMPage.sh."
+	echo "Please indicate whether your dataset has stranded or nonstranded library construction:" 1>&2
+	echo -e "\te.g. export STRANDED=true\n" 1>&2
+	echo "Please indicate whether your dataset has paired or single-end reads:" 1>&2
+	echo -e "\te.g. export PAIRED=true\n" 1>&2
+	echo "Please indicate the taxonomic class of your dataset:" 1>&2
+	echo -e "\te.g. export CLASS=insecta\n" 1>&2
+	echo "Please indicate the taxonomic species of your dataset:" 1>&2
+	echo -e "\te.g. for M. gulosa:" 1>&2
+	echo -e "\t\texport SPECIES=mgulosa\n" 1>&2
+	echo "Please indicate the working directory for your dataset:" 1>&2
+	echo -e "\te.g. for M. gulosa:" 1>&2
+	echo -e "\t\texport WORKDIR=$ROOT_DIR/insecta/mgulosa/venom\n" 1>&2
+	exit 1
+fi
+
+# if [[ ! -v PAIRED ]]; then
+# 	#	echo "Variable \$PAIRED not exported from scripts/rAMPage.sh."
+# 	echo "Please indicate whether your dataset has paired or single-end reads:" 1>&2
+# 	echo -e "\te.g. export PAIRED=true" 1>&2
+# 	exit 1
+# fi
+#
+# if [[ ! -v CLASS ]]; then
+# 	#	echo "Variable \$CLASS not exported from scripts/rAMPage.sh."
+# 	echo "Please indicate the taxonomic class of your dataset:" 1>&2
+# 	echo -e "\te.g. export CLASS=insecta" 1>&2
+# 	exit 1
+# fi
+#
+# if [[ ! -v SPECIES ]]; then
+# 	#	echo "Variable \$SPECIES not exported from scripts/rAMPage.sh."
+# 	echo "Please indicate the taxonomic species of your dataset:" 1>&2
+# 	echo -e "\te.g. for M. gulosa:" 1>&2
+# 	echo -e "\t\texport SPECIES=mgulosa" 1>&2
+# 	exit 1
+# fi
+#
+# if [[ ! -v WORKDIR ]]; then
+# 	echo "Please indicate the working directory for your dataset:" 1>&2
+# 	echo -e "\te.g. for M. gulosa:" 1>&2
+# 	echo -e "\t\texport WORKDIR=$ROOT_DIR/insecta/mgulosa/venom" 1>&2
+# 	#	echo "Variable \$WORKDIR not exported from scripts/rAMPage.sh."
+# 	exit 1
+# fi
 
 if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi
 
+touch $(realpath $WORKDIR)/DEPENDENCIES.CHECK
+
+species=$(echo "$SPECIES" | sed 's/.\+/\L&/') # make it all lowercase
+# species=${SPECIES,,}
 if [[ "$email" = true ]]; then
-	org=$(pwd | awk -F "/" '{print $(NF-1)}' | sed 's/^./&. /')
-	pwd | mail -s "${org^}: STAGE 01: CHECK DEPENDENCIES: SUCCESS" "$address"
+	species=$(echo "$species" | sed 's/^./\u&. /') # add a space and period, and capitalize the first letter
+	# pwd | mail -s "${species^}: STAGE 01: CHECK DEPENDENCIES: SUCCESS" "$address"
+	pwd | mail -s "${species}: STAGE 01: CHECK DEPENDENCIES: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

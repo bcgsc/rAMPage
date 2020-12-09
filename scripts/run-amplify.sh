@@ -2,6 +2,17 @@
 
 set -euo pipefail
 PROGRAM=$(basename $0)
+args="$PROGRAM $*"
+
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 
 # 1 - get_help function
 function get_help() {
@@ -23,12 +34,12 @@ function get_help() {
 		\t  - 2: AMPlify failed\n \
 		\n \
 		\tFor more information on AMPlify: https://github.com/bcgsc/amplify\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
@@ -39,31 +50,37 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tAMPlify score cut-off (i.e. keep score(sequences) >= DBL)\t(default = 0.99)\n \
 		\t-t <INT>\tnumber of threads\t(default = all)\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
+}
+
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
-	} 1>&2
-}
-
-function print_line() {
-	{
-		printf '%.0s=' $(seq $(tput cols))
-		echo
 	} 1>&2
 }
 
@@ -125,6 +142,20 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "input file $(realpath $1) is empty."
 fi
 
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	# species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}' | sed 's/^./&./')
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+else
+	species=$SPECIES
+fi
+
 # 7 - remove status files
 rm -f $outdir/AMPLIFY.DONE
 
@@ -134,6 +165,7 @@ echo -e "START: $(date)\n" 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
 # start_sec=$(date '+%s')
+echo -e "CALL: $args (wd: $(pwd))\n" 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false
@@ -224,8 +256,8 @@ if [[ ! -s $file ]]; then
 	touch $outdir/AMPLIFY.FAIL
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 10: AMPLIFY: FAILED" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 10: AMPLIFY: FAILED" $address
 		# echo "$outdir" | mail -s "Failed AMPlify run on $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -307,8 +339,8 @@ if [[ -s ${outfile} || $(grep -c '^>' $outfile) -gt 1 ]]; then
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.amps.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_nr} | tr -d '>') $outdir/AMPlify_results.amps.tsv >> $outdir/AMPlify_results.amps.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_nr} | tr -d '>') $outdir/AMPlify_results.amps.tsv >>$outdir/AMPlify_results.amps.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.amps.tsv >> $outdir/AMPlify_results.amps.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.amps.tsv >>$outdir/AMPlify_results.amps.nr.tsv || true
 else
 	cp $outfile $outfile_nr
 fi
@@ -345,8 +377,8 @@ if [[ -s ${outfile_conf} || $(grep -c '^>' $outfile_conf) -gt 1 ]]; then
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.conf.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_conf_nr} | tr -d '>') $outdir/AMPlify_results.conf.tsv >> $outdir/AMPlify_results.conf.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_conf_nr} | tr -d '>') $outdir/AMPlify_results.conf.tsv >>$outdir/AMPlify_results.conf.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_conf_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.tsv >> $outdir/AMPlify_results.conf.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_conf_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.tsv >>$outdir/AMPlify_results.conf.nr.tsv || true
 else
 	cp $outfile_conf $outfile_conf_nr
 fi
@@ -383,8 +415,8 @@ if [[ -s ${outfile_short} || $(grep -c '^>' ${outfile_short}) -gt 1 ]]; then
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.short.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_short_nr} | tr -d '>') $outdir/AMPlify_results.short.tsv >> $outdir/AMPlify_results.short.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_short_nr} | tr -d '>') $outdir/AMPlify_results.short.tsv >>$outdir/AMPlify_results.short.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_short_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.short.tsv >> $outdir/AMPlify_results.short.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_short_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.short.tsv >>$outdir/AMPlify_results.short.nr.tsv || true
 else
 	cp $outfile_short $outfile_short_nr
 fi
@@ -420,8 +452,8 @@ if [[ -s $outfile_charge || $(grep -c '^>' $outfile_charge) -gt 1 ]]; then
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.charge.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_charge_nr} | tr -d '>') $outdir/AMPlify_results.charge.tsv >> $outdir/AMPlify_results.charge.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_charge_nr} | tr -d '>') $outdir/AMPlify_results.charge.tsv >>$outdir/AMPlify_results.charge.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.charge.tsv >> $outdir/AMPlify_results.charge.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.charge.tsv >>$outdir/AMPlify_results.charge.nr.tsv || true
 else
 	cp $outfile_charge $outfile_charge_nr
 fi
@@ -458,8 +490,8 @@ if [[ -s $outfile_conf_charge || $(grep -c '^>' $outfile_conf_charge) -gt 1 ]]; 
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.conf.charge.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_conf_charge_nr} | tr -d '>') $outdir/AMPlify_results.conf.charge.tsv >> $outdir/AMPlify_results.conf.charge.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_conf_charge_nr} | tr -d '>') $outdir/AMPlify_results.conf.charge.tsv >>$outdir/AMPlify_results.conf.charge.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_conf_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.charge.tsv >> $outdir/AMPlify_results.conf.charge.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_conf_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.charge.tsv >>$outdir/AMPlify_results.conf.charge.nr.tsv || true
 else
 	cp $outfile_conf_charge $outfile_conf_charge_nr
 fi
@@ -497,8 +529,8 @@ if [[ -s $outfile_conf_short || $(grep -c '^>' $outfile_conf_short) -gt 1 ]]; th
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.conf.short.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_conf_short_nr} | tr -d '>') $outdir/AMPlify_results.conf.short.tsv >> $outdir/AMPlify_results.conf.short.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_conf_short_nr} | tr -d '>') $outdir/AMPlify_results.conf.short.tsv >>$outdir/AMPlify_results.conf.short.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_conf_short_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.short.tsv >> $outdir/AMPlify_results.conf.short.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_conf_short_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.short.tsv >>$outdir/AMPlify_results.conf.short.nr.tsv || true
 else
 	cp $outfile_conf_short $outfile_conf_short_nr
 fi
@@ -535,8 +567,8 @@ if [[ -s $outfile_short_charge || $(grep -c '^>' $outfile_short_charge) -gt 1 ]]
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.short.charge.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_short_charge_nr} | tr -d '>') $outdir/AMPlify_results.short.charge.tsv >> $outdir/AMPlify_results.short.charge.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_short_charge_nr} | tr -d '>') $outdir/AMPlify_results.short.charge.tsv >>$outdir/AMPlify_results.short.charge.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_short_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.short.charge.tsv >> $outdir/AMPlify_results.short.charge.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_short_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.short.charge.tsv >>$outdir/AMPlify_results.short.charge.nr.tsv || true
 else
 	cp $outfile_short_charge $outfile_short_charge_nr
 fi
@@ -572,8 +604,8 @@ if [[ -s $outfile_conf_short_charge || $(grep -c '^>' $outfile_conf_short_charge
 
 	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
 	echo "$header" >$outdir/AMPlify_results.conf.short.charge.nr.tsv
-	echo -e "COMMAND: grep -Fwf <(grep '^>' ${outfile_conf_short_charge_nr} | tr -d '>') $outdir/AMPlify_results.conf.short.charge.tsv >> $outdir/AMPlify_results.conf.short.charge.nr.tsv\n" 1>&2
-	grep -Fwf <(grep '^>' ${outfile_conf_short_charge_nr} | tr -d '>') $outdir/AMPlify_results.conf.short.charge.tsv >>$outdir/AMPlify_results.conf.short.charge.nr.tsv || true
+	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_conf_short_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.short.charge.tsv >> $outdir/AMPlify_results.conf.short.charge.nr.tsv\n" 1>&2
+	grep -Ff <(awk '/^>/ {print $1}' ${outfile_conf_short_charge_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.conf.short.charge.tsv >>$outdir/AMPlify_results.conf.short.charge.nr.tsv || true
 else
 	cp $outfile_conf_short_charge $outfile_conf_short_charge_nr
 fi
@@ -609,7 +641,7 @@ echo -e "\
 	$(basename $outfile_conf_short_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence and length <= $length\n \
 	$(basename $outfile_short_charge_nr)\tnon-redundant sequences in AMPlify results with length <= $length and charge >= $charge\n \
 	$(basename $outfile_conf_short_charge_nr)\tnon-redundant sequences in AMPlify results with charge >= $charge, score >= $confidence, and length <= $length\n \
-	" | column -s $'\t' -t 1>&2
+	" | table
 echo 1>&2
 echo -e "\
 	File\tAMP Count\n \
@@ -622,7 +654,7 @@ echo -e "\
 	$(basename $outfile_conf_short_nr)\t$count_conf_short\n \
 	$(basename $outfile_short_charge_nr)\t$count_short_charge\n \
 	$(basename $outfile_conf_short_charge_nr)\t$count_conf_short_charge\n \
-	" | column -s $'\t' -t 1>&2
+	" | table
 print_line
 echo 1>&2
 
@@ -647,17 +679,16 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-echo "STATUS: DONE." 1>&2
+echo -e "STATUS: DONE.\n" 1>&2
 touch $outdir/AMPLIFY.DONE
 
+echo "Output: $outdir/amps.conf.short.charge.nr.faa" 1>&2
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-	echo "$outdir" | mail -s "${org^}: STAGE 10: AMPLIFY: SUCCESS" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	#	echo "$outdir" | mail -s "${species^}: STAGE 10: AMPLIFY: SUCCESS" $address
+	echo "$outdir" | mail -s "${species}: STAGE 10: AMPLIFY: SUCCESS" $address
 	# echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
-	echo "Email alert sent to $address." 1>&2
+	echo -e "\nEmail alert sent to $address." 1>&2
 fi
-# end_sec=$(date '+%s')
-
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-# echo 1>&2

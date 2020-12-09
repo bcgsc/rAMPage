@@ -2,7 +2,7 @@
 
 set -euo pipefail
 PROGRAM=$(basename $0)
-
+args="$PROGRAM $*"
 function get_help() {
 	echo "DESCRIPTION:" 1>&2
 	echo -e "\
@@ -27,6 +27,16 @@ function get_help() {
 	exit 1
 }
 
+# 2 - print_error function
+function print_error() {
+	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
+		message="$1"
+		echo "ERROR: $message"
+		print_line
+		get_help
+	} 1>&2
+}
 threads=8
 email=false
 outdir=""
@@ -57,10 +67,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 if [[ "$#" -ne 1 ]]; then
-	echo "ERROR: Incorrect number of arguments." 1>&2
-	printf '%.0s=' $(seq $(tput cols)) 1>&2
-	echo 1>&2
-	get_help
+	print_error "Incorrect number of arguments."
 fi
 
 if [[ -z $outdir ]]; then
@@ -68,9 +75,15 @@ if [[ -z $outdir ]]; then
 else
 	mkdir -p $outdir
 fi
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)" 1>&2
-# start_sec=$(date '+%s')
+
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n"
+
+	echo -e "CALL: $args (wd: $(pwd))\n"
+} 1>&2
 
 echo "PROGRAM: $(command -v $RUN_SABLE)"
 echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
@@ -78,27 +91,36 @@ echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
 echo "PROGRAM: $(command -v $BLAST_DIR/psiblast)" 1>&2
 echo -e "VERSION: $($BLAST_DIR/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
 
+# if workdir is unbound then
+if [[ ! -v WORKDIR ]]; then
+	# get workdir from input
+	workdir=$(dirname $outdir)
+else
+	workdir=$(realpath $WORKDIR)
+fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}' | sed 's/^./&./')
+else
+	species=$SPECIES
+fi
 fasta=$(realpath $1)
 
 if [[ ! -s $fasta ]]; then
 	if [[ ! -f $fasta ]]; then
-		echo "ERROR: Input file does not exist." 1>&2
-		printf '%.0s=' $(seq $(tput cols)) 1>&2
-		echo 1>&2
-		get_help
+		print_error "Input file does not exist."
 	else
-		echo "ERROR: Input file is empty!" 1>&2
-		printf '%.0s=' $(seq $(tput cols)) 1>&2
-		echo 1>&2
-		get_help
+		print_error "Input file is empty!"
 	fi
-	exit 2
 fi
 
 # This script differs, as it must be run in the output directory.
 echo "Predicting secondary structures using SABLE..." 1>&2
-echo -e "COMMAND: (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)\n" 1>&2
-(cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)
+# echo -e "COMMAND: (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)\n" 1>&2
+# (cd $outdir && cp $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)
+echo -e "COMMAND: (cd $outdir && ln -fs $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)\n" 1>&2
+(cd $outdir && ln -fs $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)
 
 if [[ -s $outdir/OUT_SABLE_graph ]]; then
 	echo "Parsing SABLE TXT output into a TSV format..." 1>&2
@@ -112,19 +134,11 @@ else
 	if [[ "$email" = true ]]; then
 		#		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		#		echo "$outdir" | mail -s "Failed SABLE run on $org" $address
-		echo "$outdir" | mail -s "STAGE 12: SABLE: FAILED" $address
+		echo "$outdir" | mail -s "${species^}: STAGE 12: SABLE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 
 	exit 2
-fi
-
-touch $outdir/SABLE.DONE
-
-if [[ "$email" = true ]]; then
-	#	echo "$outdir" | mail -s "Finished running SABLE" $address
-	echo "$outdir" | mail -s "STAGE 12: SABLE: SUCCESS"
-	echo "Email alert sent to $address." 1>&2
 fi
 
 default_name="$(realpath -s $(dirname $outdir)/sable)"
@@ -148,8 +162,14 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
+echo -e "STATUS: DONE.\n" 1>&2
+echo "Output: $outdir/SABLE_results.tsv" 1>&2
+touch $outdir/SABLE.DONE
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
-# echo 1>&2
-echo "STATUS: DONE." 1>&2
+if [[ "$email" = true ]]; then
+	#	echo "$outdir" | mail -s "Finished running SABLE" $address
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	echo "$outdir" | mail -s "${species}: STAGE 12: SABLE: SUCCESS" "$address"
+	# echo "$outdir" | mail -s "${species^}: STAGE 12: SABLE: SUCCESS"
+	echo -e "\nEmail alert sent to $address." 1>&2
+fi
