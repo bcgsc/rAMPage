@@ -111,7 +111,6 @@ rm -f $dir/READSLIST.DONE
 # 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s') 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
 
@@ -243,9 +242,6 @@ else
 fi
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
-# if [[ "$end_sec" != "$start_sec" ]]; then
-#     $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 #     echo 1>&2
 # fi
 echo "STATUS: DONE." 1>&2

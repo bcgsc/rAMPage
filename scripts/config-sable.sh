@@ -74,7 +74,6 @@ fi
 # 8 - print env
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
-# start_sec=$(date '+%s')
 
 if command -v pigz &>/dev/null; then
 	if [[ "$custom_threads" = true ]]; then
@@ -196,9 +195,7 @@ else
 	exit 2
 fi
 echo "END: $(date)" 1>&2
-# end_sec=$(date '+%s')
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 echo "STATUS: DONE." 1>&2

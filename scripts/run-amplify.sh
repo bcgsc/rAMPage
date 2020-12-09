@@ -164,7 +164,6 @@ echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
-# start_sec=$(date '+%s')
 echo -e "CALL: $args (wd: $(pwd))\n" 1>&2
 
 if ! command -v mail &>/dev/null; then

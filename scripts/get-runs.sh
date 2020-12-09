@@ -112,7 +112,6 @@ rm -f $outdir/RUNS.DONE
 # 8 - print environment details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)" 1>&2
-# start_sec=$(date '+%s')
 
 echo -e "PATH=$PATH\n" 1>&2
 
@@ -152,9 +151,7 @@ echo -e "COMMAND: $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions\n" 1>
 $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 # soft link to a generic name

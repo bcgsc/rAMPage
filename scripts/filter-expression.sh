@@ -324,9 +324,7 @@ if [[ "$default_name" != "$outdir" ]]; then
 	fi
 fi
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 echo -e "STATUS: DONE.\n" 1>&2

@@ -272,16 +272,13 @@ fi
 # RUN PROP and get output
 echo "Predicting cleavage sites..." 1>&2
 echo "COMMAND: $RUN_PROP -p -s $infile > $tempfile" 1>&2
-# start_sec_temp=$(date '+%s')
 
 $RUN_PROP -p -s $infile >$tempfile
-# end_sec_temp=$(date '+%s')
 
 cp $tempfile $outdir/prop.raw.out
 sed -i 's/ \+$//' $tempfile
 sed -i 's/^[[:space:]]*[0-9]\+[[:space:]]*/Sequence: /' $tempfile
 
-# $ROOT_DIR/scripts/get-runtime.sh $start_sec_temp $end_sec_temp 1>&2
 # echo 1>&2
 echo -e "Output: $tempfile\n" 1>&2
 
@@ -413,9 +410,7 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 touch $outdir/CLEAVE_LEN.DONE
