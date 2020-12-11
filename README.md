@@ -243,9 +243,57 @@ Example: _M. gulosa_ (stranded library construction)
 $ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa input.txt
 ```
 
-### Running multiple datasets
+### Running multiple datasets from the root of the repository
 
-TODO
+To run rAMPage on multiple datasets, you can use the `stAMPede.sh` wrapper script. By default, `stAMPede.sh` will run rAMPage on the datasets consecutively. If the `-s` option is invoked, they will be run simultaenously in parallel. The `-p` option allows parallelization of certain processes, such as trimming reads in parallel.
+
+```
+PROGRAM: stAMPede.sh
+
+DESCRIPTION:
+      A wrapper around rAMPage.sh to allow running of multiple datasets.
+      
+USAGE(S):
+      stAMPede.sh [-a <address>] [-p] [-s] [-v] <multi-input TXT file>
+      
+OPTION(S):
+       -a <address>  email alert
+       -h            show help menu
+       -p            allow parallel processes for each dataset
+       -s            simultaenously run rAMPAge on all datasets
+       -v            verbose (uses /usr/bin/time to time each rAMPage run)
+                     
+ACCESSIONS TXT FORMAT:
+       CLASS/SPECIES/TISSUE_OR_CONDITION/input.txt strandedness
+       amphibia/ptoftae/skin-liver/input.txt nonstranded
+       insecta/mgulosa/venom/input.txt stranded
+       
+EXAMPLE(S):
+      stAMPede.sh -a user@example.com -p -s -v multi-input.txt
+```
+
+#### Input
+
+For running multiple datasets, the multi-input text file should be a 2-column text file:
+
+|Column|Attribute|
+|------|---------|
+| 1 | path to `input.txt` file |
+| 2 | `stranded` or `nonstranded`|
+
+Example: _P. toftae_ and _M. gulosa_
+
+| `input.txt` | `strandedness` |
+|-------------|----------------|
+| `amphibia/ptoftae/skin-liver/input.txt` | `nonstranded` |
+| `insecta/mgulosa/venom/input.txt` | `stranded` |
+
+`multi-input.txt`:
+
+```
+amphibia/ptoftae/skin-liver/input.txt nonstranded
+insecta/mgulosa/venom/input.txt stranded
+```
 
 ## Directory Structure
 
