@@ -20,27 +20,28 @@ function get_help() {
 		# DESCRIPTION
 		echo "DESCRIPTION:"
 		echo -e "\
-		\tUses the input.txt and builds a reads list for RNA-Bloom.\n \
+		\tUses the input.processed.txt (produced by check-reads.sh) and builds a reads list for RNA-Bloom.\n \
 		" | table
 
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-s] -i <input directory> <input reads TXT file>\n \
 		" | table
 
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow help menu\n \
-		\t-i <directory>\tinput directory (i.e. directory of trimmed reads)\n \
+		\t-i <directory>\tinput directory (i.e. directory of trimmed reads)\t(required)\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
 		" | table
 
 		# EXAMPLE
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -s input.txt\n \
+		\t$PROGRAM -a user@example.com -s -i /path/to/trimmed_reads input.txt\n \
 		" | table
 
 	} 1>&2

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -uo pipefail
+set -euo pipefail
 PROGRAM=$(basename $0)
 
 ## SCRIPT that wraps around the Makefile
@@ -44,6 +44,7 @@ function get_help() {
 		\t-r <FASTA.gz>\treference transcriptome\t(accepted multiple times, *.fna.gz *.fsa_nt.gz)\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
 		\t-t <INT>\tnumber of threads\t(default = 48)\n \
+		\t-v\tverbose (uses /usr/bin/time)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -97,14 +98,15 @@ fi
 stranded=false
 ref=false
 outdir=""
-failed=false
+# failed=false
 threads=""
 parallel=false
 email=false
 email_opt=""
 class=""
 species=""
-while getopts :ha:c:r:n:o:pst: opt; do
+verbose=false
+while getopts :ha:c:r:n:o:pst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -128,6 +130,7 @@ while getopts :ha:c:r:n:o:pst: opt; do
 		;;
 	s) stranded=true ;;
 	t) threads="THREADS=$OPTARG" ;;
+	v) verbose=true ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -172,6 +175,7 @@ if ! command -v mail &>/dev/null; then
 fi
 
 # 7 - remove status files
+rm -f $outdir/RAMPAGE.DONE
 
 # 8 - print environemnt details
 if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
@@ -258,30 +262,40 @@ if [[ $ref = true ]]; then
 		fi
 	done
 fi
+db=$ROOT_DIR/amp_seqs/amps.${CLASS^}.prot.combined.faa
+if [[ ! -s $db ]]; then
+	print_error "Reference AMP sequences not found in $db."
+fi
 
 # RUN THE PIPELINE USING THE MAKE FILE
 mkdir -p $outdir/logs
 echo "Running rAMPage..." 1>&2
-/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile
-
-if [[ "$?" -ne 0 ]]; then
-	failed=true
-	# 	file=$(ls -t $outdir/logs/*.log | head -n1)
-	# 	echo "FAILED! Last logfile: $(realpath $file)" 1>&2
-	# 	print_line
-	# 	cat $file 1>&2
-	# 	print_line
-	# echo "Cleaning directory $outdir..." 1>&2
-	# make INPUT=$input -C $outdir -f $ROOT_DIR/scripts/Makefile clean
+if [[ "$verbose" = true ]]; then
+	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
+else
+	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
 fi
+
+# if [[ "$?" -ne 0 ]]; then
+# 	failed=true
+# 	file=$(ls -t $outdir/logs/*.log | head -n1)
+# 	echo "FAILED! Last logfile: $(realpath $file)" 1>&2
+# 	print_line
+# 	cat $file 1>&2
+# 	print_line
+# echo "Cleaning directory $outdir..." 1>&2
+# make INPUT=$input -C $outdir -f $ROOT_DIR/scripts/Makefile clean
+# fi
 
 echo -e "\nEND: $(date)" 1>&2
 
-if [[ "$failed" = true ]]; then
-	echo -e "\nSTATUS: FAILED." 1>&2
-else
-	echo -e "\nSTATUS: DONE." 1>&2
-fi
+# if [[ "$failed" = true ]]; then
+# 	echo -e "\nSTATUS: FAILED." 1>&2
+# else
+# 	echo -e "\nSTATUS: DONE." 1>&2
+# fi
+echo -e "\nSTATUS: DONE" 1>&2
+touch $outdir/RAMPAGE.DONE
 
 if [[ "$email" = true ]]; then
 	species=$(echo "$SPECIES" | sed 's/^./\u&. /')

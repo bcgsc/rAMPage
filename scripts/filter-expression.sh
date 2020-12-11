@@ -37,7 +37,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <dbl>] [-s] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
         " | table
 
 		echo "OPTION(S):"
@@ -47,13 +47,13 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-r <FASTA file>\treference transcriptome (assembly)\t(required)\n \
-		\t-s\tstrand-specific library construction (default = false) \n \
+		\t-s\tstrand-specific library construction\t(default = false) \n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
         " | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/filtering -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/reads.txt\n \
+		\t$PROGRAM -a user@example.com -c 1.0 -s -t 8 -o /path/to/filtering -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/readslist.txt\n \
 		" | table
 	} 1>&2
 	exit 1

@@ -36,19 +36,19 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] -o <output directory> <input FASTA file>\n \
         " | table
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
         " | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/translation /path/to/filtering/rnabloom.transcripts.filtered.fa\n \
+		\t$PROGRAM -a user@example.com -o /path/to/translation /path/to/filtering/rnabloom.transcripts.filtered.fa\n \
 		" | table
 	} 1>&2
 	exit 1

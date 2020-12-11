@@ -10,12 +10,12 @@ REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 
 .PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean
 # final
-all: sable
+all: amplify
 
 sable: sable/SABLE_results.tsv
 
 sable/SABLE_results.tsv sable/OUT_SABLE/SABLE.DONE &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh amplify/amps.conf.short.charge.nr.faa amplify/AMPlify_results.conf.short.charge.nr.tsv DEPENDENCIES.CHECK
-	@echo "STAGE 12: SABLE: $$(realpath logs)/11-sable.log" 1>&2
+	@echo "STAGE 11: SABLE: $$(realpath logs)/11-sable.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/11-sable.log; \
@@ -223,18 +223,17 @@ DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG
 	@echo "STAGE 01: CHECK DEPENDENCIES: $$(realpath logs)/01-check.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) 2> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
+			/usr/bin/time -pv --append -o logs/01-check.log $< -a $(EMAIL) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
 		else \
-			$< -a $(EMAIL) | tee logs/01-check.log 1>&2; \
+			$< -a $(EMAIL) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< 2> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
+			/usr/bin/time -pv --append -o logs/01-check.log $< 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
 		else \
-			$< | tee logs/01-check.log 1>&2; \
+			$< 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
 		fi; \
 	fi
 
 clean:
-	@rm -rf $(INPUT_PROCESSED) DEPENDENCIES.CHECK raw_reads trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable
-	# @mv raw_reads/*.fastq.gz . 2> /dev/null || true
+	@rm -rf $(INPUT_PROCESSED) DEPENDENCIES.CHECK trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE

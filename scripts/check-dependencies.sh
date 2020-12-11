@@ -26,13 +26,18 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS]\n \
+		\t$PROGRAM [-a <address>]\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow help menu\n \
+		" | table
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -a user@example.com\n \
 		" | table
 
 	} 1>&2
@@ -142,7 +147,7 @@ fi
 	check $RUN_AMPLIFY "AMPlify" $count || exit 1
 	check $RUN_SABLE "SABLE" $count || exit 1
 	check_dir $BLAST_DIR "BLAST+" $count || exit 1
-} | column -s$'\t' -t #1>&2
+} | column -s$'\t' -t
 
 if [[ ! -v STRANDED || ! -v PAIRED || ! -v CLASS || ! -v SPECIES || ! -v WORKDIR ]]; then
 	# echo "Variable \$STRANDED not exported from scripts/rAMPage.sh."
@@ -198,6 +203,7 @@ fi
 
 touch $(realpath $WORKDIR)/DEPENDENCIES.CHECK
 
+echo "STATUS: DONE" 1>&2
 species=$(echo "$SPECIES" | sed 's/.\+/\L&/') # make it all lowercase
 # species=${SPECIES,,}
 if [[ "$email" = true ]]; then

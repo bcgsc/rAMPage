@@ -24,14 +24,19 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-t <int>] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow help menu\n \
-		\t-t <INT>\tnumber of threads (for compression, if needed)\n \
+		\t-t <int>\tnumber of threads (for compression, if needed)\n \
+		" | table
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -a user@example.com -t 8 input.txt\n \
 		" | table
 	} 1>&2
 	exit 1

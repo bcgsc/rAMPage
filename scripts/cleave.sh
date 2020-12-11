@@ -39,12 +39,12 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-c\tallow consecutive (i.e. adjacent) segments to be recombined\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
@@ -52,7 +52,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/cleavage /path/to/homology/jackhmmer.nr.faa\n \
+		\t$PROGRAM -a user@example.com -c -o /path/to/cleavage /path/to/homology/jackhmmer.nr.faa\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -173,23 +173,23 @@ fi
 
 echo "PROGRAM: $(command -v $RUN_PROP)" 1>&2
 echo -e "VERSION: 1.0c\n" 1>&2
-propdir=$(dirname $RUN_PROP)
+# propdir=$(dirname $RUN_PROP)
 
 # check if this needs to be checked
-if [[ -f "$propdir/CONFIG.DONE" ]]; then
-	config=false
-	echo -e "ProP and SignalP have been pre-configured. Skipping configuration. If this is not the case, please delete the $propdir/CONFIG.DONE file to trigger a reconfiguration of ProP and SignalP.\n" 1>&2
-else
-	config=true
-fi
+# if [[ -f "$propdir/CONFIG.DONE" ]]; then
+# 	config=false
+# 	echo -e "ProP and SignalP have been pre-configured. Skipping configuration. If this is not the case, please delete the $propdir/CONFIG.DONE file to trigger a reconfiguration of ProP and SignalP.\n" 1>&2
+# else
+# 	config=true
+# fi
 
-if [[ "$config" == true ]]; then
-	permissions=$(ls -ld $propdir/tmp | awk '{print $1}')
-	owner=$(ls -ld $propdir/tmp | awk '{print $3}')
-	if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
-		chmod 1777 $propdir/tmp
-	fi
-fi
+# if [[ "$config" == true ]]; then
+# 	permissions=$(ls -ld $propdir/tmp | awk '{print $1}')
+# 	owner=$(ls -ld $propdir/tmp | awk '{print $3}')
+# 	if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
+# 		chmod 1777 $propdir/tmp
+# 	fi
+# fi
 # echo -e "VERSION: $(echo $RUN_PROP | grep -o prop\-[0-9]\.[0-9]. | cut -f2 -d-)\n" 1>&2
 # this should have been moved to config-signalp.sh
 # if command -v $RUN_SIGNALP &>/dev/null; then

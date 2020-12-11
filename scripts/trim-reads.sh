@@ -24,7 +24,7 @@ function get_help() {
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
-		\t  - *.[paired.]fastq.gz\n \
+		\t  - *.fastq.gz\n \
 		\t  - TRIM.DONE\n \
         \n \
 		\tEXIT CODES:\n \
@@ -40,13 +40,13 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -i <input directory> -o <output directory>\n \
+		\t$PROGRAM [-a <address>] [-p] [-t <int>] -i <input directory> -o <output directory>\n \
         " | table
 
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow this help menu\n \
 		\t-i <directory>\tinput directory for raw reads\t(required)\n \
 		\t-o <directory>\toutput directory for trimmed reads\t(required)\n \
@@ -56,7 +56,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -i /path/to/raw_reads -o /path/to/trimmed_reads\n \
+		\t$PROGRAM -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads\n \
 		" | table
 	} 1>&2
 	exit 1

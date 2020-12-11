@@ -20,6 +20,7 @@ function get_help() {
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tRuns jackhmmer from the HMMER package to find AMPs via homology search of protein sequences.\n \
+		\tRequires $ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa or $ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa file.\n \
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
@@ -43,13 +44,13 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-e <E-value>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-e <E-value>\tE-value threshold\t(default = 1e-3)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
@@ -59,7 +60,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/homology /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
+		\t$PROGRAM -a user@example.com -e 1e-3 -s 0.90 -t 8 -o /path/to/homology /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
 		" | table
 	} 1>&2
 
@@ -158,6 +159,10 @@ else
 	class=$CLASS
 fi
 db=$ROOT_DIR/amp_seqs/amps.${class^}.prot.combined.faa
+
+if [[ ! -s $db ]]; then
+	print_error "Required FASTA databse $db does not exist."
+fi
 # workdir=$(realpath $(dirname $outdir))
 # if [[ -f "$workdir/AMPHIBIA.CLASS" ]]; then
 # db=$ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa

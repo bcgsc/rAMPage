@@ -169,7 +169,7 @@ touch $outdir/SABLE.DONE
 if [[ "$email" = true ]]; then
 	#	echo "$outdir" | mail -s "Finished running SABLE" $address
 	species=$(echo "$species" | sed 's/^./\u&. /')
-	echo "$outdir" | mail -s "${species}: STAGE 12: SABLE: SUCCESS" "$address"
+	echo "$outdir" | mail -s "${species}: STAGE 11: SABLE: SUCCESS" "$address"
 	# echo "$outdir" | mail -s "${species^}: STAGE 12: SABLE: SUCCESS"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

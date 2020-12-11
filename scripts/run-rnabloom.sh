@@ -21,7 +21,7 @@ function get_help() {
 		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
-		\tUses RNA-Bloom to assembly trimmed reads into transcripts. Strandedness of the library is determined by the *.LIB file in the working directory. If a reference-guided assembly is desired, please place the reference transcriptome(s) (e.g. *.fna) in the working directory. In this case, the working directory is inferred to be the parent directory of your specified output directory.\n \
+		\tUses RNA-Bloom to assembly trimmed reads into transcripts. If a reference-guided assembly is desired, please place the reference transcriptome(s) (e.g. *.fna) in the working directory. In this case, the working directory is inferred to be the parent directory of your specified output directory.\n \
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
@@ -39,17 +39,17 @@ function get_help() {
 		#  USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <reads list>\n \
+		\t$PROGRAM [-a <address>] [-m <int K/M/G>] [-s] [-t <int>] -o <output directory> <reads list TXT file>\n \
         " | table
 
 		# OPTION
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow help menu\n \
 		\t-m <int K/M/G>\tallotted memory for Java (e.g. 500G)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s\tstrand-specific library construction (default = false)\n \
+		\t-s\tstrand-specific library construction\t(default = false)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
         " | table
 
@@ -75,7 +75,7 @@ function get_help() {
 		# EXAMPLE
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/assembly /path/to/trimmed_reads/readslist.txt\n \
+		\t$PROGRAM -a user@example.com -m 500G -s -t 8 -o /path/to/assembly /path/to/trimmed_reads/readslist.txt\n \
         " | table
 	} 1>&2
 	exit 1

@@ -38,23 +38,23 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c <int>] [-l <int>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail address alert\n \
-		\t-c <INT>\tcharge cut-off (i.e. keep charge(sequences >= INT)\t(default = 2)\n \
+		\t-a <address>\temail address for alerts\n \
+		\t-c <int>\tcharge cut-off [i.e. keep charge(sequences >= int]\t(default = 2)\n \
 		\t-h\tshow this help menu\n \
-		\t-l <INT>\tlength cut-off (i.e. keep len(sequences) <= INT)\t(default = 50)\n \
+		\t-l <int>\tlength cut-off [i.e. keep len(sequences) <= int]\t(default = 50)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\tAMPlify score cut-off (i.e. keep score(sequences) >= DBL)\t(default = 0.99)\n \
-		\t-t <INT>\tnumber of threads\t(default = all)\n \
+		\t-s <0 to 1>\tAMPlify score cut-off [i.e. keep score(sequences) >= dbl]\t(default = 0.99)\n \
+		\t-t <int>\tnumber of threads\t(default = all)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 50 -s 0.99 -t 8 -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa\n \
 		" | table
 	} 1>&2
 	exit 1
