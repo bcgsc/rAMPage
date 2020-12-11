@@ -30,12 +30,12 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-s] [-o <output directory>] [-r <reference>] [-c <taxonomic class>] [-n <species name>] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <taxonomic class> [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTIONS:"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
 		\t-h\tshow help menu\n \
 		\t-n <species>\ttaxnomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
@@ -43,13 +43,13 @@ function get_help() {
 		\t-p\trun processes in parallel\n \
 		\t-r <FASTA.gz>\treference transcriptome\t(accepted multiple times, *.fna.gz *.fsa_nt.gz)\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
-		\t-t <INT>\tnumber of threads\t(default = 48)\n \
-		\t-v\tverbose (uses /usr/bin/time)\n \
+		\t-t <int>\tnumber of threads\t(default = 48)\n \
+		\t-v\tverbose (uses /usr/bin/time -pv)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -s -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt \n \
+		\t$PROGRAM -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt \n \
 		" | table
 
 		echo "INPUT EXAMPLE:"

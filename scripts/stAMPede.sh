@@ -29,11 +29,11 @@ function get_help() {
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow help menu\n \
 		\t-p\tallow parallel processes for each dataset\n \
 		\t-s\tsimultaenously run rAMPAge on all datasets\n \
-		\t-v\tverbose (uses /usr/bin/time to time each rAMPage run)\n \
+		\t-v\tverbose (uses /usr/bin/time -pv to time each rAMPage run)\n \
 		" | table
 
 		echo "ACCESSIONS TXT FORMAT:"

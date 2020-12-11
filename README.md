@@ -200,23 +200,28 @@ tsa-master[prop] "Apis mellifera"[orgn] midgut[All Fields]
 The `rAMPage.sh` script in `scripts/` runs the pipeline using a `Makefile`.
 
 ```
+PROGRAM: rAMPage.sh
+
 DESCRIPTION:
       Runs the rAMPage pipeline, using the Makefile.
       
 USAGE(S):
-      rAMPage.sh [-s] [-o <output directory>] [-r <reference>] <input reads TXT file>
+      rAMPage.sh [-a <address>] [-c <taxonomic class> [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] <input reads TXT file>
       
 OPTIONS:
-       -a <address>    email alert                    
-       -h              show help menu                 
-       -o <directory>  output directory               (default = directory of input reads TXT file)
-       -p              run processes in parallel      
-       -r <FASTA.gz>   reference transcriptome        (accepted multiple times, *.fna.gz *.fsa_nt.gz)
-       -s              stranded library construction  (default = nonstranded)
-       -t <INT>        number of threads              (default = 48)
-                                                      
+       -a <address>    email address for alerts                 
+       -c <class>      taxonomic class of the dataset           (default = top-level directory in $outdir)
+       -h              show help menu                           
+       -n <species>    taxnomic species or name of the dataset  (default = second-level directory in $outdir)
+       -o <directory>  output directory                         (default = directory of input reads TXT file)
+       -p              run processes in parallel                
+       -r <FASTA.gz>   reference transcriptome                  (accepted multiple times, *.fna.gz *.fsa_nt.gz)
+       -s              strand-specific library construction     (default = false)
+       -t <int>        number of threads                        (default = 48)
+       -v              verbose (uses /usr/bin/time -pv)             
+                                                                
 EXAMPLE(S):
-      rAMPage.sh -s -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
+      rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
       
 INPUT EXAMPLE:
        tissue /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz
@@ -257,11 +262,11 @@ USAGE(S):
       stAMPede.sh [-a <address>] [-p] [-s] [-v] <multi-input TXT file>
       
 OPTION(S):
-       -a <address>  email alert
+       -a <address>  email address for alerts
        -h            show help menu
        -p            allow parallel processes for each dataset
        -s            simultaenously run rAMPAge on all datasets
-       -v            verbose (uses /usr/bin/time to time each rAMPage run)
+       -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)
                      
 ACCESSIONS TXT FORMAT:
        CLASS/SPECIES/TISSUE_OR_CONDITION/input.txt strandedness
