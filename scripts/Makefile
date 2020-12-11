@@ -8,7 +8,7 @@ VERBOSE = true
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 
-.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean
+.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean check
 # final
 all: amplify
 
@@ -217,6 +217,7 @@ raw_reads/READS.DONE $(INPUT_PROCESSED) &: $(ROOT_DIR)/scripts/check-reads.sh $(
 			$< $(INPUT) &> logs/02-raw_reads.log; \
 		fi; \
 	fi
+check: DEPENDENCIES.CHECK
 
 DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
 	@mkdir -p logs
