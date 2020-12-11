@@ -38,6 +38,7 @@ function get_help() {
 		\t-a <address>\temail address for alerts\n \
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
 		\t-h\tshow help menu\n \
+		\t-m <target>\tMakefile target\t(default = all)\n \
 		\t-n <species>\ttaxnomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
 		\t-o <directory>\toutput directory\t(default = directory of input reads TXT file)\n \
 		\t-p\trun processes in parallel\n \
@@ -56,6 +57,21 @@ function get_help() {
 		echo -e "\
 		\ttissue /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz\n \
 		\ttissue /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz\n \
+		" | table
+
+		echo "MAKEFILE TARGETS:"
+		echo -e "\
+		\t01) check\n \
+		\t02) reads\n \
+		\t03) trim\n \
+		\t04) readslist\n \
+		\t05) assembly\n \
+		\t06) filtering\n \
+		\t07) translation\n \
+		\t08) homology\n \
+		\t09) cleavage\n \
+		\t10) amplify\n \
+		\t11) sable\n \
 		" | table
 
 		#	echo "Reads must be compressed in .gz format."
@@ -106,7 +122,8 @@ email_opt=""
 class=""
 species=""
 verbose=false
-while getopts :ha:c:r:n:o:pst:v opt; do
+target="all"
+while getopts :ha:c:r:m:n:o:pst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -118,6 +135,7 @@ while getopts :ha:c:r:n:o:pst:v opt; do
 		class=$(echo "$OPTARG" | sed 's/.\+/\L&/')
 		;;
 	h) get_help ;;
+	m) target=$(echo "$OPTARG" | sed 's/.\+\L&/') ;;
 	n)
 		species=$(echo "$OPTARG" | sed 's/.\+/\L&/')
 		# species="${OPTARG,,}"
@@ -147,6 +165,12 @@ if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
 	print_error "input file $(realpath $1) is empty."
+fi
+
+if [[ "$target" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|sable)$ ]]; then
+	:
+else
+	print_error "Invalid Makefile target specified with -m."
 fi
 
 # check that input file is somehwere in the repository
@@ -208,9 +232,8 @@ else
 		mv $input $outdir/$(basename $input)
 	fi
 	input=$outdir/$(basename $input)
-
-	export WORKDIR=$outdir
 fi
+export WORKDIR=$outdir
 
 # check that there are either 2 or 3 columns
 num_cols=$(awk '{print NF}' $input | sort -u)
@@ -235,7 +258,7 @@ fi
 {
 	echo "EXPORTED VARIABLES:"
 	print_line
-	echo "WORKDIR=$outdir"
+	echo "WORKDIR=$WORKDIR"
 	echo "PAIRED=$PAIRED"
 	echo "STRANDED=$STRANDED"
 	echo "CLASS=$CLASS"
@@ -262,6 +285,7 @@ if [[ $ref = true ]]; then
 		fi
 	done
 fi
+
 db=$ROOT_DIR/amp_seqs/amps.${CLASS^}.prot.combined.faa
 if [[ ! -s $db ]]; then
 	print_error "Reference AMP sequences not found in $db."
@@ -271,9 +295,11 @@ fi
 mkdir -p $outdir/logs
 echo "Running rAMPage..." 1>&2
 if [[ "$verbose" = true ]]; then
-	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
 else
-	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
 fi
 
 # if [[ "$?" -ne 0 ]]; then
