@@ -49,5 +49,14 @@ export RUN_AMPLIFY=$ROOT_DIR/src/AMPlify-1.0.0/src/AMPlify.py
 ## SABLE
 export RUN_SABLE=$ROOT_DIR/src/sable_v4_distr/run.sable
 export BLAST_DIR=$ROOT_DIR/src/blast/2.10.0/bin
+export NR_DIR_FORMATTED=$ROOT_DIR/src/EnTAP-0.10.7-beta/bin/nr
+
+## EXONERATE
+export RUN_EXONERATE=$ROOT_DIR/src/exonerate/2.4.0/bin/exonerate
+
+## ENTAP
+export RUN_ENTAP=$ROOT_DIR/src/EnTAP-0.10.7-beta/EnTAP
+export RUN_DIAMOND=$ROOT_DIR/src/EnTAP-0.10.7-beta/libs/diamond-0.9.9/bin/diamond
+export RUN_INTERPROSCAN=$ROOT_DIR/src/interproscan-5.30-69.0/interproscan.sh # required
 
 touch $ROOT_DIR/CONFIG.DONE

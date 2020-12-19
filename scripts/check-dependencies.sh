@@ -118,6 +118,17 @@ function check_jar() {
 	((count++))
 }
 
+function check_file() {
+	file=$1
+	name=$2
+	if [[ ! -s ${file}.00.pni ]]; then
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "MISSING"
+		exit 1
+	else
+		printf "\t%2d/%d:\t%s\t%s\t%s\n" $count $total $name "..." "CHECK"
+	fi
+	((count++))
+}
 count=1
 
 total=$(($(grep -c 'export' $ROOT_DIR/scripts/config.sh) - 1))
@@ -145,8 +156,13 @@ fi
 	check $RUN_SIGNALP "SignalP" $count || exit 1
 	check $RUN_PROP "ProP" $count || exit 1
 	check $RUN_AMPLIFY "AMPlify" $count || exit 1
+	check $RUN_ENTAP "EnTAP" $count || exit 1
+	check $RUN_DIAMOND "diamond" $count || exit 1
+	check $RUN_INTERPROSCAN "InterProScan" $count || exit 1
+	check $RUN_EXONERATE "Exonerate" $count || exit 1
 	check $RUN_SABLE "SABLE" $count || exit 1
 	check_dir $BLAST_DIR "BLAST+" $count || exit 1
+	check_file $NR_DBNAME_FORMATTED "NR" $count || exit 1
 } | column -s$'\t' -t
 
 if [[ ! -v STRANDED || ! -v PAIRED || ! -v CLASS || ! -v SPECIES || ! -v WORKDIR ]]; then

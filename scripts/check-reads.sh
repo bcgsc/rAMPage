@@ -100,7 +100,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 # 7 remove status files
@@ -192,7 +192,6 @@ if [[ "$paired" = true ]]; then
 			echo "$pool ${newname1} ${newname2}" >>$input_processed
 		else
 			print_error "Reads ${read1} and ${read2} in the input file do not exist or are empty."
-			exit 1
 		fi
 	done <$input
 else

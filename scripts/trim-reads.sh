@@ -40,7 +40,7 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-p] [-t <int>] -i <input directory> -o <output directory>\n \
+		\t$PROGRAM [-a <address>] [-p] [-t <int>] -i <input directory> -o <output directory> <input reads TXT file>\n \
         " | table
 
 		# OPTIONS
@@ -56,7 +56,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads\n \
+		\t$PROGRAM -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads /path/to/input.txt\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -118,7 +118,7 @@ done
 shift $((OPTIND - 1))
 
 # 5 - incorrect number of arguments given
-if [[ "$#" -ne 0 ]]; then
+if [[ "$#" -ne 1 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
@@ -135,6 +135,12 @@ fi
 
 if [[ ! -d $indir ]]; then
 	print_error "Input directory $indir does not exist."
+fi
+
+if [[ ! -f $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 if ! ls $indir/*.fastq.gz &>/dev/null; then
@@ -191,6 +197,8 @@ if ! command -v mail &>/dev/null; then
 	echo -e "System does not have email set up.\n" 1>&2
 fi
 
+input=$(realpath $1)
+
 echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
 if [[ "$parallel" = true ]]; then
@@ -198,9 +206,12 @@ if [[ "$parallel" = true ]]; then
 	for i in $(find $indir -maxdepth 1 -name "*.fastq.gz" | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
 		if [[ -n $i ]]; then
 			run=$(basename $i)
-			echo "Trimming ${run}..." 1>&2
-			echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
-			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+			# only trim the ones in the input
+			if grep -q $run $input; then
+				echo "Trimming ${run}..." 1>&2
+				echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
+				$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+			fi
 		fi
 	done
 	wait
@@ -208,9 +219,12 @@ else
 	for i in $(find $indir -maxdepth 1 -name "*.fastq.gz" | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
 		if [[ -n $i ]]; then
 			run=$(basename $i)
-			echo "Trimming ${run}..." 1>&2
-			echo -e "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run\n" 1>&2
-			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+			# only trim the ones that are given in input
+			if grep -q $run $input; then
+				echo "Trimming ${run}..." 1>&2
+				echo -e "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run\n" 1>&2
+				$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+			fi
 		fi
 	done
 fi
@@ -221,9 +235,13 @@ failed_accs=()
 # for each accession in indir, check if an outdir equivalent exists
 for i in $(find $indir -maxdepth 1 -name "*.fastq.gz"); do
 	run=$(basename $i)
-	if [[ ! -s $outdir/${run} ]]; then
-		fail=true
-		failed_accs+=(${run})
+
+	# only if it's in input
+	if grep -q $run $input; then
+		if [[ ! -s $outdir/${run} ]]; then
+			fail=true
+			failed_accs+=(${run})
+		fi
 	fi
 done
 

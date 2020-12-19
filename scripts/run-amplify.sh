@@ -139,7 +139,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 if [[ ! -v WORKDIR ]]; then
@@ -622,6 +622,7 @@ count_conf_short_charge=$(grep -c '^>' ${outfile_conf_short_charge_nr} || true)
 print_line
 echo 1>&2
 #--------------------------------------------------------------------
+sed -i '/^$/d' $outdir/*.faa
 
 echo "FINAL SUMMARY" 1>&2
 print_line

@@ -117,7 +117,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 # 7 - remove status files

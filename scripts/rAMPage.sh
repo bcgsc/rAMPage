@@ -71,7 +71,9 @@ function get_help() {
 		\t08) homology\n \
 		\t09) cleavage\n \
 		\t10) amplify\n \
-		\t11) sable\n \
+		\t11) annotation\n \
+		\t12) exonerate\n \
+		\t13) sable\n \
 		" | table
 
 		#	echo "Reads must be compressed in .gz format."
@@ -164,13 +166,13 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
-if [[ "$target" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|sable)$ ]]; then
+if [[ "$target" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|annotation|exonerate|sable|all|clean)$ ]]; then
 	:
 else
-	print_error "Invalid Makefile target specified with -m."
+	print_error "Invalid Makefile target specified with -m $target."
 fi
 
 # check that input file is somehwere in the repository
@@ -207,21 +209,7 @@ if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
 	exit 1
 fi
 
-{
-	echo "HOSTNAME: $(hostname)"
-	echo -e "START: $(date)\n"
-
-	echo -e "PATH=$PATH\n"
-
-	echo -e "CALL: $args (wd: $(pwd))\n"
-} 1>&2
-
 input=$(realpath $1)
-
-# check that all rows have the same number of columns
-if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
-	print_error "Inconsistent number of columns."
-fi
 
 if [[ -z $outdir ]]; then
 	outdir=$(dirname $input)
@@ -233,6 +221,22 @@ else
 	fi
 	input=$outdir/$(basename $input)
 fi
+mkdir -p $outdir/logs
+
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n"
+
+	echo -e "CALL: $args (wd: $(pwd))\n"
+} | tee -a $outdir/logs/00-rAMPage.log 1>&2
+
+# check that all rows have the same number of columns
+if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
+	print_error "Inconsistent number of columns."
+fi
+
 export WORKDIR=$outdir
 
 # check that there are either 2 or 3 columns
@@ -265,7 +269,7 @@ fi
 	echo "SPECIES=$SPECIES"
 	print_line
 	echo
-} 1>&2
+} | tee -a $outdir/logs/00-rAMPage.log 1>&2
 # class=$(echo "$outdir" | sed "s|$ROOT_DIR/\?||" | awk -F "/" '{print $1}')
 # if [[ -n $class ]]; then
 # 	touch $outdir/${class^^}.CLASS
@@ -292,14 +296,13 @@ if [[ ! -s $db ]]; then
 fi
 
 # RUN THE PIPELINE USING THE MAKE FILE
-mkdir -p $outdir/logs
 echo "Running rAMPage..." 1>&2
 if [[ "$verbose" = true ]]; then
-	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 else
-	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 fi
 
 # if [[ "$?" -ne 0 ]]; then

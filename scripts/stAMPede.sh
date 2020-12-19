@@ -111,7 +111,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 # 7 - remove status files
@@ -156,7 +156,37 @@ if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi
-if [[ "$multi" = false ]]; then
+if command -v sbatch &>/dev/null; then
+	while read path strandedness; do
+		if [[ "$strandedness" != *[Ss][Tt][Rr][Aa][Nn][Dd][Ee][Dd] ]]; then
+			print_error "Column 2 of $input must be 'stranded' or 'nonstranded'."
+		fi
+
+		if [[ "$strandedness" == [Ss][Tt][Rr][Aa][Nn][Dd][Ee][Dd] ]]; then
+			strand_opt="-s"
+		else
+			strand_opt=""
+		fi
+		if [[ "$email" = true ]]; then
+			email_opt="-a $address"
+			sbatch_email_opt="--mail-type=END"
+		else
+			email_opt=""
+			sbatch_email_opt=""
+		fi
+		input_path=$(realpath $path)
+		outdir=$(dirname $input_path)
+		results+=($outdir)
+		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
+		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
+		pool=$(echo "$outdir" | awk -F "/" '{print $NF}')
+		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
+		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
+		print_line
+	done <$input
+	email=false # don't email when this script is done because it just submits only
+elif [[ "$multi" = false ]]; then
 	while read path strandedness; do
 		if [[ "$strandedness" != *[Ss][Tt][Rr][Aa][Nn][Dd][Ee][Dd] ]]; then
 			print_error "Column 2 of $input must be 'stranded' or 'nonstranded'."
@@ -178,6 +208,7 @@ if [[ "$multi" = false ]]; then
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
+		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
 		$ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
 		print_line
 	done <$input
@@ -204,7 +235,9 @@ else
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		mkdir -p $outdir/logs
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "See $outdir/logs/00-rAMPage.log for details.\n" 1>&2
+		echo "See $outdir/logs/00-rAMPage.log for details." 1>&2
+		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
+
 		$ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &
 	done <$input
 	wait
@@ -212,11 +245,13 @@ fi
 echo -e "END: $(date)\n" 1>&2
 echo -e "STATUS: DONE\n" 1>&2
 
-if [[ "${#results[@]}" -ne 0 ]]; then
-	echo "Output:" 1>&2
-	for i in ${results[@]}; do
-		echo -e "\t - $i/amplify/amps.conf.short.charge.nr.faa"
-	done | table 1>&2
+if ! command -v sbatch &>/dev/null; then
+	if [[ "${#results[@]}" -ne 0 ]]; then
+		echo "Output:" 1>&2
+		for i in ${results[@]}; do
+			echo -e "\t - $i/amplify/amps.conf.short.charge.nr.faa"
+		done | table 1>&2
+	fi
 fi
 touch $ROOT_DIR/STAMPEDE.DONE
 

@@ -101,14 +101,15 @@ threads=8
 email=false
 similarity=0.90
 outdir=""
-
+db=""
 # 4 - read options
-while getopts :a:e:ho:s:t: opt; do
+while getopts :a:d:e:ho:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
+	d) db="$(realpath $OPTARG)" ;;
 	e) evalue="$OPTARG" ;;
 	h) get_help ;;
 	o)
@@ -138,7 +139,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 if [[ ! -v WORKDIR ]]; then
@@ -158,7 +159,10 @@ if [[ ! -v CLASS ]]; then
 else
 	class=$CLASS
 fi
-db=$ROOT_DIR/amp_seqs/amps.${class^}.prot.combined.faa
+
+if [[ -z "$db" ]]; then
+	db=$ROOT_DIR/amp_seqs/amps.${class^}.prot.combined.faa
+fi
 
 if [[ ! -s $db ]]; then
 	print_error "Required FASTA databse $db does not exist."

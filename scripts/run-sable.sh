@@ -134,7 +134,7 @@ else
 	if [[ "$email" = true ]]; then
 		#		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		#		echo "$outdir" | mail -s "Failed SABLE run on $org" $address
-		echo "$outdir" | mail -s "${species^}: STAGE 12: SABLE: FAILED" $address
+		echo "$outdir" | mail -s "${species^}: STAGE XX: SABLE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 
@@ -169,7 +169,7 @@ touch $outdir/SABLE.DONE
 if [[ "$email" = true ]]; then
 	#	echo "$outdir" | mail -s "Finished running SABLE" $address
 	species=$(echo "$species" | sed 's/^./\u&. /')
-	echo "$outdir" | mail -s "${species}: STAGE 11: SABLE: SUCCESS" "$address"
+	echo "$outdir" | mail -s "${species}: STAGE 13: SABLE: SUCCESS" "$address"
 	# echo "$outdir" | mail -s "${species^}: STAGE 12: SABLE: SUCCESS"
 	echo -e "\nEmail alert sent to $address." 1>&2
 fi

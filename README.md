@@ -27,6 +27,7 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 	git clone https://github.com/bcgsc/rAMPage.git
 	```
 1. Download and install the dependencies (specified in the [Dependencies](#dependencies) section below), into [`rAMPage/src`](src/).
+	* some of these dependencies need to be configured: `SignalP`, `ProP`, `SABLE`, `EnTAP` (see [configurations](#configurations))
 1. Update _all_ the paths in [`rAMPage/scripts/config.sh`](scripts/config.sh) to reflect dependencies in [`rAMPage/src`](src/) and dependencies pre-installed elsewhere.
 1. Source [`scripts/config.sh`](scripts/config.sh) in the root of the repository.
 	```shell
@@ -88,6 +89,7 @@ rAMPage
 | GNU `grep` | v3.4 |
 | GNU `make` | v4.3 |
 | GNU `column` | 2.36 |
+| `gzip` | v1.10|
 | `python` | v3.7.7
 <!-- - [ ] Perl v5.32.0 -->
 
@@ -107,13 +109,76 @@ rAMPage
 | [SignalP](https://services.healthtech.dtu.dk/services/SignalP-5.0/9-Downloads.php#) | v3.0
 | [ProP](https://services.healthtech.dtu.dk/services/ProP-1.0/9-Downloads.php#) | v1.0c |
 | [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.0.0) |v1.0.0|
+| [EnTAP](https://github.com/harta55/EnTAP/tree/v0.10.7-beta) | v0.10.7-beta|
+| [Exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate) | v2.4.0|
 | [SABLE](https://sourceforge.net/projects/meller-sable/) | v4.0 |
+
+#### Configurations
+
+##### Configuring SignalP
+
+The file to edit is `src/signalp-3.0/signalp`: 
+
+| Before | After |
+|--------|-------|
+|`SIGNALP=/usr/opt/signalp-3.0` | `SIGNALP=$ROOT_DIR/src/signalp-3.0`
+| `AWK=nawk` | `AWK=awk`
+
+##### Configuring ProP
+
+The file to edit is `src/prop-1.0c/prop`:
+
+| Before | After |
+|--------|-------|
+|`setenv	PROPHOME	/usr/cbs/packages/prop/1.0c/prop-1.0c` | `setenv	PROPHOME	$ROOT_DIR/src/prop-1.0c` |
+|\*`setenv AWK /usr/bin/gawk` | `setenv AWK awk` |
+|\*`setenv SIGNALP /usr/cbs/bio/bin/signalp` | `setenv SIGNALP $ROOT_DIR/src/signalp-3.0/signalp` |
+
+\*edit the one corresponding to your system, Linux used in the example
+
+##### Configuring EnTAP
+
+Download **and** decompress the following [databases](https://entap.readthedocs.io/en/latest/Getting_Started/configuration.html):
+
+| Database | Example Download Code | 
+|---------------|--------|----------|
+|RefSeq: Non-mammalian Vertebrates<br/>(for `amphibia`) | `wget -O vertebrate_other_protein.faa.gz ftp://ftp.ncbi.nlm.nih.gov/refseq/release/vertebrate_other/vertebrate_other.*.protein.faa.gz`
+|RefSeq: Invertebrates<br/>(for `insecta`) | `wget -O invertebrate_protein.faa.gz ftp://ftp.ncbi.nlm.nih.gov/refseq/release/invertebrate/invertebrate.*.protein.faa.gz`|
+| SwissProt  | `wget ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz` |
+| NCBI `nr` | `wget -O nr.fasta.gz ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz` |
+
+After decompression, the databases can be configured using [`scripts/config-entap.sh`](scripts/config-entap.sh):
+
+```
+scripts/config-entap.sh -t 8 invertebrate.protein.faa vertebrate_other.protein.faa uniprot_sprot.fasta nr.fasta
+```
+
+The script configures all the databases in the `EnTAP-0.10.7-beta/bin` directory.
+
+##### Configuring SABLE
+
+The file to edit is `src/sable_v4_distr/run.sable`:
+
+| Before | After |
+|--------|-------|
+|`remDir=$PWD;` | `remDir=$PWD; THREADS=$1;`
+|`export SABLE_DIR="/users/radamcza/work/newSable/sable_distr";`| `export SABLE_DIR="$ROOT_DIR/src/sable_v4_distr";` |
+| `export BLAST_DIR="/usr/local/blast/2.2.28/bin";` | `export BLAST_DIR=$BLAST_DIR` | 
+|\*`export NR_DIR="/database/ncbi/nr"` | `export NR_DIR=$ROOT_DIR/src/EnTAP-0.10.7-beta/bin/nr` |
+| `export PRIMARY_DATABASE="$ROOT_DIR/src/sable_v4_distr/GI_indexes/pfam_index"` | 
+| `export SECONDARY_DATABASE="$ROOT_DIR/src/sable_v4_distr/GI_indexes/swissprot_index";`
+|`mkdir $PBS_JOBID` | `mkdir -p $PBS_JOBID`|
+| `/usr/bin/perl ${SABLE_DIR}/sable.pl` | `perl ${SABLE_DIR}/sable.pl $THREADS` |
+
+\*After downloading the `nr` FASTA file (see below), it will need to be configured using BLAST+'s `makeblastdb`.
 
 ### Optional
 
 |Dependency| Tested Version |
 |----------|----------------|
-| [pigz](https://github.com/madler/pigz/releases/tag/v2.4) |v2.4|
+| GNU `wget` | v1.20.3|
+| `curl` | v7.72.0 |
+| [`pigz`](https://github.com/madler/pigz/releases/tag/v2.4) |v2.4 |
 
 ## Input
 
@@ -172,9 +237,10 @@ To use a reference transcriptome for the assembly stage with RNA-Bloom, put the 
 ```
 insecta/mgulosa/venom
 ├── input.txt
-├── SRR6466797_1.fastq.gz
-├── SRR6466797_2.fastq.gz
-└── tsa.GGFG.1.fsa_nt.gz
+├── raw_reads
+│   ├── SRR6466797_1.fastq.gz
+│   └── SRR6466797_2.fastq.gz
+└── tsa.GGFG.1.fsa_nt.gzz
 ```
 
 In this case, the reference transcriptome is a **Transcriptome Shotgun Assembly** for _M. gulosa_, downloaded from [`ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz`](ftp://ftp.ncbi.nlm.nih.gov/genbank/tsa/G/tsa.GGFG.1.fsa_nt.gz).
@@ -233,7 +299,7 @@ INPUT EXAMPLE:
 Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-scripts/rAMPage.sh -s -o insecta/mgulosa/venom -r insecta/mgulosa/venom/tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa insecta/mgulosa/venom/input.txt
+scripts/rAMPage.sh -v -s -o insecta/mgulosa/venom -r insecta/mgulosa/venom/tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa insecta/mgulosa/venom/input.txt
 ```
 
 In the example above, the `-o insecta/mgulosa/venom` argument is _optional_, since the default will be set as parent directory of the `input.txt` file. This option is a safeguard for the scenario where `input.txt` is _not_ located in the working directory. In this case, the `-o` option will move `input.txt` and provided references to the working directory.
@@ -245,7 +311,7 @@ rAMPage will use all `*.fsa_nt*` and `*.fna*` files located in the working direc
 Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-$ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa input.txt
+scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa input.txt
 ```
 
 ### Running multiple datasets from the root of the repository

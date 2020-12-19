@@ -5,30 +5,69 @@ INPUT_PROCESSED := $(shell x='$(INPUT)'; echo "$${x/.txt/.processed.txt}")
 PARALLEL = false
 EMAIL = ""
 VERBOSE = true
+ENTAPDIR := $(shell dirname $(RUN_ENTAP))
+DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 
-.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean check
+.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean check exonerate annotation
 # final
-all: amplify
+all: amplify # exonerate
 
 sable: sable/SABLE_results.tsv
 
 sable/SABLE_results.tsv sable/OUT_SABLE/SABLE.DONE &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh amplify/amps.conf.short.charge.nr.faa amplify/AMPlify_results.conf.short.charge.nr.tsv DEPENDENCIES.CHECK
-	@echo "STAGE 11: SABLE: $$(realpath logs)/11-sable.log" 1>&2
+	@echo "STAGE 13: SABLE: $$(realpath logs)/11-sable.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/11-sable.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
 		else \
-			$< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/11-sable.log; \
+			$< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o sable amplify/amps.conf.short.charge.nr.faa &> logs/11-sable.log; \
+			/usr/bin/time -pv $< -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
 		else \
-			$< -o sable amplify/amps.conf.short.charge.nr.faa &> logs/11-sable.log; \
+			$< -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
 		fi; \
 	fi
+
+# 12. exonerate
+exonerate: exonerate/novel.amps.exonerate.nr.faa
+exonerate/EXONERATE.DONE exonerate/novel.amps.exonerate.nr.faa &: $(ROOT_DIR)/scripts/exonerate.sh amplify/AMPLIFY.DONE amplify/amps.conf.short.charge.nr.faa $(REF_AMP) # annotation/final_results/final_annotations_no_contam_lvl0.tsv
+	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
+		if [[ $(VERBOSE) == true ]]; then \
+			/usr/bin/time -pv $< -a $(EMAIL) -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+		else \
+			$< -a $(EMAIL) -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+		fi; \
+	else \
+		if [[ $(VERBOSE) == true ]]; then \
+			/usr/bin/time -pv $< -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+		else \
+			$< -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+		fi; \
+	fi
+		
+# 11. 
+annotation: annotation/final_results/final_annotations_no_contam_lvl0.tsv 
+annotation/final_results/final_annotations_no_contam_lvl0.tsv annotation/ANNOTATION.DONE &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.conf.short.charge.nr.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE
+	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log" 1>&2
+	@if [[ -n $(EMAIL) ]]; then \
+		if [[ $(VERBOSE) == true ]]; then \
+			/usr/bin/time -pv $< -a $(EMAIL) -o annotation -i amplify/amps.conf.short.charge.nr.faa $(DATABASES) &> logs/11-annotation.log; \
+		else \
+			$< -a $(EMAIL) -o annotation -i amplify/amps.conf.short.charge.nr.faa &> logs/11-annotation.log $(DATABASES); \
+		fi; \
+	else \
+		if [[ $(VERBOSE) == true ]]; then \
+			/usr/bin/time -pv $< -o annotation -i amplify/conf.short.charge.nr.faa &> logs/11-annotation.log $(DATABASES); \
+		else \
+			$< -o annotation -i amplify/conf.short.charge.nr.faa &> logs/11-annotation.log $(DATABASES); \
+		fi; \
+	fi
+
 
 # 10. amplify
 amplify: amplify/amps.conf.short.charge.nr.faa
@@ -168,34 +207,34 @@ trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/
 # 3. trim the reads
 trim: trimmed_reads/TRIM.DONE
 
-trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE DEPENDENCIES.CHECK
+trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE DEPENDENCIES.CHECK $(INPUT_PROCESSED)
 	@echo "STAGE 03: TRIMMING READS: $$(realpath logs)/03-trimmed_reads.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(VERBOSE) == true ]]; then \
-				/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p &> logs/03-trimmed_reads.log; \
+				/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			else \
-				$< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p &> logs/03-trimmed_reads.log; \
+				$< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			fi; \
 		else \
 			if [[ $(VERBOSE) == true ]]; then \
-				/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log; \
+				/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			else \
-				$< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log; \
+				$< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			fi; \
 		fi; \
 	else \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(VERBOSE) == true ]]; then \
-				/usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) -p &> logs/03-trimmed_reads.log; \
+				/usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			else \
-				$< -i raw_reads -o trimmed_reads -t $(THREADS) -p &> logs/03-trimmed_reads.log; \
+				$< -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			fi; \
 		else \
 			if [[ $(VERBOSE) == true ]]; then \
-				/usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log; \
+				/usr/bin/time -pv $< -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			else \
-				$< -i raw_reads -o trimmed_reads -t $(THREADS) &> logs/03-trimmed_reads.log; \
+				$< -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			fi; \
 		fi; \
 	fi
@@ -237,4 +276,4 @@ DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG
 	fi
 
 clean:
-	@rm -rf $(INPUT_PROCESSED) DEPENDENCIES.CHECK trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE
+	@rm -rf $(INPUT_PROCESSED) DEPENDENCIES.CHECK trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE exonerate annotation

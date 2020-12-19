@@ -91,7 +91,8 @@ fi
 # default options
 email=false
 threads=2
-cutoff=0.50
+cutoff=1
+# cutoff=0.50
 outdir=""
 ref=""
 stranded=false
@@ -142,7 +143,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 # workdir=$(dirname $outdir)
@@ -266,7 +267,7 @@ echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
 
-awk -v var="$cutoff" '{if($4>=var) print}' $outdir/quant.sf >$outdir/remaining.sf
+awk -v var="$cutoff" '{if($4>=var) print}' $outdir/quant.sf >$outdir/kept.sf
 awk -v var="$cutoff" '{if($4<var) print}' $outdir/quant.sf >$outdir/discarded.sf
 
 echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var) print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
