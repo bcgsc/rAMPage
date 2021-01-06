@@ -32,14 +32,14 @@ function get_help() {
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
 		\t-h\tshow this help menu\n \
-		\t-i <FASTA>\tinput FASTA file (required)\n \
+		\t-i <file>\tinput FASTA file\t(required)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
 		" | table
 
 		echo -e "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -t 8 -i /path/to/input.faa -o /path/to/output/directory nr.fasta uniprot.fasta\n \
+		\t$PROGRAM -a user@example.com -t 8 -i /path/to/amps.summary.tsv -o /path/to/output/directory nr.fasta uniprot.fasta\n \
 		" | table
 
 	} 1>&2
@@ -168,7 +168,7 @@ if ! command -v mail &>/dev/null; then
 	echo -e "System does not have email set up.\n" 1>&2
 fi
 # 7 remove status files
-rm -f $outdir/ANNOTATION.DONE
+# rm -f $outdir/ANNOTATION.DONE
 
 # 8 - print env details
 {
@@ -177,7 +177,8 @@ rm -f $outdir/ANNOTATION.DONE
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } 1>&2
 
 echo "Checking EnTAP..." 1>&2

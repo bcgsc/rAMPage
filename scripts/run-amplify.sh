@@ -45,6 +45,7 @@ function get_help() {
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
 		\t-c <int>\tcharge cut-off [i.e. keep charge(sequences >= int]\t(default = 2)\n \
+		\t-d\tdebug mode\t(skips running AMPlify)\n \
 		\t-h\tshow this help menu\n \
 		\t-l <int>\tlength cut-off [i.e. keep len(sequences) <= int]\t(default = 50)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
@@ -97,15 +98,17 @@ email=false
 custom_threads=false
 charge=2
 outdir=""
+debug=false
 
 # 4 - read options
-while getopts :a:c:hl:o:s:t: opt; do
+while getopts :a:c:dhl:o:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
 	c) charge="$OPTARG" ;;
+	d) debug=true ;;
 	s) confidence="$OPTARG" ;;
 	h) get_help ;;
 	l) length="$OPTARG" ;;
@@ -157,14 +160,20 @@ else
 fi
 
 # 7 - remove status files
-rm -f $outdir/AMPLIFY.DONE
+# rm -f $outdir/AMPLIFY.DONE
 
 # 8 - print env details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)\n" 1>&2
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
 
-echo -e "PATH=$PATH\n" 1>&2
-echo -e "CALL: $args (wd: $(pwd))\n" 1>&2
+	echo -e "PATH=$PATH\n"
+	echo "CALL: $args (wd: $(pwd))"
+	if [[ "$custom_threads" = true ]]; then
+		echo
+		echo -e "THREADS: $threads"
+	fi
+} 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false
@@ -240,12 +249,18 @@ fi
 
 # RUNNING AMPLIFY
 # -------------------
-model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
-echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
-echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+if [[ "$debug" = false ]]; then
+	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
+	echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
+	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+	$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 
-echo "Finished running AMPlify." 1>&2
+	echo "Finished running AMPlify." 1>&2
+else
+	echo "DEBUG MODE: Skipping AMPlify..." 1>&2
+	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
+	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+fi
 # -------------------
 
 file=$(ls -t $outdir/AMPlify_results_*.txt 2>/dev/null | head -n1 || true)
@@ -352,7 +367,7 @@ count=$(grep -c '^>' ${outfile_nr} || true)
 {
 	echo "Output: ${outfile_nr}"
 	echo "Number of unique AMPs: $(printf "%'d" $count)"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -390,7 +405,7 @@ count_conf=$(grep -c '^>' ${outfile_conf_nr} || true)
 {
 	echo "Output: ${outfile_conf_nr}"
 	echo "Number of high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -428,7 +443,7 @@ count_short=$(grep -c '^>' ${outfile_short_nr} || true)
 {
 	echo "Output: ${outfile_short_nr}"
 	echo "Number of short (length <= $length) unique AMPs: $(printf "%'d" ${count_short})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -465,7 +480,7 @@ count_charge=$(grep -c '^>' ${outfile_charge_nr} || true)
 {
 	echo "Output: ${outfile_charge_nr}"
 	echo "Number of positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_charge})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -503,7 +518,7 @@ count_conf_charge=$(grep -c '^>' ${outfile_conf_charge_nr} || true)
 {
 	echo "Output: ${outfile_conf_charge_nr}"
 	echo "Number of confident (score >= $confidence) and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_conf_charge})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -541,7 +556,7 @@ count_conf_short=$(grep -c '^>' ${outfile_conf_short_nr} || true)
 {
 	echo "Output: ${outfile_conf_short_nr}"
 	echo "Number of short (length <= $length) and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -579,7 +594,7 @@ count_short_charge=$(grep -c '^>' ${outfile_short_charge_nr} || true)
 {
 	echo "Output: ${outfile_short_charge_nr}"
 	echo "Number of short (length <= $length) and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_short_charge})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -617,7 +632,7 @@ count_conf_short_charge=$(grep -c '^>' ${outfile_conf_short_charge_nr} || true)
 {
 	echo "Output: ${outfile_conf_short_charge_nr}"
 	echo "Number of positive (charge >= $charge), short (length <= $length), and high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf_short_charge})"
-} 1>&2
+} | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
@@ -627,26 +642,8 @@ sed -i '/^$/d' $outdir/*.faa
 echo "FINAL SUMMARY" 1>&2
 print_line
 
-echo -e "\
-	File\tDescription\n \
-	----\t-----------\n \
-	AMPlify_results.txt\traw AMPlify results\n \
-	AMPlify_results.tsv\traw AMPlify results parsed into a TSV\n \
-	AMPlify_results.faa\tsequences of raw AMPlify results with new headers\n \
-	$(basename $outfile_nr)\tnon-redundant sequences in AMPlify results labelled 'AMP'\n \
-	$(basename $outfile_conf_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence\n \
-	$(basename $outfile_short_nr)\tnon-redundant sequences labelled 'AMP' with length <= $length\n \
-	$(basename $outfile_charge_nr)\tnon-redundant sequences labelled 'AMP' with charge >= $charge\n \
-	$(basename $outfile_conf_charge_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence and charge >= $charge\n \
-	$(basename $outfile_conf_short_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence and length <= $length\n \
-	$(basename $outfile_short_charge_nr)\tnon-redundant sequences in AMPlify results with length <= $length and charge >= $charge\n \
-	$(basename $outfile_conf_short_charge_nr)\tnon-redundant sequences in AMPlify results with charge >= $charge, score >= $confidence, and length <= $length\n \
-	" | table
 echo 1>&2
-echo -e "\
-	File\tAMP Count\n \
-	----\t-----------\n \
-	$(basename $outfile_nr)\t$count\n \
+echo -e "$(basename $outfile_nr)\t$count\n \
 	$(basename $outfile_conf_nr)\t$count_conf\n \
 	$(basename $outfile_short_nr)\t$count_short\n \
 	$(basename $outfile_charge_nr)\t$count_charge\n \
@@ -654,9 +651,41 @@ echo -e "\
 	$(basename $outfile_conf_short_nr)\t$count_conf_short\n \
 	$(basename $outfile_short_charge_nr)\t$count_short_charge\n \
 	$(basename $outfile_conf_short_charge_nr)\t$count_conf_short_charge\n \
-	" | table
+	" | sed 's/^\s\+//g' | sed '/^$/d' | sort -t $'\t' -k2,2nr >$outdir/amps.summary.tsv
+
+{
+	echo -e "\
+		File\tDescription\n \
+		----\t-----------\n \
+		AMPlify_results.txt\traw AMPlify results\n \
+		AMPlify_results.tsv\traw AMPlify results parsed into a TSV\n \
+		AMPlify_results.faa\tsequences of raw AMPlify results with new headers\n \
+		$(basename $outfile_nr)\tnon-redundant sequences in AMPlify results labelled 'AMP'\n \
+		$(basename $outfile_conf_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence\n \
+		$(basename $outfile_short_nr)\tnon-redundant sequences labelled 'AMP' with length <= $length\n \
+		$(basename $outfile_charge_nr)\tnon-redundant sequences labelled 'AMP' with charge >= $charge\n \
+		$(basename $outfile_conf_short_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence and length <= $length\n \
+		$(basename $outfile_conf_charge_nr)\tnon-redundant sequences in AMPlify results with score >= $confidence and charge >= $charge\n \
+		$(basename $outfile_short_charge_nr)\tnon-redundant sequences in AMPlify results with length <= $length and charge >= $charge\n \
+		$(basename $outfile_conf_short_charge_nr)\tnon-redundant sequences in AMPlify results with charge >= $charge, score >= $confidence, and length <= $length\n \
+		"
+	echo -e "\
+	File\tAMP Count\n \
+	----\t-----------"
+	cat $outdir/amps.summary.tsv
+
+} | sed 's/^\s\+//g' | table | sed 's/^/\t/'
+
+echo
 print_line
 echo 1>&2
+
+# sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
+# soft link the file that has the least number of AMPs but isn't 0
+final_amps=$(awk -F "\t" '{if($2!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
+ln -fs $outdir/${final_amps} $outdir/amps.final.faa
+filename=$(echo "$final_amps" | sed 's/amps/AMPlify_results/' | sed 's/\.faa/.tsv/')
+ln -fs $outdir/${filename} $outdir/amps.final.tsv
 
 default_name="$(realpath -s $(dirname $outdir)/amplify)"
 if [[ "$default_name" != "$outdir" ]]; then
@@ -682,7 +711,7 @@ echo -e "END: $(date)\n" 1>&2
 echo -e "STATUS: DONE.\n" 1>&2
 touch $outdir/AMPLIFY.DONE
 
-echo "Output: $outdir/amps.conf.short.charge.nr.faa" 1>&2
+echo "Output: $outdir/amps.final.faa" 1>&2
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')

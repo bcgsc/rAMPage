@@ -125,7 +125,8 @@ if [[ "$verbose" = true ]]; then
 
 		echo -e "PATH=$PATH\n"
 
-		echo -e "CALL: $args (wd: $(pwd))\n"
+		echo "CALL: $args (wd: $(pwd))"
+		echo -e "THREADS: $threads\n"
 	} 1>&2
 fi
 

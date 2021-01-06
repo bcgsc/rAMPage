@@ -1,18 +1,19 @@
 SHELL := /usr/bin/env bash -ceuo pipefail
-THREADS = 48
-INPUT = input.txt
+THREADS := 48
+INPUT := input.txt
 INPUT_PROCESSED := $(shell x='$(INPUT)'; echo "$${x/.txt/.processed.txt}")
-PARALLEL = false
-EMAIL = ""
-VERBOSE = true
+PARALLEL := false
+EMAIL := ""
+VERBOSE := true
 ENTAPDIR := $(shell dirname $(RUN_ENTAP))
 DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 
-.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean check exonerate annotation
+.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation
+
 # final
-all: amplify # exonerate
+all: amplify/amps.final.faa # exonerate
 
 sable: sable/SABLE_results.tsv
 
@@ -34,45 +35,45 @@ sable/SABLE_results.tsv sable/OUT_SABLE/SABLE.DONE &: $(ROOT_DIR)/scripts/run-sa
 
 # 12. exonerate
 exonerate: exonerate/novel.amps.exonerate.nr.faa
-exonerate/EXONERATE.DONE exonerate/novel.amps.exonerate.nr.faa &: $(ROOT_DIR)/scripts/exonerate.sh amplify/AMPLIFY.DONE amplify/amps.conf.short.charge.nr.faa $(REF_AMP) # annotation/final_results/final_annotations_no_contam_lvl0.tsv
+exonerate/EXONERATE.DONE exonerate/novel.amps.exonerate.nr.faa &: $(ROOT_DIR)/scripts/exonerate.sh amplify/AMPLIFY.DONE amplify/amps.final.faa $(REF_AMP) DEPENDENCIES.CHECK # annotation/final_results/final_annotations_no_contam_lvl0.tsv
 	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
 		else \
-			$< -a $(EMAIL) -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+			$< -a $(EMAIL) -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+			/usr/bin/time -pv $< -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
 		else \
-			$< -o exonerate amplify/amps.conf.short.charge.nr.faa &> logs/12-exonerate.log; \
+			$< -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
 		fi; \
 	fi
 		
 # 11. 
 annotation: annotation/final_results/final_annotations_no_contam_lvl0.tsv 
-annotation/final_results/final_annotations_no_contam_lvl0.tsv annotation/ANNOTATION.DONE &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.conf.short.charge.nr.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE
+annotation/final_results/final_annotations_no_contam_lvl0.tsv annotation/ANNOTATION.DONE &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o annotation -i amplify/amps.conf.short.charge.nr.faa $(DATABASES) &> logs/11-annotation.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -a $(EMAIL) -o annotation -i amplify/amps.conf.short.charge.nr.faa &> logs/11-annotation.log $(DATABASES); \
+			$< -a $(EMAIL) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o annotation -i amplify/conf.short.charge.nr.faa &> logs/11-annotation.log $(DATABASES); \
+			/usr/bin/time -pv $< -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -o annotation -i amplify/conf.short.charge.nr.faa &> logs/11-annotation.log $(DATABASES); \
+			$< -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	fi
 
 
 # 10. amplify
-amplify: amplify/amps.conf.short.charge.nr.faa
+amplify: amplify/amps.final.faa
 
-amplify/AMPlify_results.conf.short.charge.nr.tsv amplify/amps.conf.short.charge.nr.faa amplify/AMPLIFY.DONE &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.faa $(ROOT_DIR)/scripts/run-cdhit.sh cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
+amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.faa $(ROOT_DIR)/scripts/run-cdhit.sh cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
@@ -207,7 +208,7 @@ trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/
 # 3. trim the reads
 trim: trimmed_reads/TRIM.DONE
 
-trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE DEPENDENCIES.CHECK $(INPUT_PROCESSED)
+trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE $(INPUT_PROCESSED) DEPENDENCIES.CHECK
 	@echo "STAGE 03: TRIMMING READS: $$(realpath logs)/03-trimmed_reads.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
@@ -256,8 +257,8 @@ raw_reads/READS.DONE $(INPUT_PROCESSED) &: $(ROOT_DIR)/scripts/check-reads.sh $(
 			$< $(INPUT) &> logs/02-raw_reads.log; \
 		fi; \
 	fi
-check: DEPENDENCIES.CHECK
 
+check: DEPENDENCIES.CHECK
 DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
 	@mkdir -p logs
 	@echo "STAGE 01: CHECK DEPENDENCIES: $$(realpath logs)/01-check.log" 1>&2
@@ -276,4 +277,4 @@ DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG
 	fi
 
 clean:
-	@rm -rf $(INPUT_PROCESSED) DEPENDENCIES.CHECK trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE exonerate annotation
+	@rm -rf DEPENDENCIES.CHECK $(INPUT_PROCESSED) trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE exonerate annotation

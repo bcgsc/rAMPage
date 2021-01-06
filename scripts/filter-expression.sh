@@ -43,7 +43,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail alert\n \
-		\t-c <dbl>\tTPM cut-off\t(default = 0.50)\n \
+		\t-c <dbl>\tTPM cut-off\t(default = 1.0)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-r <FASTA file>\treference transcriptome (assembly)\t(required)\n \
@@ -165,7 +165,7 @@ fi
 
 # 7 - remove status files
 rm -f $outdir/FILTERING.DONE
-rm -f $outdir/FILTERING.FAIL
+# rm -f $outdir/FILTERING.FAIL
 
 # 8 - print env details
 {
@@ -174,7 +174,8 @@ rm -f $outdir/FILTERING.FAIL
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } 1>&2
 
 if ! command -v mail &>/dev/null; then

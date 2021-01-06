@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+args="$PROGRAM $*"
 # nr_fasta=$(dirname $RUN_ENTAP)/extra-db/nr.fasta
 
 # 1 - get_help function
@@ -72,8 +73,13 @@ fi
 # 7 - do NOT remove status files, only want this configuration done once
 
 # 8 - print env
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)" 1>&2
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)"
+
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
+} 1>&2
 
 if command -v pigz &>/dev/null; then
 	if [[ "$custom_threads" = true ]]; then

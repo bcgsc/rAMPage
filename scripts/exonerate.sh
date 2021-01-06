@@ -162,8 +162,13 @@ echo -e "COMMAND: $RUN_SEQTK subseq $query <(awk '{print \$1}' $outdir/amps.exon
 $RUN_SEQTK subseq $query <(awk '{print $1}' $outdir/amps.exonerate.summary.out | sort -u) >$outdir/known.amps.exonerate.nr.faa
 
 echo "Labelling known AMPs..." 1>&2
-echo -e "COMMAND: sed -i '/^>/ s/ length=/_known&/' $outdir/known.amps.exonerate.nr.faa" 1>&2
+# echo -e "COMMAND: sed -i '/^>/ s/ length=/_known&/' $outdir/known.amps.exonerate.nr.faa" 1>&2
 sed -i '/^>/ s/ length=/_known&/' $outdir/known.amps.exonerate.nr.faa
+
+# label with known AMP accession
+while IFS=' ' read novel known; do
+	sed -i "/${novel}_known/ s/$/ known=$known/" $outdir/known.amps.exonerate.nr.faa
+done < <(awk '{print $1, $2}' $outdir/amps.exonerate.summary.out | sort -u)
 
 echo "Filtering for novel AMPs..." 1>&2
 echo -e "COMMAND: $RUN_SEQTK subseq $query <(grep -vFf <(awk '{print \$1}' $outdir/amps.exonerate.summary.out | sort -u) <(grep '^>' $query | tr -d '>' | sort -u)) >$outdir/novel.amps.exonerate.nr.faa\n" 1>&2

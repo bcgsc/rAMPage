@@ -115,9 +115,12 @@ fi
 
 {
 	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } >$logfile
 
 echo "PROGRAM: $(command -v $RUN_FASTP)" >>$logfile

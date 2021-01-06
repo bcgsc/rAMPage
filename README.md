@@ -141,7 +141,7 @@ The file to edit is `src/prop-1.0c/prop`:
 Download **and** decompress the following [databases](https://entap.readthedocs.io/en/latest/Getting_Started/configuration.html):
 
 | Database | Example Download Code | 
-|---------------|--------|----------|
+|---------------|------------------|
 |RefSeq: Non-mammalian Vertebrates<br/>(for `amphibia`) | `wget -O vertebrate_other_protein.faa.gz ftp://ftp.ncbi.nlm.nih.gov/refseq/release/vertebrate_other/vertebrate_other.*.protein.faa.gz`
 |RefSeq: Invertebrates<br/>(for `insecta`) | `wget -O invertebrate_protein.faa.gz ftp://ftp.ncbi.nlm.nih.gov/refseq/release/invertebrate/invertebrate.*.protein.faa.gz`|
 | SwissProt  | `wget ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz` |

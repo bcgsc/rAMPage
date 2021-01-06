@@ -46,6 +46,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
+		\t-d\tdebug mode\n (skips RNA-Bloom)\n \
 		\t-h\tshow help menu\n \
 		\t-m <int K/M/G>\tallotted memory for Java (e.g. 500G)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
@@ -111,6 +112,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # default parameters
+debug=false
 threads=8
 custom_threads=false
 memory_bool=false
@@ -118,12 +120,13 @@ email=false
 outdir=""
 stranded=false
 # 4 - read options
-while getopts :a:hm:o:st: opt; do
+while getopts :a:dhm:o:st: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
+	d) debug=true ;;
 	h) get_help ;;
 	m)
 		memory_bool=true
@@ -161,7 +164,7 @@ elif [[ ! -s $(realpath $1) ]]; then
 fi
 
 # 7 - remove status files
-rm -f $outdir/ASSEMBLY.DONE
+# rm -f $outdir/ASSEMBLY.DONE
 rm -f $outdir/ASSEMBLY.FAIL
 
 # 8 - print env details
@@ -176,7 +179,8 @@ export PATH=${minimap2_dir}:${ntcard_dir}:${PATH}
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } 1>&2
 
 if ! command -v mail &>/dev/null; then
@@ -331,6 +335,7 @@ fi
 if ls $workdir/*.fsa_nt* 1>/dev/null 2>&1; then
 	# if the reference exists, then use it
 	reference=$(ls $workdir/*.fsa_nt*)
+	echo -e "Decompressing reference transcriptome(s)...\n" 1>&2
 	${compress} -d $reference 2>/dev/null || true
 
 	for i in $workdir/*.fsa_nt*; do
@@ -348,12 +353,12 @@ else
 fi
 
 if [[ "$paired" = false ]]; then
-	reads_opt="-left $(awk '{print $2}' $readslist)"
+	reads_opt="-left $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//')"
 	revcomp_opt=""
 	mergepool_opt=""
 	pool=false
 elif [[ "$(awk '{print $1}' $readslist | sort -u | wc -l)" -eq 1 ]]; then
-	reads_opt="-left $(awk '{print $2}' $readslist) -right $(awk '{print $3}' $readslist)"
+	reads_opt="-left $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -right $(awk '{print $3}' $readslist | tr '\n' ' ' | sed 's/ $//')"
 	revcomp_opt="-revcomp-right"
 	mergepool_opt=""
 	pool=false
@@ -371,14 +376,20 @@ if [[ -z "$ref_opt" ]]; then
 else
 	echo "Conducting a reference-guided transcriptome assembly." 1>&2
 fi
-echo "Running RNA-Bloom..." 1>&2
+if [[ "$debug" = false ]]; then
+	echo "Running RNA-Bloom..." 1>&2
 
-echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt}\n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt}\n" | tee $logfile 1>&2
 
-${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} &>>$logfile
+	${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} &>>$logfile
+else
+	echo -e "DEBUG MODE: Skipping RNA-Bloom..." 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt}\n" | tee $logfile 1>&2
+fi
 
 if [[ "${#references[@]}" -ne 0 ]]; then
-	${compress} ${references[*]} 2>/dev/null
+	echo "Re-compressing reference transcriptome(s)..." 1>&2
+	${compress} ${references[*]} 2>/dev/null || true
 fi
 
 if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
@@ -391,32 +402,33 @@ if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 		echo "Email alert sent to $address." 1>&2
 	fi
 fi
+
+label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="_"}{gsub(/_/, "-", $NF); print $(NF-1), $NF}')
+
 if [[ $pool = false ]]; then
+	echo "Renaming transcripts in rnabloom.transcripts.nr.fa..." 1>&2
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.nr.fa
+	echo "Renaming transcripts in rnabloom.transcripts.nr.short.fa..." 1>&2
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.nr.short.fa
+
 	echo -e "Combining rnabloom.transcripts.nr.fa and rnabloom.transcripts.nr.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.nr.fa $outdir/rnabloom.transcripts.nr.short.fa >$outdir/rnabloom.transcripts.all.fa
 else
+	echo "Renaming transcripts in rnabloom.transcripts.fa..." 1>&2
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.fa
+	echo "Renaming transcripts in rnabloom.transcripts.short.fa..." 1>&2
+	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.short.fa
+
 	echo -e "Combining rnabloom.transcripts.fa and rnabloom.transcripts.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.fa $outdir/rnabloom.transcripts.short.fa >$outdir/rnabloom.transcripts.all.fa
 fi
 
-tx_total=$(tac $logfile | grep -m 1 "after:" | awk '{print $NF}')
+echo "Fetching total number of transcripts..." 1>&2
+# echo "COMMAND: tac $logfile | grep -m 1 "after:" | awk '{print $NF}'" 1>&2
+# tx_total=$(tac $logfile | grep -m 1 "after:" | awk '{print $NF}')
+echo "COMMAND: grep \"after:\" $logfile | tail -n1 | awk '{print \$NF}')" 1>&2
+tx_total=$(grep "after:" $logfile | tail -n1 | awk '{print $NF}')
 echo -e "Total number of assembled non-redundant transcripts: $tx_total\n" 1>&2
-
-# rename to reflect current directory
-label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="_"}{gsub(/_/, "-", $NF); print $(NF-1), $NF}')
-if [[ -f $outdir/rnabloom.transcripts.nr.fa ]]; then
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.nr.fa
-else
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.fa
-fi
-
-if [[ -f $outdir/rnabloom.transcripts.short.nr.fa ]]; then
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.short.nr.fa
-else
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.short.fa
-fi
-
-sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.all.fa
 
 echo -e "Assembly: $outdir/rnabloom.transcripts.all.fa\n" 1>&2
 default_name="$(realpath -s ${workdir}/assembly)"

@@ -85,8 +85,9 @@ email=false
 parallel=false
 verbose=false
 multi=false
+threads=48
 # 4 - get options
-while getopts :ha:psv opt; do
+while getopts :ha:pst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -95,6 +96,7 @@ while getopts :ha:psv opt; do
 	h) get_help ;;
 	p) parallel=true ;;
 	s) multi=true ;;
+	t) threads="$OPTARG";;
 	v) verbose=true ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -119,7 +121,7 @@ if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
 	echo "Environment variables have not been successfuly configured yet." 1>&2
 	exit 1
 fi
-rm -f $ROOT_DIR/STAMPEDE.DONE
+# rm -f $ROOT_DIR/STAMPEDE.DONE
 
 # 8 - print environemnt details
 
@@ -129,7 +131,8 @@ rm -f $ROOT_DIR/STAMPEDE.DONE
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } 1>&2
 
 input=$(realpath $1)
@@ -168,10 +171,8 @@ if command -v sbatch &>/dev/null; then
 			strand_opt=""
 		fi
 		if [[ "$email" = true ]]; then
-			email_opt="-a $address"
 			sbatch_email_opt="--mail-type=END"
 		else
-			email_opt=""
 			sbatch_email_opt=""
 		fi
 		input_path=$(realpath $path)
@@ -181,8 +182,8 @@ if command -v sbatch &>/dev/null; then
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		pool=$(echo "$outdir" | awk -F "/" '{print $NF}')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
+		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
 		print_line
 	done <$input
 	email=false # don't email when this script is done because it just submits only

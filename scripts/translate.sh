@@ -122,7 +122,7 @@ fi
 
 # 7 - remove status files
 rm -f $outdir/TRANSLATION.FAIL
-rm -f $outdir/TRANSLATION.DONE
+# rm -f $outdir/TRANSLATION.DONE
 
 # 8 - print env details
 {

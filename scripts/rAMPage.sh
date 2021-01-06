@@ -37,6 +37,7 @@ function get_help() {
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
+		\t-d\tdebug mode of Makefile\n \
 		\t-h\tshow help menu\n \
 		\t-m <target>\tMakefile target\t(default = all)\n \
 		\t-n <species>\ttaxnomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
@@ -113,6 +114,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # 4 - get options
+num_threads=48
 stranded=false
 ref=false
 outdir=""
@@ -125,7 +127,8 @@ class=""
 species=""
 verbose=false
 target="all"
-while getopts :ha:c:r:m:n:o:pst:v opt; do
+debug=""
+while getopts :ha:c:dr:m:n:o:pst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -135,6 +138,9 @@ while getopts :ha:c:r:m:n:o:pst:v opt; do
 	c)
 		# class="${OPTARG,,}"
 		class=$(echo "$OPTARG" | sed 's/.\+/\L&/')
+		;;
+	d)
+		debug="--debug"
 		;;
 	h) get_help ;;
 	m) target=$(echo "$OPTARG" | sed 's/.\+\L&/') ;;
@@ -149,7 +155,10 @@ while getopts :ha:c:r:m:n:o:pst:v opt; do
 		ref=true
 		;;
 	s) stranded=true ;;
-	t) threads="THREADS=$OPTARG" ;;
+	t)
+		num_threads="$OPTARG"
+		threads="THREADS=$THREADS"
+		;;
 	v) verbose=true ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -201,7 +210,7 @@ if ! command -v mail &>/dev/null; then
 fi
 
 # 7 - remove status files
-rm -f $outdir/RAMPAGE.DONE
+# rm -f $outdir/RAMPAGE.DONE
 
 # 8 - print environemnt details
 if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
@@ -229,7 +238,8 @@ mkdir -p $outdir/logs
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $num_threads\n"
 } | tee -a $outdir/logs/00-rAMPage.log 1>&2
 
 # check that all rows have the same number of columns
@@ -298,11 +308,11 @@ fi
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
 if [[ "$verbose" = true ]]; then
-	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 else
-	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 fi
 
 # if [[ "$?" -ne 0 ]]; then

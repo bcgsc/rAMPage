@@ -112,7 +112,11 @@ fi
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	if [[ "$custom_threads" = true ]]; then
+		echo
+		echo -e "THREADS: $threads\n"
+	fi
 } 1>&2
 
 input=$(realpath $1)

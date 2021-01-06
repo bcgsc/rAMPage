@@ -178,13 +178,13 @@ fi
 # fi
 
 # 7 - remove status files
-rm -f $outdir/HOMOLOGY.DONE
+# rm -f $outdir/HOMOLOGY.DONE
 rm -f $outdir/HOMOLOGY.FAIL
 rm -f $outdir/JACKHMMER.FAIL
-rm -f $outdir/JACKHMMER.DONE
-rm -f $outdir/SEQUENCES.DONE
+# rm -f $outdir/JACKHMMER.DONE
+# rm -f $outdir/SEQUENCES.DONE
 rm -f $outdir/SEQEUNCES.FAIL
-rm -f $outdir/SEQUENCES_NR.DONE
+# rm -f $outdir/SEQUENCES_NR.DONE
 rm -f $outdir/SEQUENCES_NR.FAIL
 
 # 8 - print env details
@@ -196,7 +196,8 @@ logfile="$outdir/jackhmmer.log"
 
 	echo -e "PATH=$PATH\n" | tee $logfile
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } 1>&2
 
 if ! command -v mail &>/dev/null; then

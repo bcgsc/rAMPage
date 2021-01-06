@@ -148,7 +148,7 @@ if ! ls $indir/*.fastq.gz &>/dev/null; then
 fi
 
 # 7 - remove status files
-rm -f $outdir/TRIM.DONE
+# rm -f $outdir/TRIM.DONE
 rm -f $outdir/TRIM.FAIL
 
 # 8 - print env details
@@ -158,7 +158,8 @@ rm -f $outdir/TRIM.FAIL
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
 } 1>&2
 
 # if workdir not set, infer from indir
@@ -192,6 +193,21 @@ fi
 # 	print_error "*.END file not found. Please check that the reads have been downloaded properly."
 # fi
 
+if [[ ! -v PAIRED ]]; then
+	num_cols=$(awk '{print NF}' $(realpath $1) | sort -u)
+	if [[ "$num_cols" -eq 2 ]]; then
+		paired=false
+		#		touch SINGLE.END
+	elif [[ "$num_cols" -eq 3 ]]; then
+		paired=true
+		#		touch PAIRED.END
+	else
+		print_error "There are too many columns in the input TXT file."
+	fi
+else
+	paired=$PAIRED
+fi
+
 if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
@@ -203,47 +219,77 @@ echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2
 if [[ "$parallel" = true ]]; then
 	echo -e "Trimming each accession in parallel...\n" 1>&2
-	for i in $(find $indir -maxdepth 1 -name "*.fastq.gz" | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
-		if [[ -n $i ]]; then
-			run=$(basename $i)
-			# only trim the ones in the input
-			if grep -q $run $input; then
-				echo "Trimming ${run}..." 1>&2
-				echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
-				$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+
+	if [[ "$paired" = true ]]; then
+		while read pool read1 read2; do
+			run1=$(basename $read1 | sed 's/_[1-2]\.fastq\.gz//')
+			run2=$(basename $read2 | sed 's/_[1-2]\.fastq\.gz//')
+			if [[ "$run1" != "$run2" ]]; then
+				echo "ERROR: Accessions for paired reads do not match." 1>&2
+				exit 1
+			else
+				run=${run1}
 			fi
-		fi
-	done
-	wait
+			echo "Trimming ${run}..." 1>&2
+			echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
+			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+		done <$input
+		wait
+	else
+		while read pool read1; do
+			run=$(basename $read1 | sed 's/\.fastq\.gz//')
+			echo "Trimming ${run}..." 1>&2
+			echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
+			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &
+		done <$input
+		wait
+	fi
 else
-	for i in $(find $indir -maxdepth 1 -name "*.fastq.gz" | sed 's/_\?[1-2]\?\.fastq\.gz//' | sort -u); do
-		if [[ -n $i ]]; then
-			run=$(basename $i)
-			# only trim the ones that are given in input
-			if grep -q $run $input; then
-				echo "Trimming ${run}..." 1>&2
-				echo -e "COMAMND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run\n" 1>&2
-				$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+	if [[ "$paired" = true ]]; then
+		while read pool read1 read2; do
+			run1=$(basename $read1 | sed 's/_[1-2]\.fastq\.gz//')
+			run2=$(basename $read2 | sed 's/_[1-2]\.fastq\.gz//')
+			if [[ "$run1" != "$run2" ]]; then
+				echo "ERROR: Accessions for paired reads do not match." 1>&2
+				exit 1
+			else
+				run=${run1}
 			fi
-		fi
-	done
+			echo "Trimming ${run}..." 1>&2
+			echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
+			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+		done <$input
+	else
+		while read pool read1; do
+			run=$(basename $read1 | sed 's/\.fastq\.gz//')
+			echo "Trimming ${run}..." 1>&2
+			echo -e "COMMAND: $ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run &\n" 1>&2
+			$ROOT_DIR/scripts/run-fastp.sh -t $threads -i $indir -o $outdir $run
+		done <$input
+	fi
 fi
 
 fail=false
 failed_accs=()
 
 # for each accession in indir, check if an outdir equivalent exists
-for i in $(find $indir -maxdepth 1 -name "*.fastq.gz"); do
-	run=$(basename $i)
-
-	# only if it's in input
-	if grep -q $run $input; then
-		if [[ ! -s $outdir/${run} ]]; then
+if [[ "$paired" = true ]]; then
+	while read pool read1 read2; do
+		run=$(basename $read1 | sed 's/_[1-2]\.fastq\.gz//')
+		if [[ ! -s $outdir/${run}_1.fastq.gz && ! -s $outdir/${run}_2.fastq.gz ]]; then
 			fail=true
 			failed_accs+=(${run})
 		fi
-	fi
-done
+	done <$input
+else
+	while read pool read1; do
+		run=$(basename $read1 | sed 's/\.fastq\.gz//')
+		if [[ ! -s $outdir/${run}.fastq.gz ]]; then
+			fail=true
+			failed_accs+=(${run})
+		fi
+	done <$input
+fi
 
 if [[ "$fail" = true ]]; then
 	touch $outdir/TRIM.FAIL

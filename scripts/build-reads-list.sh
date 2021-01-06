@@ -135,9 +135,9 @@ if [[ ! -v SPECIES ]]; then
 else
 	species=$SPECIES
 fi
-# 7 - remove status files
-rm -f $indir/READSLIST.DONE
-rm -f $indir/readslist.txt
+# 7 - remove status files - DO NOT remove the files so time stamp can be used.
+# rm -f $indir/READSLIST.DONE
+rm -f $indir/readslist.txt # needs to be removed because append is used
 
 # 8 - print env details
 {

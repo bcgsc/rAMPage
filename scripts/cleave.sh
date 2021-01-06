@@ -135,9 +135,9 @@ elif [[ ! -s $(realpath $1) ]]; then
 fi
 
 # 7 - remove existing status files
-rm -f $outdir/CLEAVE.DONE
+# rm -f $outdir/CLEAVE.DONE
 rm -f $outdir/CLEAVE.FAIL
-rm -f $outdir/CLEAVE_LEN.DONE
+# rm -f $outdir/CLEAVE_LEN.DONE
 rm -f $outdir/CLEAVE_LEN.FAIL
 
 # 8 - print env details
