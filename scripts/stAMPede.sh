@@ -30,6 +30,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
+		\t-d\tdebug mode\n \
 		\t-h\tshow help menu\n \
 		\t-p\tallow parallel processes for each dataset\n \
 		\t-s\tsimultaenously run rAMPAge on all datasets\n \
@@ -86,17 +87,19 @@ parallel=false
 verbose=false
 multi=false
 threads=48
+debug=""
 # 4 - get options
-while getopts :ha:pst:v opt; do
+while getopts :ha:dpst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
+	d) debug="-d" ;;
 	h) get_help ;;
 	p) parallel=true ;;
 	s) multi=true ;;
-	t) threads="$OPTARG";;
+	t) threads="$OPTARG" ;;
 	v) verbose=true ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -182,8 +185,8 @@ if command -v sbatch &>/dev/null; then
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		pool=$(echo "$outdir" | awk -F "/" '{print $NF}')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
+		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
 		print_line
 	done <$input
 	email=false # don't email when this script is done because it just submits only
@@ -209,8 +212,8 @@ elif [[ "$multi" = false ]]; then
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		$ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
+		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		$ROOT_DIR/scripts/rAMPage.sh $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
 		print_line
 	done <$input
 else
@@ -243,6 +246,9 @@ else
 	done <$input
 	wait
 fi
+
+# grep summaries here
+
 echo -e "END: $(date)\n" 1>&2
 echo -e "STATUS: DONE\n" 1>&2
 
