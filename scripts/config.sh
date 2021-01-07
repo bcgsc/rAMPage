@@ -59,4 +59,4 @@ export RUN_ENTAP=$ROOT_DIR/src/EnTAP-0.10.7-beta/EnTAP
 export RUN_DIAMOND=$ROOT_DIR/src/EnTAP-0.10.7-beta/libs/diamond-0.9.9/bin/diamond
 export RUN_INTERPROSCAN=$ROOT_DIR/src/interproscan-5.30-69.0/interproscan.sh # required
 
-touch $ROOT_DIR/CONFIG.DONE
+touch -a $ROOT_DIR/CONFIG.DONE
