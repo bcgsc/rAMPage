@@ -261,6 +261,7 @@ raw_reads/READS.DONE $(INPUT_PROCESSED) &: $(ROOT_DIR)/scripts/check-reads.sh $(
 check: DEPENDENCIES.CHECK
 DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
 	@mkdir -p logs
+	@rm -f logs/01-check.log
 	@echo "STAGE 01: CHECK DEPENDENCIES: $$(realpath logs)/01-check.log" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
