@@ -3,30 +3,57 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 args="$PROGRAM $*"
+
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
+
 function get_help() {
-	echo "DESCRIPTION:" 1>&2
-	echo -e "\
+	{
+		echo "DESCRIPTION:"
+		echo -e "\
 		\tTakes a protein FASTA file as input and predicts a secondary structure and RSA score.\n\
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | table
 
-	echo "USAGE(S):" 1>&2
-	echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <protein FASTA file>\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		echo "USAGE(S):"
+		echo -e "\
+		\t$PROGRAM [OPTIONS] -o <output directory> <protein FASTA file> <protein TSV file>\n \
+		" | table
 
-	echo "OPTION(S):" 1>&2
-	echo -e "\
+		echo "OPTION(S):"
+		echo -e "\
 		\t-a <address>\temail address for alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n\
 		\t-t <INT>\tnumber of threads\t(default = 8)\n \
-		" | column -s $'\t' -t 1>&2
+		" | table
 
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM -o /path/to/sable/dir /path/to/exonerate/labelled.amps.exonerate.nr.faa  /path/to/amplify/AMPlify_results.final.tsv\n \
+		" | table
+	} 1>&2
 	exit 1
 }
 
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
@@ -66,7 +93,7 @@ if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
 
-if [[ "$#" -ne 1 ]]; then
+if [[ "$#" -ne 2 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
@@ -75,6 +102,8 @@ if [[ -z $outdir ]]; then
 else
 	mkdir -p $outdir
 fi
+
+rm -f $outdir/SABLE.FAIL
 
 {
 	echo "HOSTNAME: $(hostname)"
@@ -106,6 +135,7 @@ if [[ ! -v SPECIES ]]; then
 else
 	species=$SPECIES
 fi
+
 fasta=$(realpath $1)
 
 if [[ ! -s $fasta ]]; then
@@ -114,6 +144,19 @@ if [[ ! -s $fasta ]]; then
 	else
 		print_error "Input file is empty!"
 	fi
+elif [[ "$fasta" != *.fa* ]]; then
+	print_error "Input file is not a FASTA file."
+fi
+
+tsv_file=$(realpath $2)
+if [[ ! -s $tsv_file ]]; then
+	if [[ ! -f $tsv_file ]]; then
+		print_error "Input file does not exist."
+	else
+		print_error "Input file is empty!"
+	fi
+elif [[ "$tsv_file" != *.tsv ]]; then
+	print_error "Input file is not a TSV file."
 fi
 
 # This script differs, as it must be run in the output directory.
@@ -125,8 +168,8 @@ echo -e "COMMAND: (cd $outdir && ln -fs $fasta $outdir/data.seq && $RUN_SABLE $t
 
 if [[ -s $outdir/OUT_SABLE_graph ]]; then
 	echo "Parsing SABLE TXT output into a TSV format..." 1>&2
-	echo -e "COMMAND: $ROOT_DIR/scripts/process-sable.sh $outdir/OUT_SABLE_graph &>>$outdir/sable.log\n" 1>&2
-	$ROOT_DIR/scripts/process-sable.sh $outdir/OUT_SABLE_graph &>>$outdir/sable.log
+	echo -e "COMMAND: $ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph $tsv_file &>>$outdir/sable.log\n" 1>&2
+	$ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph $tsv_file &>>$outdir/sable.log
 
 	# combine AMPlify score with this file
 else
