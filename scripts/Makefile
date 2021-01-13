@@ -10,51 +10,69 @@ DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 
-.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation
+.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation summary
 
 # final
-all: amplify/amps.final.faa # exonerate
+all: sable/SABLE_results.tsv # amplify/amps.final.faa # exonerate # logs/00-summary.log
+
+# summary: logs/00-summary.log
+# logs/00-summary.tsv logs/00-summary.log &: $(ROOT_DIR)/scripts/summarize-verbose.sh logs/01-check.log logs/02-raw_reads.log logs/03-trimmed_reads.log logs/04-readslist.log logs/05-assembly.log logs/06-filtering.log logs/07-translation.log logs/08-homology.log logs/09-cleavage.log logs/10-amplify.log
+# 	@echo "FINAL SUMMARY: $$(realpath logs)/00-summary.tsv: $$(date)" 1>&2
+# 	@if [[ -n $(EMAIL) ]]; then \
+# 		if [[ $(VERBOSE) == true ]]; then \
+# 			/usr/bin/time -pv $< -a $(EMAIL) logs &> logs/00-summary.log; \
+# 		else \
+# 			echo "Verbose option not selected-- time, CPU, and memory not recorded." > logs/00-summary.log; \
+# 		fi; \
+# 	else \
+# 		if [[ $(VERBOSE) == true ]]; then \
+# 			/usr/bin/time -pv $< logs &> logs/00-summary.log; \
+# 		else \
+# 			echo "Verbose option not selected-- time, CPU, and memory not recorded." > logs/00-summary.log; \
+# 		fi; \
+# 	fi
+		
 
 sable: sable/SABLE_results.tsv
 
-sable/SABLE_results.tsv sable/OUT_SABLE/SABLE.DONE &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh amplify/amps.conf.short.charge.nr.faa amplify/AMPlify_results.conf.short.charge.nr.tsv DEPENDENCIES.CHECK
-	@echo "STAGE 13: SABLE: $$(realpath logs)/11-sable.log" 1>&2
+sable/SABLE_results.tsv sable/OUT_SABLE/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK
+	@echo "STAGE 13: SABLE: $$(realpath logs)/13-sable.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		else \
-			$< -a $(EMAIL) -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
+			$< -a $(EMAIL) -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		else \
-			$< -o sable amplify/amps.conf.short.charge.nr.faa &> logs/13-sable.log; \
+			$< -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		fi; \
 	fi
 
 # 12. exonerate
-exonerate: exonerate/novel.amps.exonerate.nr.faa
-exonerate/EXONERATE.DONE exonerate/novel.amps.exonerate.nr.faa &: $(ROOT_DIR)/scripts/exonerate.sh amplify/AMPLIFY.DONE amplify/amps.final.faa $(REF_AMP) DEPENDENCIES.CHECK # annotation/final_results/final_annotations_no_contam_lvl0.tsv
-	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log" 1>&2
+exonerate: exonerate/labelled.amps.exonerate.nr.faa
+exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK
+	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		else \
-			$< -a $(EMAIL) -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
+			$< -a $(EMAIL) -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
+			/usr/bin/time -pv $< -o exonerate annotation/amps.final.annotated.faa &annotation/final_annotations.final.tsv > logs/12-exonerate.log; \
 		else \
-			$< -o exonerate amplify/amps.final.faa &> logs/12-exonerate.log; \
+			$< -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		fi; \
 	fi
 		
 # 11. 
-annotation: annotation/final_results/final_annotations_no_contam_lvl0.tsv 
-annotation/final_results/final_annotations_no_contam_lvl0.tsv annotation/ANNOTATION.DONE &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log" 1>&2
+annotation: annotation/final_results/final_annotations.final.tsv
+annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
@@ -73,8 +91,8 @@ annotation/final_results/final_annotations_no_contam_lvl0.tsv annotation/ANNOTAT
 # 10. amplify
 amplify: amplify/amps.final.faa
 
-amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.faa $(ROOT_DIR)/scripts/run-cdhit.sh cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log" 1>&2
+amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE logs/10-amplify.log &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.faa $(ROOT_DIR)/scripts/run-cdhit.sh cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.faa &> logs/10-amplify.log; \
@@ -92,8 +110,8 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE &:
 # 9. cleavage
 cleavage: cleavage/cleaved.mature.len.faa
 
-cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE &: $(ROOT_DIR)/scripts/cleave.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs)/09-cleavage.log" 1>&2
+cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs)/09-cleavage.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
@@ -111,8 +129,8 @@ cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE &: $(ROOT_DIR)/scripts/clea
 # 8. homology search
 homology: homology/jackhmmer.nr.faa
 
-homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE &: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSLATION.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 08: HOMOLOGY SEARCH: $$(realpath logs)/08-homology.log" 1>&2
+homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE logs/08-homology.log &: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSLATION.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 08: HOMOLOGY SEARCH: $$(realpath logs)/08-homology.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
@@ -130,8 +148,8 @@ homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE &: $(ROOT_DIR)/scripts/run-jack
 # 7. translation 
 translation: translation/rnabloom.transcripts.filtered.transdecoder.faa
 
-translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATION.DONE &: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 07: IN SILICO TRANSLATION: $$(realpath logs)/07-translation.log" 1>&2
+translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATION.DONE logs/07-translation.log &: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 07: IN SILICO TRANSLATION: $$(realpath logs)/07-translation.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
@@ -149,8 +167,8 @@ translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATI
 # 6. filter expression 
 filtering: filtering/rnabloom.transcripts.filtered.fa
 
-filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE &: $(ROOT_DIR)/scripts/filter-expression.sh assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt assembly/ASSEMBLY.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 06: EXPRESSION FILTERING: $$(realpath logs)/06-filtering.log" 1>&2
+filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE logs/06-filtering.log &: $(ROOT_DIR)/scripts/filter-expression.sh assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt assembly/ASSEMBLY.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 06: EXPRESSION FILTERING: $$(realpath logs)/06-filtering.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
@@ -169,8 +187,8 @@ filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE &: $(ROOT_DI
 # 5. assembly
 assembly: assembly/rnabloom.transcripts.all.fa
 
-assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE &: $(ROOT_DIR)/scripts/run-rnabloom.sh trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY: $$(realpath logs)/05-assembly.log" 1>&2
+assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE logs/05-assembly.log &: $(ROOT_DIR)/scripts/run-rnabloom.sh trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY: $$(realpath logs)/05-assembly.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
@@ -188,8 +206,8 @@ assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE &: $(ROOT_DIR)/scrip
 # 4. make a reads list
 readslist: trimmed_reads/readslist.txt
 
-trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/build-reads-list.sh $(INPUT_PROCESSED) trimmed_reads/TRIM.DONE DEPENDENCIES.CHECK
-	@echo "STAGE 04: MAKING A READS LIST: $$(realpath logs)/04-readslist.log" 1>&2
+trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE logs/04-readslist.log &: $(ROOT_DIR)/scripts/build-reads-list.sh $(INPUT_PROCESSED) trimmed_reads/TRIM.DONE DEPENDENCIES.CHECK
+	@echo "STAGE 04: MAKING A READS LIST: $$(realpath logs)/04-readslist.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) -i trimmed_reads $(INPUT_PROCESSED) &> logs/04-readslist.log; \
@@ -202,14 +220,14 @@ trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE &: $(ROOT_DIR)/scripts/
 		else \
 			$< -i trimmed_reads $(INPUT_PROCESSED) &> logs/04-readslist.log; \
 		fi; \
-	fi
+	fi; \
 
 
 # 3. trim the reads
 trim: trimmed_reads/TRIM.DONE
 
-trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE $(INPUT_PROCESSED) DEPENDENCIES.CHECK
-	@echo "STAGE 03: TRIMMING READS: $$(realpath logs)/03-trimmed_reads.log" 1>&2
+trimmed_reads/TRIM.DONE logs/03-trimmed_reads.log &: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE $(INPUT_PROCESSED) DEPENDENCIES.CHECK
+	@echo "STAGE 03: TRIMMING READS: $$(realpath logs)/03-trimmed_reads.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(VERBOSE) == true ]]; then \
@@ -242,8 +260,8 @@ trimmed_reads/TRIM.DONE: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/r
 
 reads: raw_reads/READS.DONE
 
-raw_reads/READS.DONE $(INPUT_PROCESSED) &: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) DEPENDENCIES.CHECK
-	@echo "STAGE 02: GETTING READS: $$(realpath logs)/02-raw_reads.log" 1>&2
+raw_reads/READS.DONE $(INPUT_PROCESSED) logs/02-raw_reads.log &: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) DEPENDENCIES.CHECK
+	@echo "STAGE 02: GETTING READS: $$(realpath logs)/02-raw_reads.log:: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) $(INPUT) &> logs/02-raw_reads.log; \
@@ -259,10 +277,10 @@ raw_reads/READS.DONE $(INPUT_PROCESSED) &: $(ROOT_DIR)/scripts/check-reads.sh $(
 	fi
 
 check: DEPENDENCIES.CHECK
-DEPENDENCIES.CHECK: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
+DEPENDENCIES.CHECK logs/01-check.log &: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
 	@mkdir -p logs
 	@rm -f logs/01-check.log
-	@echo "STAGE 01: CHECK DEPENDENCIES: $$(realpath logs)/01-check.log" 1>&2
+	@echo "STAGE 01: CHECK DEPENDENCIES: $$(realpath logs)/01-check.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv --append -o logs/01-check.log $< -a $(EMAIL) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
