@@ -24,7 +24,7 @@ function get_help() {
 
 		echo "USAGE(S)":
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-p] [-s] [-v] <accessions TXT file>\n \
+		\t$PROGRAM [-a <address>] [-d] [-p] [-s] [-v] <accessions TXT file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -33,7 +33,7 @@ function get_help() {
 		\t-d\tdebug mode\n \
 		\t-h\tshow help menu\n \
 		\t-p\tallow parallel processes for each dataset\n \
-		\t-s\tsimultaenously run rAMPAge on all datasets\n \
+		\t-s\tsimultaenously run rAMPAge on all datasets (default if SLURM available)\n \
 		\t-v\tverbose (uses /usr/bin/time -pv to time each rAMPage run)\n \
 		" | table
 
@@ -124,7 +124,7 @@ if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
 	echo "Environment variables have not been successfuly configured yet." 1>&2
 	exit 1
 fi
-# rm -f $ROOT_DIR/STAMPEDE.DONE
+rm -f $ROOT_DIR/STAMPEDE.DONE
 
 # 8 - print environemnt details
 
@@ -216,6 +216,17 @@ elif [[ "$multi" = false ]]; then
 		$ROOT_DIR/scripts/rAMPage.sh $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
 		print_line
 	done <$input
+	echo -e "Path\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$ROOT_DIR/summary.tsv
+
+	if [[ "$verbose" = true ]]; then
+		while read path strandedness; do
+			dir=$(dirname $path)
+			info=$(grep 'rAMPage' $dir/logs/00-summary.tsv)
+			echo -e "$dir\t$info" >>$ROOT_DIR/summary.tsv
+		done <$input
+		echo 1>&2
+		column -s $'\t' -t $ROOT_DIR/summary.tsv 1>&2
+	fi
 else
 	while read path strandedness; do
 		if [[ "$strandedness" != *[Ss][Tt][Rr][Aa][Nn][Dd][Ee][Dd] ]]; then
@@ -245,19 +256,58 @@ else
 		$ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &
 	done <$input
 	wait
+
+	#
+	if [[ "$verbose" = true ]]; then
+		while read path strandedness; do
+			input_path=$(realpath $path)
+			outdir=$(dirname $input_path)
+			exit_status=$(awk '/Exit status:/ {print $NF}' $outdir/logs/00-rAMPage.log)
+			class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
+			species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
+			if [[ "$exit_status" -ne 0 ]]; then
+				species=$(echo "$species" | sed 's/^./\u&. /')
+				echo "ERROR: $species: FAILED" 1>&2
+				echo -e "\nEND: $(date)\n" 1>&2
+				echo -e "STATUS: FAILED\n" 1>&2
+
+				if [[ "$email" = true ]]; then
+					# 	species=$(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')
+					# echo "$outdir" | mail -s "${species^}: rAMPage: SUCCESS" "$address"
+					pwd | mail -s "stAMPede: FAILED" "$address"
+					echo -e "\nEmail alert sent to $address." 1>&2
+				fi
+				touch $ROOT_DIR/STAMPEDE.FAIL
+				exit 1
+			fi
+		done <$input
+	fi
+	echo -e "Path\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$ROOT_DIR/summary.tsv
+
+# 	if [[ "$verbose" = true ]]; then
+# 		while read path strandedness; do
+# 			dir=$(dirname $path)
+# 			info=$(grep 'rAMPage' $dir/logs/00-summary.tsv)
+# 			echo -e "$dir\t$info" >>$ROOT_DIR/summary.tsv
+# 		done <$input
+# 		echo 1>&2
+# 		column -s $'\t' -t $ROOT_DIR/summary.tsv 1>&2
+# 	fi
 fi
 
-# grep summaries here
-
-echo -e "END: $(date)\n" 1>&2
+echo -e "\nEND: $(date)\n" 1>&2
 echo -e "STATUS: DONE\n" 1>&2
 
 if ! command -v sbatch &>/dev/null; then
 	if [[ "${#results[@]}" -ne 0 ]]; then
 		echo "Output:" 1>&2
 		for i in ${results[@]}; do
-			echo -e "\t - $i/amplify/amps.conf.short.charge.nr.faa"
+			echo -e "\t - $i/amplify/amps.final.faa\n"
 		done | table 1>&2
+		echo 1>&2
+		if [[ "$verbose" = true ]]; then
+			echo "Summary: $ROOT_DIR/summary.tsv" 1>&2
+		fi
 	fi
 fi
 touch $ROOT_DIR/STAMPEDE.DONE

@@ -164,7 +164,7 @@ elif [[ ! -s $(realpath $1) ]]; then
 fi
 
 # 7 - remove status files
-# rm -f $outdir/ASSEMBLY.DONE
+rm -f $outdir/ASSEMBLY.DONE
 rm -f $outdir/ASSEMBLY.FAIL
 
 # 8 - print env details

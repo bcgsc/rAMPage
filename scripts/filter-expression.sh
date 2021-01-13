@@ -165,7 +165,7 @@ fi
 
 # 7 - remove status files
 rm -f $outdir/FILTERING.DONE
-# rm -f $outdir/FILTERING.FAIL
+rm -f $outdir/FILTERING.FAIL
 
 # 8 - print env details
 {

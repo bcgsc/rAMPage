@@ -3,6 +3,10 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+fi
+
 ## SCRIPT that wraps around the Makefile
 args="$PROGRAM $*"
 
@@ -30,7 +34,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <taxonomic class> [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTIONS:"
@@ -39,7 +43,7 @@ function get_help() {
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
 		\t-d\tdebug mode of Makefile\n \
 		\t-h\tshow help menu\n \
-		\t-m <target>\tMakefile target\t(default = all)\n \
+		\t-m <target>\tMakefile target\t(default = exonerate)\n \
 		\t-n <species>\ttaxnomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
 		\t-o <directory>\toutput directory\t(default = directory of input reads TXT file)\n \
 		\t-p\trun processes in parallel\n \
@@ -157,7 +161,7 @@ while getopts :ha:c:dr:m:n:o:pst:v opt; do
 	s) stranded=true ;;
 	t)
 		num_threads="$OPTARG"
-		threads="THREADS=$THREADS"
+		threads="THREADS=$num_threads"
 		;;
 	v) verbose=true ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
@@ -210,7 +214,7 @@ if ! command -v mail &>/dev/null; then
 fi
 
 # 7 - remove status files
-# rm -f $outdir/RAMPAGE.DONE
+rm -f $outdir/RAMPAGE.DONE
 
 # 8 - print environemnt details
 if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
@@ -240,7 +244,7 @@ mkdir -p $outdir/logs
 
 	echo "CALL: $args (wd: $(pwd))"
 	echo -e "THREADS: $num_threads\n"
-} | tee -a $outdir/logs/00-rAMPage.log 1>&2
+} | tee $outdir/logs/00-rAMPage.log 1>&2
 
 # check that all rows have the same number of columns
 if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
@@ -304,35 +308,45 @@ db=$ROOT_DIR/amp_seqs/amps.${CLASS^}.prot.combined.faa
 if [[ ! -s $db ]]; then
 	print_error "Reference AMP sequences not found in $db."
 fi
+if ! /usr/bin/time -pv echo &>/dev/null; then
+	verbose=false
+	echo -e "Verbose option selected but /usr/bin/time -pv not available.\n" 1>&2
+fi
 
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
 if [[ "$verbose" = true ]]; then
-	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
 	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 else
-	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
 	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 fi
 
-# if [[ "$?" -ne 0 ]]; then
-# 	failed=true
-# 	file=$(ls -t $outdir/logs/*.log | head -n1)
-# 	echo "FAILED! Last logfile: $(realpath $file)" 1>&2
-# 	print_line
-# 	cat $file 1>&2
-# 	print_line
-# echo "Cleaning directory $outdir..." 1>&2
-# make INPUT=$input -C $outdir -f $ROOT_DIR/scripts/Makefile clean
-# fi
+# PERFORM SUMMARY
+
+if [[ "$email" = true ]]; then
+	if [[ "$verbose" == true ]]; then
+		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log." 1>&2
+		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
+	else
+		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
+	fi
+else
+	if [[ "$verbose" == true ]]; then
+		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log." 1>&2
+		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh $outdir/logs &>$outdir/logs/00-summary.log
+	else
+		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
+	fi
+fi
+
+# summarize the log files here
+echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+$ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
 
 echo -e "\nEND: $(date)" 1>&2
 
-# if [[ "$failed" = true ]]; then
-# 	echo -e "\nSTATUS: FAILED." 1>&2
-# else
-# 	echo -e "\nSTATUS: DONE." 1>&2
-# fi
 echo -e "\nSTATUS: DONE" 1>&2
 touch $outdir/RAMPAGE.DONE
 

@@ -148,7 +148,7 @@ if ! ls $indir/*.fastq.gz &>/dev/null; then
 fi
 
 # 7 - remove status files
-# rm -f $outdir/TRIM.DONE
+rm -f $outdir/TRIM.DONE
 rm -f $outdir/TRIM.FAIL
 
 # 8 - print env details

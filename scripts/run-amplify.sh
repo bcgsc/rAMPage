@@ -48,6 +48,7 @@ function get_help() {
 		\t-d\tdebug mode\t(skips running AMPlify)\n \
 		\t-h\tshow this help menu\n \
 		\t-l <int>\tlength cut-off [i.e. keep len(sequences) <= int]\t(default = 50)\n \
+		\t-r <0 to 1>\tredundancy removal cut-off\t(default = 1.0)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tAMPlify score cut-off [i.e. keep score(sequences) >= dbl]\t(default = 0.99)\n \
 		\t-t <int>\tnumber of threads\t(default = all)\n \
@@ -99,9 +100,9 @@ custom_threads=false
 charge=2
 outdir=""
 debug=false
-
+rr=1.0
 # 4 - read options
-while getopts :a:c:dhl:o:s:t: opt; do
+while getopts :a:c:dhl:o:r:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -109,6 +110,7 @@ while getopts :a:c:dhl:o:s:t: opt; do
 		;;
 	c) charge="$OPTARG" ;;
 	d) debug=true ;;
+	r) rr="$OPTARG" ;;
 	s) confidence="$OPTARG" ;;
 	h) get_help ;;
 	l) length="$OPTARG" ;;
@@ -159,8 +161,16 @@ else
 	species=$SPECIES
 fi
 
+if [[ "$rr" -lt 0 || "$rr" -gt 1 ]]; then
+	print_error "Invalid argument for -r <0 to 1>: $rr"
+fi
+
+if [[ "$confidence" -lt 0 || "$confidence" -gt 1 ]]; then
+	print_error "Invalid argument for -c <0 to 1>: $confidence"
+fi
+
 # 7 - remove status files
-# rm -f $outdir/AMPLIFY.DONE
+rm -f $outdir/AMPLIFY.DONE
 
 # 8 - print env details
 {
@@ -262,7 +272,6 @@ else
 	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
 fi
 # -------------------
-
 file=$(ls -t $outdir/AMPlify_results_*.txt 2>/dev/null | head -n1 || true)
 echo -e "Output: $file\n" 1>&2
 
@@ -279,14 +288,9 @@ if [[ ! -s $file ]]; then
 	exit 2
 fi
 
-# echo -e "Softlinking $file to $outdir/AMPlify_results.txt...\n" 1>&2
-if [[ ! -f $outdir/AMPlify_results.txt ]]; then
-	cp $file $outdir/AMPlify_results.txt
-fi
-file=$outdir/AMPlify_results.txt
-
 # remove empty lines
-sed -i '/^$/d' $file
+sed '/^$/d' $file >$outdir/AMPlify_results.txt
+file=$outdir/AMPlify_results.txt
 
 # convert TXT to TSV
 if [[ -s $outdir/AMPlify_results.faa ]]; then
@@ -651,7 +655,7 @@ echo -e "$(basename $outfile_nr)\t$count\n \
 	$(basename $outfile_conf_short_nr)\t$count_conf_short\n \
 	$(basename $outfile_short_charge_nr)\t$count_short_charge\n \
 	$(basename $outfile_conf_short_charge_nr)\t$count_conf_short_charge\n \
-	" | sed 's/^\s\+//g' | sed '/^$/d' | sort -t $'\t' -k2,2nr >$outdir/amps.summary.tsv
+	" | sed 's/^\s\+//g' | sed '/^$/d' | sort -t $'\t' -k2,2nr -k1,1r >$outdir/amps.summary.tsv
 
 {
 	echo -e "\
@@ -683,9 +687,9 @@ echo 1>&2
 # sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
 # soft link the file that has the least number of AMPs but isn't 0
 final_amps=$(awk -F "\t" '{if($2!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
-ln -fs $outdir/${final_amps} $outdir/amps.final.faa
+(cd $outdir && ln -fs ${final_amps} amps.final.faa)
 filename=$(echo "$final_amps" | sed 's/amps/AMPlify_results/' | sed 's/\.faa/.tsv/')
-ln -fs $outdir/${filename} $outdir/amps.final.tsv
+(cd $outdir && ln -fs ${filename} AMPlify_results.final.tsv)
 
 default_name="$(realpath -s $(dirname $outdir)/amplify)"
 if [[ "$default_name" != "$outdir" ]]; then

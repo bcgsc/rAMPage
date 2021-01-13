@@ -54,7 +54,7 @@ function get_help() {
 		\t-e <E-value>\tE-value threshold\t(default = 1e-3)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n \
+		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 1.00)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
 		" | table
 
@@ -99,7 +99,7 @@ fi
 evalue=1e-5
 threads=8
 email=false
-similarity=0.90
+similarity=1.00
 outdir=""
 db=""
 # 4 - read options
@@ -178,13 +178,13 @@ fi
 # fi
 
 # 7 - remove status files
-# rm -f $outdir/HOMOLOGY.DONE
+rm -f $outdir/HOMOLOGY.DONE
 rm -f $outdir/HOMOLOGY.FAIL
 rm -f $outdir/JACKHMMER.FAIL
-# rm -f $outdir/JACKHMMER.DONE
-# rm -f $outdir/SEQUENCES.DONE
+rm -f $outdir/JACKHMMER.DONE
+rm -f $outdir/SEQUENCES.DONE
 rm -f $outdir/SEQEUNCES.FAIL
-# rm -f $outdir/SEQUENCES_NR.DONE
+rm -f $outdir/SEQUENCES_NR.DONE
 rm -f $outdir/SEQUENCES_NR.FAIL
 
 # 8 - print env details
