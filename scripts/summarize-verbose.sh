@@ -45,13 +45,15 @@ function get_help() {
 }
 
 # 1.5 - print_line function
-function print_error() {
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
 	{
-		echo -e "CALL: $args (wd: $(pwd))\n"
-		message="$1"
-		echo "ERROR: $message"
-		print_line
-		get_help
+		printf '%.0s=' $(seq 1 $end)
+		echo
 	} 1>&2
 }
 
@@ -130,7 +132,14 @@ fi
 echo -e "Step\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$outfile
 
 for logfile in $indir/*.log; do
+	if [[ "$logfile" == $indir/00-summary.log || "$logfile" == $indir/00-stats.log ]]; then
+		continue
+	fi
 	line=$(grep -Ff <(echo -e "Elapsed (wall clock) time (h:mm:ss or m:ss)\nPercent of CPU this job got:\nMaximum resident set size (kbytes):") $logfile | awk '{print $NF}' | tr '\n' '\t' | sed 's/\t$//')
+	if [[ -z "$line" ]]; then
+		# line="0\t0\t0"
+		line="NA\tNA\tNA"
+	fi
 	step=$(basename $logfile ".log" | cut -f2 -d-)
 	echo -e "$step\t$line" >>$outfile
 done
