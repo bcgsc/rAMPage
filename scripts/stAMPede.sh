@@ -24,7 +24,7 @@ function get_help() {
 
 		echo "USAGE(S)":
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-d] [-p] [-s] [-v] <accessions TXT file>\n \
+		\t$PROGRAM [-a <address>] [-d] [-p] [-s] [-t <int>] [-v] <accessions TXT file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -32,8 +32,10 @@ function get_help() {
 		\t-a <address>\temail address for alerts\n \
 		\t-d\tdebug mode\n \
 		\t-h\tshow help menu\n \
+		\t-m <target>\tMakefile target\t(default = exonerate)\n \
 		\t-p\tallow parallel processes for each dataset\n \
 		\t-s\tsimultaenously run rAMPAge on all datasets (default if SLURM available)\n \
+		\t-t <int>\tnumber of threads\t(default = 48)\n \
 		\t-v\tverbose (uses /usr/bin/time -pv to time each rAMPage run)\n \
 		" | table
 
@@ -88,8 +90,9 @@ verbose=false
 multi=false
 threads=48
 debug=""
+target=""
 # 4 - get options
-while getopts :ha:dpst:v opt; do
+while getopts :ha:dpst:vm: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -97,6 +100,11 @@ while getopts :ha:dpst:v opt; do
 		;;
 	d) debug="-d" ;;
 	h) get_help ;;
+	m) if [[ "${OPTARG,,}" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|annotation|exonerate|sable|all|clean)$ ]]; then
+		target="-m ${OPTARG,,}"
+	else
+		print_error "Invalid Makefile target specified with -m ${OPTARG}."
+	fi ;;
 	p) parallel=true ;;
 	s) multi=true ;;
 	t) threads="$OPTARG" ;;
@@ -185,8 +193,8 @@ if command -v sbatch &>/dev/null; then
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		pool=$(echo "$outdir" | awk -F "/" '{print $NF}')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
+		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
 		print_line
 	done <$input
 	email=false # don't email when this script is done because it just submits only
@@ -212,8 +220,8 @@ elif [[ "$multi" = false ]]; then
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		$ROOT_DIR/scripts/rAMPage.sh $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
+		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		$ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
 		print_line
 	done <$input
 	echo -e "Path\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$ROOT_DIR/summary.tsv
@@ -251,9 +259,9 @@ else
 		mkdir -p $outdir/logs
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
 		echo "See $outdir/logs/00-rAMPage.log for details." 1>&2
-		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
+		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
 
-		$ROOT_DIR/scripts/rAMPage.sh $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &
+		$ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &
 	done <$input
 	wait
 

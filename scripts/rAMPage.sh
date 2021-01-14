@@ -79,6 +79,7 @@ function get_help() {
 		\t11) annotation\n \
 		\t12) exonerate\n \
 		\t13) sable\n \
+		\t14) all\n \
 		" | table
 
 		#	echo "Reads must be compressed in .gz format."
@@ -130,7 +131,7 @@ email_opt=""
 class=""
 species=""
 verbose=false
-target="all"
+target="exonerate"
 debug=""
 while getopts :ha:c:dr:m:n:o:pst:v opt; do
 	case $opt in
@@ -147,7 +148,7 @@ while getopts :ha:c:dr:m:n:o:pst:v opt; do
 		debug="--debug"
 		;;
 	h) get_help ;;
-	m) target=$(echo "$OPTARG" | sed 's/.\+\L&/') ;;
+	m) target=$(echo "$OPTARG" | sed 's/.\+/\L&/') ;;
 	n)
 		species=$(echo "$OPTARG" | sed 's/.\+/\L&/')
 		# species="${OPTARG,,}"
@@ -182,7 +183,7 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
 fi
 
-if [[ "$target" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|annotation|exonerate|sable|all|clean)$ ]]; then
+if [[ "${target,,}" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|annotation|exonerate|sable|all|clean)$ ]]; then
 	:
 else
 	print_error "Invalid Makefile target specified with -m $target."
