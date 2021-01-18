@@ -165,8 +165,8 @@ The file to edit is `src/sable_v4_distr/run.sable`:
 |`export SABLE_DIR="/users/radamcza/work/newSable/sable_distr";`| `export SABLE_DIR="$ROOT_DIR/src/sable_v4_distr";` |
 | `export BLAST_DIR="/usr/local/blast/2.2.28/bin";` | `export BLAST_DIR=$BLAST_DIR` | 
 |\*`export NR_DIR="/database/ncbi/nr"` | `export NR_DIR=$ROOT_DIR/src/EnTAP-0.10.7-beta/bin/nr` |
-| `export PRIMARY_DATABASE="$ROOT_DIR/src/sable_v4_distr/GI_indexes/pfam_index"` | 
-| `export SECONDARY_DATABASE="$ROOT_DIR/src/sable_v4_distr/GI_indexes/swissprot_index";`
+| `export PRIMARY_DATABASE="/users/radamcza/work/newSable/sable_distr/GI_indexes/pfam_index"` | `export PRIMARY_DATABASE="$ROOT_DIR/src/sable_v4_distr/GI_indexes/pfam_index"` | 
+| `export SECONDARY_DATABASE="/users/radamcza/work/newSable/sable_distr/GI_indexes/swissprot_index"` | `export SECONDARY_DATABASE="$ROOT_DIR/src/sable_v4_distr/GI_indexes/swissprot_index";`
 |`mkdir $PBS_JOBID` | `mkdir -p $PBS_JOBID`|
 | `/usr/bin/perl ${SABLE_DIR}/sable.pl` | `perl ${SABLE_DIR}/sable.pl $THREADS` |
 
