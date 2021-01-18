@@ -272,19 +272,21 @@ DESCRIPTION:
       Runs the rAMPage pipeline, using the Makefile.
       
 USAGE(S):
-      rAMPage.sh [-a <address>] [-c <taxonomic class> [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] <input reads TXT file>
+      rAMPage.sh [-a <address>] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>
       
 OPTIONS:
        -a <address>    email address for alerts                 
        -c <class>      taxonomic class of the dataset           (default = top-level directory in $outdir)
+       -d              debug mode of Makefile                   
        -h              show help menu                           
+       -m <target>     Makefile target                          (default = exonerate)
        -n <species>    taxnomic species or name of the dataset  (default = second-level directory in $outdir)
        -o <directory>  output directory                         (default = directory of input reads TXT file)
        -p              run processes in parallel                
        -r <FASTA.gz>   reference transcriptome                  (accepted multiple times, *.fna.gz *.fsa_nt.gz)
        -s              strand-specific library construction     (default = false)
        -t <int>        number of threads                        (default = 48)
-       -v              verbose (uses /usr/bin/time -pv)             
+       -v              verbose (uses /usr/bin/time -pv)         
                                                                 
 EXAMPLE(S):
       rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
@@ -292,6 +294,22 @@ EXAMPLE(S):
 INPUT EXAMPLE:
        tissue /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz
        tissue /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz
+       
+MAKEFILE TARGETS:
+       01) check
+       02) reads
+       03) trim
+       04) readslist
+       05) assembly
+       06) filtering
+       07) translation
+       08) homology
+       09) cleavage
+       10) amplify
+       11) annotation
+       12) exonerate
+       13) sable
+       14) all
 ```
 
 ### Running from the root of the repository
@@ -322,25 +340,28 @@ To run rAMPage on multiple datasets, you can use the `stAMPede.sh` wrapper scrip
 PROGRAM: stAMPede.sh
 
 DESCRIPTION:
-      A wrapper around rAMPage.sh to allow running of multiple datasets.
+      A wrapper around rAMPage.sh to allow running of multiple assemblies.
       
 USAGE(S):
-      stAMPede.sh [-a <address>] [-p] [-s] [-v] <multi-input TXT file>
+      stAMPede.sh [-a <address>] [-d] [-p] [-s] [-t <int>] [-v] <accessions TXT file>
       
 OPTION(S):
-       -a <address>  email address for alerts
-       -h            show help menu
-       -p            allow parallel processes for each dataset
-       -s            simultaenously run rAMPAge on all datasets
-       -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)
-                     
+       -a <address>  email address for alerts                                                 
+       -d            debug mode                                                               
+       -h            show help menu                                                           
+       -m <target>   Makefile target                                                          (default = exonerate)
+       -p            allow parallel processes for each dataset                                
+       -s            simultaenously run rAMPAge on all datasets (default if SLURM available)  
+       -t <int>      number of threads                                                        (default = 48)
+       -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)                
+                                                                                              
 ACCESSIONS TXT FORMAT:
        CLASS/SPECIES/TISSUE_OR_CONDITION/input.txt strandedness
        amphibia/ptoftae/skin-liver/input.txt nonstranded
        insecta/mgulosa/venom/input.txt stranded
        
 EXAMPLE(S):
-      stAMPede.sh -a user@example.com -p -s -v multi-input.txt
+      stAMPede.sh -a user@example.com -p -s -v accessions.txt
 ```
 
 #### Input
