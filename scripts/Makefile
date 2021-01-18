@@ -10,14 +10,14 @@ DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 
-.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation summary
+.PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation
 
 # final
 all: sable/SABLE_results.tsv
 
 sable: sable/SABLE_results.tsv
 
-sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK
+sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK exonerate/EXONERATE.DONE amplify/AMPLIFY.DONE
 	@echo "STAGE 13: SABLE: $$(realpath logs)/13-sable.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
@@ -35,7 +35,7 @@ sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/script
 
 # 12. exonerate
 exonerate: exonerate/labelled.amps.exonerate.nr.faa
-exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK
+exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
 	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
@@ -53,7 +53,7 @@ exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exoner
 		
 # 11. 
 annotation: annotation/final_results/final_annotations.final.tsv
-annotation/final_annotations.final.tsv annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK
+annotation/final_annotations.final.tsv annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK amplify/AMPLIFY.DONE
 	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
