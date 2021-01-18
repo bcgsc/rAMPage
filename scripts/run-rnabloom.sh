@@ -39,7 +39,7 @@ function get_help() {
 		#  USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-m <int K/M/G>] [-s] [-t <int>] -o <output directory> <reads list TXT file>\n \
+		\t$PROGRAM [-a <address>] [-d] [-h] [-m <int K/M/G>] [-s] [-t <int>] -o <output directory> <reads list TXT file>\n \
         " | table
 
 		# OPTION

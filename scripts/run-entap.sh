@@ -25,7 +25,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-t <int>] -i <input FASTA file> -o <output directory> <database FASTA file(s)>\n \
+		\t$PROGRAM [-a <address>] [-h] [-t <int>] -i <input FASTA file> -o <output directory> <database FASTA file(s)>\n \
 		" | table
 
 		echo -e "OPTION(S):"

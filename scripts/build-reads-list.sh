@@ -26,7 +26,7 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-s] -i <input directory> <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-h] [-s] -i <input directory> <input reads TXT file>\n \
 		" | table
 
 		# OPTIONS

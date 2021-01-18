@@ -278,4 +278,4 @@ DEPENDENCIES.CHECK logs/01-check.log &: $(ROOT_DIR)/scripts/check-dependencies.s
 	fi
 
 clean:
-	@rm -rf DEPENDENCIES.CHECK $(INPUT_PROCESSED) trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE exonerate annotation
+	@rm -rf DEPENDENCIES.CHECK $(INPUT_PROCESSED) trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE exonerate annotation env.txt

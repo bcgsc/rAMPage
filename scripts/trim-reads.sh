@@ -40,7 +40,7 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-p] [-t <int>] -i <input directory> -o <output directory> <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-h] [-p] [-t <int>] -i <input directory> -o <output directory> <input reads TXT file>\n \
         " | table
 
 		# OPTIONS

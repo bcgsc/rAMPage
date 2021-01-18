@@ -23,7 +23,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-t <int>] <FASTA database files>\n
+		\t$PROGRAM [-a <address>] [-h] [-t <int>] <FASTA database files>\n
 		" | table
 
 		echo "OPTION(S):"

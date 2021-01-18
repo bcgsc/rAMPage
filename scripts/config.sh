@@ -12,11 +12,11 @@ if [[ -f $ROOT_DIR/CONFIG.DONE ]]; then
 fi
 
 ## FOR DOWNLOADING REFERENCE AMP SEQUENCES
-export RUN_ESEARCH=$ROOT_DIR/src/edirect/13.8/bin/esearch
-export RUN_EFETCH=$ROOT_DIR/src/edirect/13.8/bin/efetch
+# export RUN_ESEARCH=$ROOT_DIR/src/edirect/13.8/bin/esearch
+# export RUN_EFETCH=$ROOT_DIR/src/edirect/13.8/bin/efetch
 
 ## FOR DOWNLOADING READS
-export FASTERQ_DUMP=$ROOT_DIR/src/sratoolkit.2.10.5-centos_linux64/bin/fasterq-dump
+# export FASTERQ_DUMP=$ROOT_DIR/src/sratoolkit.2.10.5-centos_linux64/bin/fasterq-dump
 
 ## FOR TRIMMING READS
 export RUN_FASTP=$ROOT_DIR/fastp/0.20.1/bin/fastp

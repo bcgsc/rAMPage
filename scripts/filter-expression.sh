@@ -37,7 +37,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <dbl>] [-s] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <dbl>] [-h] [-s] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
         " | table
 
 		echo "OPTION(S):"

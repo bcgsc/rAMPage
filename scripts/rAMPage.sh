@@ -34,7 +34,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <taxonomic class>] [-d] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTIONS:"
@@ -66,20 +66,13 @@ function get_help() {
 
 		echo "MAKEFILE TARGETS:"
 		echo -e "\
-		\t01) check\n \
-		\t02) reads\n \
-		\t03) trim\n \
-		\t04) readslist\n \
-		\t05) assembly\n \
-		\t06) filtering\n \
-		\t07) translation\n \
-		\t08) homology\n \
-		\t09) cleavage\n \
-		\t10) amplify\n \
-		\t11) annotation\n \
-		\t12) exonerate\n \
-		\t13) sable\n \
-		\t14) all\n \
+		\t01) check\t08) homology\n \
+		\t02) reads\t09) cleavage\n \
+		\t03) trim\t10) amplify\n \
+		\t04) readslist\t11) annotation\n \
+		\t05) assembly\t12) exonerate\n \
+		\t06) filtering\t13) sable\n \
+		\t07) translation\t14) all\n \
 		" | table
 
 		#	echo "Reads must be compressed in .gz format."
@@ -184,7 +177,7 @@ elif [[ ! -s $(realpath $1) ]]; then
 fi
 
 if [[ "${target,,}" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|annotation|exonerate|sable|all|clean)$ ]]; then
-	:
+	export TARGET=${target,,}
 else
 	print_error "Invalid Makefile target specified with -m $target."
 fi
@@ -277,6 +270,7 @@ fi
 {
 	echo "EXPORTED VARIABLES:"
 	print_line
+	echo "TARGET=$TARGET"
 	echo "WORKDIR=$WORKDIR"
 	echo "PAIRED=$PAIRED"
 	echo "STRANDED=$STRANDED"

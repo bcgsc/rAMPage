@@ -23,7 +23,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] <input protein FASTA file>\n \
+		\t$PROGRAM [-h] [-o <output FASTA file>] [-s <0 to 1>] [-t <int>] [-v] <input protein FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"

@@ -296,20 +296,13 @@ INPUT EXAMPLE:
        tissue /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz
        
 MAKEFILE TARGETS:
-       01) check
-       02) reads
-       03) trim
-       04) readslist
-       05) assembly
-       06) filtering
-       07) translation
-       08) homology
-       09) cleavage
-       10) amplify
-       11) annotation
-       12) exonerate
-       13) sable
-       14) all
+       01) check        08) homology
+       02) reads        09) cleavage
+       03) trim         10) amplify
+       04) readslist    11) annotation
+       05) assembly     12) exonerate
+       06) filtering    13) sable
+       07) translation  14) all
 ```
 
 ### Running from the root of the repository

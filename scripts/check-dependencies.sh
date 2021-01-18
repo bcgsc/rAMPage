@@ -26,7 +26,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>]\n \
+		\t$PROGRAM [-a <address>] [-h]\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -131,7 +131,16 @@ function check_file() {
 }
 count=1
 
-total=$(($(grep -c 'export' $ROOT_DIR/scripts/config.sh) - 1))
+if [[ ! -v TARGET ]]; then
+	# set it to default of exonerate
+	target="exonerate"
+fi
+
+if [[ "$target" != "sable" && "$target" != "all" ]]; then
+	total=$(($(grep -c '^export' $ROOT_DIR/scripts/config.sh) - 1 - 3))
+else
+	total=$(($(grep -c '^export' $ROOT_DIR/scripts/config.sh) - 1))
+fi
 
 if [[ ! -v ROOT_DIR || ! -f $ROOT_DIR/CONFIG.DONE ]]; then
 	echo "The script scripts/config.sh still needs to be sourced." 1>&2
@@ -139,35 +148,61 @@ if [[ ! -v ROOT_DIR || ! -f $ROOT_DIR/CONFIG.DONE ]]; then
 fi
 
 {
-	check $RUN_ESEARCH "esearch" $count || exit 1
-	check $RUN_EFETCH "efetch" $count || exit 1
-	check $FASTERQ_DUMP "fasterq-dump" $count || exit 1
+	# for fetching reads and homology db fetching...
+	# check $RUN_ESEARCH "esearch" $count || exit 1
+	# check $RUN_EFETCH "efetch" $count || exit 1
+	# check $FASTERQ_DUMP "fasterq-dump" $count || exit 1
+
+	# for trimming
 	check $RUN_FASTP "fastp" $count || exit 1
+
+	# for assembly
 	check_jar $RUN_RNABLOOM "RNA-Bloom" $count || exit 1
 	check_dir $NTCARD_DIR "ntCard" $count || exit 1
 	check_dir $MINIMAP_DIR "minimap2" $count || exit 1
 	check $JAVA_EXEC "Java" $count || exit 1
+
+	# for redundancy removal
 	check $RUN_CDHIT "CD-HIT" $count || exit 1
 	check $RUN_SEQTK "seqtk" $count || exit 1
+
+	# for filtering expression
 	check $RUN_SALMON "salmon" $count || exit 1
+
+	# for translation
 	check $TRANSDECODER_LONGORFS "TransDecoder.LongOrfs" $count || exit 1
 	check $TRANSDECODER_PREDICT "TransDecoder.Predict" $count || exit 1
+
+	# for homolgoy
 	check $RUN_JACKHMMER "jackhmmer" $count || exit 1
+
+	# for signal prediction and cleavage
 	check $RUN_SIGNALP "SignalP" $count || exit 1
 	check $RUN_PROP "ProP" $count || exit 1
+
+	# for AMPlify
 	check $RUN_AMPLIFY "AMPlify" $count || exit 1
+
+	# for annotation
 	check $RUN_ENTAP "EnTAP" $count || exit 1
 	check $RUN_DIAMOND "diamond" $count || exit 1
 	check $RUN_INTERPROSCAN "InterProScan" $count || exit 1
+
+	# for exonerate
 	check $RUN_EXONERATE "Exonerate" $count || exit 1
-	check $RUN_SABLE "SABLE" $count || exit 1
-	check_dir $BLAST_DIR "BLAST+" $count || exit 1
-	check_file $NR_DBNAME_FORMATTED "NR" $count || exit 1
+
+	# for SABLE
+	if [[ "$target" == "sable" || "$target" == "all" ]]; then
+		check $RUN_SABLE "SABLE" $count || exit 1
+		check_dir $BLAST_DIR "BLAST+" $count || exit 1
+		check_file $NR_DBNAME_FORMATTED "NR" $count || exit 1
+	fi
+
 } | column -s$'\t' -t
 
 if [[ ! -v STRANDED || ! -v PAIRED || ! -v CLASS || ! -v SPECIES || ! -v WORKDIR ]]; then
 	# echo "Variable \$STRANDED not exported from scripts/rAMPage.sh."
-	echo "Please indicate whether your dataset has stranded or nonstranded library construction:" 1>&2
+	echo -e "\nPlease indicate whether your dataset has stranded or nonstranded library construction:" 1>&2
 	echo -e "\te.g. export STRANDED=true\n" 1>&2
 	echo "Please indicate whether your dataset has paired or single-end reads:" 1>&2
 	echo -e "\te.g. export PAIRED=true\n" 1>&2
@@ -217,6 +252,7 @@ if ! command -v mail &>/dev/null; then
 	echo -e "System does not have email set up.\n" 1>&2
 fi
 
+printenv >env.txt
 touch $(realpath $WORKDIR)/DEPENDENCIES.CHECK
 
 echo "STATUS: DONE" 1>&2

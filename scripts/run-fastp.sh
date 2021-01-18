@@ -28,7 +28,7 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -i <input directory> -o <output directory> <accession>\n \
+		\t$PROGRAM [-h] [-t <int>] -i <input directory> -o <output directory> <accession>\n \
 		" | table
 
 		# OPTIONS

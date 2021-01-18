@@ -24,7 +24,7 @@ function get_help() {
 
 		echo "USAGE(S)":
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-d] [-p] [-s] [-t <int>] [-v] <accessions TXT file>\n \
+		\t$PROGRAM [-a <address>] [-d] [-h] [-m] [-p] [-s] [-t <int>] [-v] <accessions TXT file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -34,7 +34,7 @@ function get_help() {
 		\t-h\tshow help menu\n \
 		\t-m <target>\tMakefile target\t(default = exonerate)\n \
 		\t-p\tallow parallel processes for each dataset\n \
-		\t-s\tsimultaenously run rAMPAge on all datasets (default if SLURM available)\n \
+		\t-s\tsimultaenously run rAMPAge on all datasets\t(default if SLURM available)\n \
 		\t-t <int>\tnumber of threads\t(default = 48)\n \
 		\t-v\tverbose (uses /usr/bin/time -pv to time each rAMPage run)\n \
 		" | table
@@ -263,7 +263,7 @@ else
 		echo "See $outdir/logs/00-rAMPage.log for details." 1>&2
 		echo -e "COMMAND: nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
 
-		nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &> ${species}-${pool}.out &
+		nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>${species}-${pool}.out &
 	done <$input
 	echo "Submitted using nohup." 1>&2
 #	wait
@@ -322,7 +322,7 @@ echo -e "STATUS: DONE\n" 1>&2
 # 	fi
 # fi
 # touch $ROOT_DIR/STAMPEDE.DONE
-# 
+#
 # if [[ "$email" = true ]]; then
 # 	# 	species=$(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')
 # 	# echo "$outdir" | mail -s "${species^}: rAMPage: SUCCESS" "$address"

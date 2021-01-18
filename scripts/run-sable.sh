@@ -23,7 +23,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <protein FASTA file> <protein TSV file>\n \
+		\t$PROGRAM [-a <address>] [-h] [-t <int>] -o <output directory> <protein FASTA file> <protein TSV file>\n \
 		" | table
 
 		echo "OPTION(S):"

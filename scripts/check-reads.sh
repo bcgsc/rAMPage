@@ -24,7 +24,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-t <int>] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-h] [-t <int>] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTION(S):"

@@ -26,7 +26,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] <logs directory>\n \
+		\t$PROGRAM [-a <address>] [-h] <logs directory>\n \
 		" | table
 
 		echo "OPTION(S):"

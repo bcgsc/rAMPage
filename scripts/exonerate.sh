@@ -24,7 +24,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-	\t$PROGRAM [-a <address>] [-t <target FASTA file>] -o <output directory> <query FASTA file> <annotation TSV file>\n \
+	\t$PROGRAM [-a <address>] [-h] [-t <target FASTA file>] -o <output directory> <query FASTA file> <annotation TSV file>\n \
 	" | table
 
 		echo "OPTION(S):"

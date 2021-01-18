@@ -39,7 +39,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c] [-h] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"

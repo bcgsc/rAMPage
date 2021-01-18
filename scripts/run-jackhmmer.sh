@@ -44,7 +44,7 @@ function get_help() {
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-e <E-value>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-e <E-value>] [-h] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		# OPTIONS

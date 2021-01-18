@@ -21,7 +21,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] <SABLE query FASTA file> <SABLE Output TXT file> <AMPlify TSV file>\n \
+		\t$PROGRAM [-h] <SABLE query FASTA file> <SABLE Output TXT file> <AMPlify TSV file>\n \
 		" | table
 
 		echo "OPTION(S):"
