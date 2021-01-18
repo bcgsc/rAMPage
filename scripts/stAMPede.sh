@@ -191,10 +191,10 @@ if command -v sbatch &>/dev/null; then
 		results+=($outdir)
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
-		pool=$(echo "$outdir" | awk -F "/" '{print $NF}')
+		pool=$(echo "$outdir" | awk -F "/" '{print $NF}' | sed 's/-/_/g')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		sbatch $sbatch_email_opt --exclusive --job-name=${species}_${pool} --output ${species}_${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
+		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}-${pool} --output ${species}-${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
+		sbatch $sbatch_email_opt --exclusive --job-name=${species}-${pool} --output ${species}-${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
 		print_line
 	done <$input
 	email=false # don't email when this script is done because it just submits only
@@ -219,6 +219,7 @@ elif [[ "$multi" = false ]]; then
 		results+=($outdir)
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
+		pool=$(echo "$outdir" | awk -F "/" '{print $NF}' | sed 's/-/_/g')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
 		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
 		$ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
@@ -256,73 +257,75 @@ else
 		results+=($outdir)
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
+		pool=$(echo "$outdir" | awk -F "/" '{print $NF}' | sed 's/-/_/g')
 		mkdir -p $outdir/logs
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
 		echo "See $outdir/logs/00-rAMPage.log for details." 1>&2
-		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
+		echo -e "COMMAND: nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
 
-		$ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &
+		nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &> ${species}-${pool}.out &
 	done <$input
-	wait
-
-	#
-	if [[ "$verbose" = true ]]; then
-		while read path strandedness; do
-			input_path=$(realpath $path)
-			outdir=$(dirname $input_path)
-			exit_status=$(awk '/Exit status:/ {print $NF}' $outdir/logs/00-rAMPage.log)
-			class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
-			species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
-			if [[ "$exit_status" -ne 0 ]]; then
-				species=$(echo "$species" | sed 's/^./\u&. /')
-				echo "ERROR: $species: FAILED" 1>&2
-				echo -e "\nEND: $(date)\n" 1>&2
-				echo -e "STATUS: FAILED\n" 1>&2
-
-				if [[ "$email" = true ]]; then
-					# 	species=$(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')
-					# echo "$outdir" | mail -s "${species^}: rAMPage: SUCCESS" "$address"
-					pwd | mail -s "stAMPede: FAILED" "$address"
-					echo -e "\nEmail alert sent to $address." 1>&2
-				fi
-				touch $ROOT_DIR/STAMPEDE.FAIL
-				exit 1
-			fi
-		done <$input
-	fi
-	echo -e "Path\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$ROOT_DIR/summary.tsv
-
-# 	if [[ "$verbose" = true ]]; then
-# 		while read path strandedness; do
-# 			dir=$(dirname $path)
-# 			info=$(grep 'rAMPage' $dir/logs/00-summary.tsv)
-# 			echo -e "$dir\t$info" >>$ROOT_DIR/summary.tsv
-# 		done <$input
-# 		echo 1>&2
-# 		column -s $'\t' -t $ROOT_DIR/summary.tsv 1>&2
-# 	fi
+	echo "Submitted using nohup." 1>&2
+#	wait
+#
+#	#
+#	if [[ "$verbose" = true ]]; then
+#		while read path strandedness; do
+#			input_path=$(realpath $path)
+#			outdir=$(dirname $input_path)
+#			exit_status=$(awk '/Exit status:/ {print $NF}' $outdir/logs/00-rAMPage.log)
+#			class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
+#			species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
+#			if [[ "$exit_status" -ne 0 ]]; then
+#				species=$(echo "$species" | sed 's/^./\u&. /')
+#				echo "ERROR: $species: FAILED" 1>&2
+#				echo -e "\nEND: $(date)\n" 1>&2
+#				echo -e "STATUS: FAILED\n" 1>&2
+#
+#				if [[ "$email" = true ]]; then
+#					# 	species=$(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')
+#					# echo "$outdir" | mail -s "${species^}: rAMPage: SUCCESS" "$address"
+#					pwd | mail -s "stAMPede: FAILED" "$address"
+#					echo -e "\nEmail alert sent to $address." 1>&2
+#				fi
+#				touch $ROOT_DIR/STAMPEDE.FAIL
+#				exit 1
+#			fi
+#		done <$input
+#	fi
+#	echo -e "Path\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$ROOT_DIR/summary.tsv
+#
+## 	if [[ "$verbose" = true ]]; then
+## 		while read path strandedness; do
+## 			dir=$(dirname $path)
+## 			info=$(grep 'rAMPage' $dir/logs/00-summary.tsv)
+## 			echo -e "$dir\t$info" >>$ROOT_DIR/summary.tsv
+## 		done <$input
+## 		echo 1>&2
+## 		column -s $'\t' -t $ROOT_DIR/summary.tsv 1>&2
+## 	fi
 fi
 
 echo -e "\nEND: $(date)\n" 1>&2
 echo -e "STATUS: DONE\n" 1>&2
 
-if ! command -v sbatch &>/dev/null; then
-	if [[ "${#results[@]}" -ne 0 ]]; then
-		echo "Output:" 1>&2
-		for i in ${results[@]}; do
-			echo -e "\t - $i/amplify/amps.final.faa\n"
-		done | table 1>&2
-		echo 1>&2
-		if [[ "$verbose" = true ]]; then
-			echo "Summary: $ROOT_DIR/summary.tsv" 1>&2
-		fi
-	fi
-fi
-touch $ROOT_DIR/STAMPEDE.DONE
-
-if [[ "$email" = true ]]; then
-	# 	species=$(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')
-	# echo "$outdir" | mail -s "${species^}: rAMPage: SUCCESS" "$address"
-	pwd | mail -s "stAMPede: SUCCESS" "$address"
-	echo -e "\nEmail alert sent to $address." 1>&2
-fi
+# if ! command -v sbatch &>/dev/null; then
+# 	if [[ "${#results[@]}" -ne 0 ]]; then
+# 		echo "Output:" 1>&2
+# 		for i in ${results[@]}; do
+# 			echo -e "\t - $i/amplify/amps.final.faa\n"
+# 		done | table 1>&2
+# 		echo 1>&2
+# 		if [[ "$verbose" = true ]]; then
+# 			echo "Summary: $ROOT_DIR/summary.tsv" 1>&2
+# 		fi
+# 	fi
+# fi
+# touch $ROOT_DIR/STAMPEDE.DONE
+# 
+# if [[ "$email" = true ]]; then
+# 	# 	species=$(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')
+# 	# echo "$outdir" | mail -s "${species^}: rAMPage: SUCCESS" "$address"
+# 	pwd | mail -s "stAMPede: SUCCESS" "$address"
+# 	echo -e "\nEmail alert sent to $address." 1>&2
+# fi

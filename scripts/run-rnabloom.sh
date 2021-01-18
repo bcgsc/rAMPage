@@ -371,6 +371,8 @@ fi
 
 logfile=$outdir/rnabloom.out
 
+label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $NF); print $(NF-1), $NF}')
+
 if [[ -z "$ref_opt" ]]; then
 	echo "Conducting a de-novo transcriptome assembly." 1>&2
 else
@@ -379,12 +381,12 @@ fi
 if [[ "$debug" = false ]]; then
 	echo "Running RNA-Bloom..." 1>&2
 
-	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt}\n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}-\n" | tee $logfile 1>&2
 
-	${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} &>>$logfile
+	${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>>$logfile
 else
 	echo -e "DEBUG MODE: Skipping RNA-Bloom..." 1>&2
-	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt}\n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- \n" | tee $logfile 1>&2
 fi
 
 if [[ "${#references[@]}" -ne 0 ]]; then
@@ -403,21 +405,21 @@ if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
 	fi
 fi
 
-label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="_"}{gsub(/_/, "-", $NF); print $(NF-1), $NF}')
+label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $NF); print $(NF-1), $NF}')
 
 if [[ $pool = false ]]; then
 	echo "Renaming transcripts in rnabloom.transcripts.nr.fa..." 1>&2
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.nr.fa
+	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.fa
 	echo "Renaming transcripts in rnabloom.transcripts.nr.short.fa..." 1>&2
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.nr.short.fa
+	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.short.fa
 
 	echo -e "Combining rnabloom.transcripts.nr.fa and rnabloom.transcripts.nr.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.nr.fa $outdir/rnabloom.transcripts.nr.short.fa >$outdir/rnabloom.transcripts.all.fa
 else
 	echo "Renaming transcripts in rnabloom.transcripts.fa..." 1>&2
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.fa
+	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.fa
 	echo "Renaming transcripts in rnabloom.transcripts.short.fa..." 1>&2
-	sed -i "s/^>/>${label}_/g" $outdir/rnabloom.transcripts.short.fa
+	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.short.fa
 
 	echo -e "Combining rnabloom.transcripts.fa and rnabloom.transcripts.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.fa $outdir/rnabloom.transcripts.short.fa >$outdir/rnabloom.transcripts.all.fa

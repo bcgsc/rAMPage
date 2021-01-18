@@ -77,7 +77,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
             if cut_list[1] > cut_list[0]:
                 signal_seq = sequence[0:cut_list[0]]
                 list_seq = []
-                sig_seq.write(">" + str(key) + "_signal-sequence " + "\n" + str(signal_seq) + "\n")
+                sig_seq.write(">" + str(key) + "-signal_sequence" + "\n" + str(signal_seq) + "\n")
 
                 a = 0
                 b = 1
@@ -91,7 +91,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                     else:
                         Name_mature = sequence[cut_list[a]: cut_list[b]]
 
-                    cleaved_seq.write(">" + str(key) + "_sig-mature_" + str(m) + "\n" + str(Name_mature) + "\n")
+                    cleaved_seq.write(">" + str(key) + "-sig_mature-" + str(m) + "\n" + str(Name_mature) + "\n")
                     list_seq.append(Name_mature)
                     m += 1
                     a += 1
@@ -102,10 +102,10 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 for v in list(length_recomb):
                     recomb = combinations(list_seq, 2)
                     if v[1] - v[0] != 1:
-                        recombined_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                        recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
                     else:
-                        adj_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                        adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                       "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
 
                 if len(list_seq) >= 3:
@@ -113,12 +113,12 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                     for v in list(length_recomb):
                         recomb = combinations(list_seq, 3)
                         if v[1] - v[0] != 1 and v[2] - v[1] != 1:
-                            recombined_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                                 "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                            recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                                 "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                                  list_seq[v[2] - 1] + "\n")
                         else:
-                            adj_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                          "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                            adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                          "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                           list_seq[v[2] - 1] + "\n")
 
 # when the first pro peptide is within the signal, cleave the whole signal and start the mature protein sequences after
@@ -126,7 +126,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
             elif cut_list[1] < cut_list[0]:
                 cut_list = [int(Signal_P)] + ProP[1:]
                 signal_seq = sequence[0: cut_list[0]]
-                sig_seq.write(">" + str(key) + "_signal-sequence " + "\n" + str(signal_seq) + "\n")
+                sig_seq.write(">" + str(key) + "-signal_sequence" + "\n" + str(signal_seq) + "\n")
 
                 a = 0
                 b = 1
@@ -141,7 +141,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                     else:
                         Name_mature = sequence[cut_list[a]: cut_list[b]]
 
-                    cleaved_seq.write(">" + str(key) + "_sig-in-mature_" + str(m) + "\n" + str(Name_mature) + "\n")
+                    cleaved_seq.write(">" + str(key) + "-sig_in_mature-" + str(m) + "\n" + str(Name_mature) + "\n")
                     list_seq.append(Name_mature)
 
                     m = m + 1
@@ -153,10 +153,10 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 for v in list(length_recomb):
                     recomb = combinations(list_seq, 2)
                     if v[1] - v[0] != 1:
-                        recombined_seq.write(">" + str(key) + "_sig-in-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                        recombined_seq.write(">" + str(key) + "-sig_in_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
                     else:
-                        adj_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                        adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                       "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
 
                 if len(list_seq) >= 3:
@@ -164,12 +164,12 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                     for v in list(length_recomb):
                         recomb = combinations(list_seq, 3)
                         if v[1] - v[0] != 1 and v[2] - v[1] != 1:
-                            recombined_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                                 "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                            recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                                 "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                                  list_seq[v[2] - 1] + "\n")
                         else:
-                            adj_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                          "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                            adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                          "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                           list_seq[v[2] - 1] + "\n")
 
 # Case 2: where there is a signal sequence but no pro peptide cleavage site
@@ -177,9 +177,9 @@ with open(OUTDIR + "/new_csv", newline='') as f:
         elif Signal_P > 0 and n_prop == 0:
 
             signal_seq = sequence[0: cut_list[0]]
-            sig_seq.write(">" + str(key) + "_signal_sequence " + "\n" + str(signal_seq) + "\n")
+            sig_seq.write(">" + str(key) + "-signal_sequence" + "\n" + str(signal_seq) + "\n")
             Name_pro = sequence[cut_list[0]:]
-            cleaved_seq.write(">" + str(key) + "_pro"  "\n" + str(Name_pro) + "\n")
+            cleaved_seq.write(">" + str(key) + "-pro"  "\n" + str(Name_pro) + "\n")
 
 
 # Case 3: where there is no signal peptide, only cleave at peptide cleavage sites
@@ -196,7 +196,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 # because of 0 based indexing, start from cut_list[a] and not cut_list[a] + 1
                 if a == 0:
                     Name_mature_1 = sequence[0: cut_list[b]]
-                    cleaved_seq.write(">" + str(key) + "_no-sig-mature_1" + "\n" + str(Name_mature_1) + "\n")
+                    cleaved_seq.write(">" + str(key) + "-no_sig_mature-1" + "\n" + str(Name_mature_1) + "\n")
                     list_seq.append(Name_mature_1)
 
                 else:
@@ -205,7 +205,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                     else:
                         Name_mature = sequence[cut_list[a]: cut_list[b]]
 
-                    cleaved_seq.write(">" + str(key) + "_no-sig-mature_" + str(m) + "\n" + str(Name_mature) + "\n")
+                    cleaved_seq.write(">" + str(key) + "-no_sig_mature-" + str(m) + "\n" + str(Name_mature) + "\n")
                     list_seq.append(Name_mature)
 
                     m += 1
@@ -218,10 +218,10 @@ with open(OUTDIR + "/new_csv", newline='') as f:
             for v in list(length_recomb):
                 recomb = combinations(list_seq, 2)
                 if v[1] - v[0] != 1:
-                    recombined_seq.write(">" + str(key) + "_no-sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                    recombined_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                          "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
                 else:
-                    adj_seq.write(">" + str(key) + "_no-sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                    adj_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                   "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
 
             if len(list_seq) >= 3:
@@ -229,12 +229,12 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 for v in list(length_recomb):
                     recomb = combinations(list_seq, 3)
                     if v[1] - v[0] != 1 and v[2] - v[1] != 1:
-                        recombined_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                             "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                        recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                             "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                              list_seq[v[2] - 1] + "\n")
                     else:
-                        adj_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                      "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                        adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                      "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                       list_seq[v[2] - 1] + "\n")
 
 # Case 4: when the signal peptide cleavage site is the same/adjacent as the first propeptide cleavage site
@@ -242,7 +242,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
         elif n_prop > 0 and Signal_P == ProP[0]:
 
             signal_seq = sequence[0: ProP[0]]
-            sig_seq.write(">" + str(key) + "_signal_sequence " + "\n" + str(signal_seq) + "\n")
+            sig_seq.write(">" + str(key) + "-signal_sequence" + "\n" + str(signal_seq) + "\n")
 
             a = 0
             b = 1
@@ -256,7 +256,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 else:
                     Name_mature = sequence[cut_list[a]: cut_list[b]]
 
-                cleaved_seq.write(">" + str(key) + "_sig-mature_" + str(m) + "\n" + str(Name_mature) + "\n")
+                cleaved_seq.write(">" + str(key) + "-sig_mature-" + str(m) + "\n" + str(Name_mature) + "\n")
                 list_seq = list_seq.append(Name_mature)
 
                 m += 1
@@ -267,10 +267,10 @@ with open(OUTDIR + "/new_csv", newline='') as f:
             for v in list(length_recomb):
                 recomb = combinations(list_seq, 2)
                 if v[1] - v[0] != 1:
-                    recombined_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                    recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                          "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
                 else:
-                    adj_seq.write(">" + str(key) + "_no-sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
+                    adj_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                   "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
 
             if len(list_seq) >= 3:
@@ -278,18 +278,18 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 for v in list(length_recomb):
                     recomb = combinations(list_seq, 3)
                     if v[1] - v[0] != 1 and v[2] - v[1] != 1:
-                        recombined_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                             "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                        recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                             "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                              list_seq[v[2] - 1] + "\n")
                     else:
-                        adj_seq.write(">" + str(key) + "_sig-recomb_" + str(v[0]) + "-" + str(v[1]) +
-                                      "-" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
+                        adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                                      "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                       list_seq[v[2] - 1] + "\n")
 
         # Case 5: when there is no signal cleavage site or no peptide cleavage site
 
         else:
-            cleaved_seq.write(">" + str(key) + "_sig-mature" + "\n" + sequence + "\n")
+            cleaved_seq.write(">" + str(key) + "-sig_mature" + "\n" + sequence + "\n")
 
 sig_seq.close()
 cleaved_seq.close()

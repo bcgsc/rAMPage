@@ -163,11 +163,11 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 
 	echo "Labelling known AMPs..." 1>&2
 	# echo -e "COMMAND: sed -i '/^>/ s/ length=/_known&/' $outdir/known.amps.exonerate.nr.faa" 1>&2
-	sed -i '/^>/ s/ length=/_known&/' $outdir/known.amps.exonerate.nr.faa
+	sed -i '/^>/ s/ length=/-known&/' $outdir/known.amps.exonerate.nr.faa
 
 	# label with known AMP accession
 	while IFS=' ' read novel known; do
-		sed -i "/${novel}_known/ s/$/ exonerate=$known/" $outdir/known.amps.exonerate.nr.faa
+		sed -i "/${novel}-known/ s/$/ exonerate=$known/" $outdir/known.amps.exonerate.nr.faa
 	done < <(awk '{if($3==100) print $1, $2}' $outdir/amps.exonerate.summary.out | sort -u)
 
 	echo "Filtering for novel AMPs..." 1>&2
@@ -178,20 +178,20 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	# $RUN_SEQTK subseq $query <(grep -vFf <(awk '{print $1}' $outdir/amps.exonerate.summary.out | sort -u) <(grep '^>' $query | tr -d '>')) >$outdir/novel.amps.exonerate.nr.faa
 
 	echo "Labelling novel AMPs..." 1>&2
-	echo -e "COMMAND: sed -i '/^>/ s/ length=/_novel&/' $outdir/novel.amps.exonerate.nr.faa\n" 1>&2
-	sed -i '/^>/ s/ length=/_novel&/' $outdir/novel.amps.exonerate.nr.faa
+	echo -e "COMMAND: sed -i '/^>/ s/ length=/-novel&/' $outdir/novel.amps.exonerate.nr.faa\n" 1>&2
+	sed -i '/^>/ s/ length=/-novel&/' $outdir/novel.amps.exonerate.nr.faa
 
 	echo "Combining the two files..." 1>&2
 	echo -e "COMMAND: cat $outdir/known.amps.exonerate.nr.faa $outdir/novel.amps.exonerate.nr.faa >$outdir/labelled.amps.exonerate.nr.faa\n" 1>&2
 	cat $outdir/known.amps.exonerate.nr.faa $outdir/novel.amps.exonerate.nr.faa >$outdir/labelled.amps.exonerate.nr.faa
 
 	# add the label to the annotation TSV as well
-	for seq in $(grep '_novel' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/_novel//'); do
-		sed -i "s/${seq}\t/${seq}_novel\t/" $file
+	for seq in $(grep '\-novel' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/-novel//'); do
+		sed -i "s/${seq}\t/${seq}-novel\t/" $file
 	done
 
-	for seq in $(grep '_known' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/_known//'); do
-		sed -i "s/${seq}\t/${seq}_known\t/" $file
+	for seq in $(grep '\-known' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/-known//'); do
+		sed -i "s/${seq}\t/${seq}-known\t/" $file
 	done
 else
 	# no known AMPs
@@ -201,11 +201,11 @@ else
 	touch $outdir/known.amps.exonerate.nr.faa
 
 	echo "Labelling novel AMPs..." 1>&2
-	sed -i '/^>/ s/ length=/_novel&/' $outdir/novel.amps.exonerate.nr.faa
+	sed -i '/^>/ s/ length=/-novel&/' $outdir/novel.amps.exonerate.nr.faa
 	cat $outdir/known.amps.exonerate.nr.faa $outdir/novel.amps.exonerate.nr.faa >$outdir/labelled.amps.exonerate.nr.faa
 fi
 
-num_novel=$(grep -c '_novel' $outdir/labelled.amps.exonerate.nr.faa || true)
+num_novel=$(grep -c '\-novel' $outdir/labelled.amps.exonerate.nr.faa || true)
 num_total=$(grep -c '^>' $outdir/labelled.amps.exonerate.nr.faa)
 
 echo -e "Number of Novel AMPs: $(printf "%'d" $num_novel)/$(printf "%'d" $num_total)\n" 1>&2

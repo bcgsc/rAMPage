@@ -13,25 +13,7 @@ REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 .PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation summary
 
 # final
-all: sable/SABLE_results.tsv # amplify/amps.final.faa # exonerate # logs/00-summary.log
-
-# summary: logs/00-summary.log
-# logs/00-summary.tsv logs/00-summary.log &: $(ROOT_DIR)/scripts/summarize-verbose.sh logs/01-check.log logs/02-raw_reads.log logs/03-trimmed_reads.log logs/04-readslist.log logs/05-assembly.log logs/06-filtering.log logs/07-translation.log logs/08-homology.log logs/09-cleavage.log logs/10-amplify.log
-# 	@echo "FINAL SUMMARY: $$(realpath logs)/00-summary.tsv: $$(date)" 1>&2
-# 	@if [[ -n $(EMAIL) ]]; then \
-# 		if [[ $(VERBOSE) == true ]]; then \
-# 			/usr/bin/time -pv $< -a $(EMAIL) logs &> logs/00-summary.log; \
-# 		else \
-# 			echo "Verbose option not selected-- time, CPU, and memory not recorded." > logs/00-summary.log; \
-# 		fi; \
-# 	else \
-# 		if [[ $(VERBOSE) == true ]]; then \
-# 			/usr/bin/time -pv $< logs &> logs/00-summary.log; \
-# 		else \
-# 			echo "Verbose option not selected-- time, CPU, and memory not recorded." > logs/00-summary.log; \
-# 		fi; \
-# 	fi
-		
+all: sable/SABLE_results.tsv logs/00-summary.log
 
 sable: sable/SABLE_results.tsv
 
@@ -63,7 +45,7 @@ exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exoner
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o exonerate annotation/amps.final.annotated.faa &annotation/final_annotations.final.tsv > logs/12-exonerate.log; \
+			/usr/bin/time -pv $< -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		else \
 			$< -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		fi; \

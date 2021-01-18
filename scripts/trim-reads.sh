@@ -302,6 +302,7 @@ if [[ "$fail" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		species=$(echo "$species" | sed 's/^./\u&. /')
 		echo "${outdir}: ${failed_accs[*]}" | mail -s "${species^}: STAGE 03: TRIMMING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -317,6 +318,7 @@ if ls $workdir/core.* &>/dev/null; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "${outdir}: ${failed_accs[*]}" | mail -s "Failed trimming reads for $org" "$address"
+		species=$(echo "$species" | sed 's/^./\u&. /')
 		echo "${outdir}: ${failed_accs[*]}" | mail -s "${species^}: STAGE 03: TRIMMING READS: FAILED" "$address"
 		echo "Email alert sent to $address." 1>&2
 	fi

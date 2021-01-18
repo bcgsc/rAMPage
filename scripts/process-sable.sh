@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 PROGRAM=$(basename $0)
 args="$PROGRAM $*"
 # 0 - table function
@@ -120,13 +120,13 @@ while read line; do
 	read str_conf
 	read rsa
 	read rsa_conf
-	updated_seqname=$(echo "$seqname" | sed 's/_novel//' | sed 's/_annotated//' | sed 's/_known//')
+	updated_seqname=$(echo "$seqname" | sed 's/-novel//' | sed 's/-annotated//' | sed 's/-known//')
 	# get AMPlify score and charge
-	score=$(grep -F "$updated_seqname" $amplify_tsv | cut -d$'\t' -f4)
-	charge=$(grep -F "$updated_seqname" $amplify_tsv | cut -d$'\t' -f6)
+	score=$(awk -F "\t" -v var=$updated_seqname '/var\t/ {print $4}' $amplify_tsv)
+	charge=$(awk -F "\t" -v var=$updated_seqname '/var\t/ {print $6}' $amplify_tsv)
 	annotation=$(grep -F "${seqname} " $fasta | grep -Eo "exonerate=\S+|diamond=\S+" | tr ' ' '\n' | cut -f2 -d= | tr '\n' ' ' || true)
 	if [[ -z $annotation ]]; then
-		annotation=""
+		annotation=" "
 	fi
 	ss=$($ROOT_DIR/scripts/longest-ss.py "$structure")
 	echo -e "$seqname\t$sequence\t$annotation\t$score\t$charge\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >>$outfile
