@@ -13,11 +13,11 @@ REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 .PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation summary
 
 # final
-all: sable/SABLE_results.tsv logs/00-summary.log
+all: sable/SABLE_results.tsv
 
 sable: sable/SABLE_results.tsv
 
-sable/SABLE_results.tsv sable/OUT_SABLE/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK
+sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK
 	@echo "STAGE 13: SABLE: $$(realpath logs)/13-sable.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
@@ -53,7 +53,7 @@ exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exoner
 		
 # 11. 
 annotation: annotation/final_results/final_annotations.final.tsv
-annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK
+annotation/final_annotations.final.tsv annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
@@ -208,7 +208,7 @@ trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE logs/04-readslist.log &
 # 3. trim the reads
 trim: trimmed_reads/TRIM.DONE
 
-trimmed_reads/TRIM.DONE logs/03-trimmed_reads.log &: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh raw_reads/READS.DONE $(INPUT_PROCESSED) DEPENDENCIES.CHECK
+trimmed_reads/TRIM.DONE logs/03-trimmed_reads.log &: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(INPUT_PROCESSED) DEPENDENCIES.CHECK raw_reads/READS.DONE
 	@echo "STAGE 03: TRIMMING READS: $$(realpath logs)/03-trimmed_reads.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
@@ -243,7 +243,7 @@ trimmed_reads/TRIM.DONE logs/03-trimmed_reads.log &: $(ROOT_DIR)/scripts/trim-re
 reads: raw_reads/READS.DONE
 
 raw_reads/READS.DONE $(INPUT_PROCESSED) logs/02-raw_reads.log &: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) DEPENDENCIES.CHECK
-	@echo "STAGE 02: GETTING READS: $$(realpath logs)/02-raw_reads.log:: $$(date)" 1>&2
+	@echo "STAGE 02: GETTING READS: $$(realpath logs)/02-raw_reads.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
 			/usr/bin/time -pv $< -a $(EMAIL) $(INPUT) &> logs/02-raw_reads.log; \
