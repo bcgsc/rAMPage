@@ -208,26 +208,26 @@ venom raw_reads/SRR6466797_1.fastq.gz raw_reads/SRR6466797_2.fastq.gz
 
 | POOLING ID | READ 1 | READ 2 |
 |---------------------|--------|--------|
-|KST695_liver|raw_reads/SRR8288040_1.fastq.gz|raw_reads/SRR8288040_2.fastq.gz|
-|KST695_skin|raw_reads/SRR8288041_1.fastq.gz|raw_reads/SRR8288041_2.fastq.gz|
-|KST688_liver|raw_reads/SRR8288056_1.fastq.gz|raw_reads/SRR8288056_2.fastq.gz|
-|KST685_skin|raw_reads/SRR8288057_1.fastq.gz|raw_reads/SRR8288057_2.fastq.gz|
-|KST685_liver|raw_reads/SRR8288058_1.fastq.gz|raw_reads/SRR8288058_2.fastq.gz|
-|KST687_skin|raw_reads/SRR8288059_1.fastq.gz|raw_reads/SRR8288059_2.fastq.gz|
-|KST687_liver|raw_reads/SRR8288060_1.fastq.gz|raw_reads/SRR8288060_2.fastq.gz|
-|KST688_skin|raw_reads/SRR8288061_1.fastq.gz|raw_reads/SRR8288061_2.fastq.gz|
+|liver|raw_reads/SRR8288040_1.fastq.gz|raw_reads/SRR8288040_2.fastq.gz|
+|skin|raw_reads/SRR8288041_1.fastq.gz|raw_reads/SRR8288041_2.fastq.gz|
+|liver|raw_reads/SRR8288056_1.fastq.gz|raw_reads/SRR8288056_2.fastq.gz|
+|skin|raw_reads/SRR8288057_1.fastq.gz|raw_reads/SRR8288057_2.fastq.gz|
+|liver|raw_reads/SRR8288058_1.fastq.gz|raw_reads/SRR8288058_2.fastq.gz|
+|skin|raw_reads/SRR8288059_1.fastq.gz|raw_reads/SRR8288059_2.fastq.gz|
+|liver|raw_reads/SRR8288060_1.fastq.gz|raw_reads/SRR8288060_2.fastq.gz|
+|skin|raw_reads/SRR8288061_1.fastq.gz|raw_reads/SRR8288061_2.fastq.gz|
 
 `amphibia/ptoftae/skin-liver/input.txt`:
 
 ```
-KST695_liver raw_reads/SRR8288040_1.fastq.gz raw_reads/SRR8288040_2.fastq.gz
-KST695_skin raw_reads/SRR8288041_1.fastq.gz raw_reads/SRR8288041_2.fastq.gz
-KST688_liver raw_reads/SRR8288056_1.fastq.gz raw_reads/SRR8288056_2.fastq.gz
-KST685_skin raw_reads/SRR8288057_1.fastq.gz raw_reads/SRR8288057_2.fastq.gz
-KST685_liver raw_reads/SRR8288058_1.fastq.gz raw_reads/SRR8288058_2.fastq.gz
-KST687_skin raw_reads/SRR8288059_1.fastq.gz raw_reads/SRR8288059_2.fastq.gz
-KST687_liver raw_reads/SRR8288060_1.fastq.gz raw_reads/SRR8288060_2.fastq.gz
-KST688_skin raw_reads/SRR8288061_1.fastq.gz raw_reads/SRR8288061_2.fastq.gz
+liver raw_reads/SRR8288040_1.fastq.gz raw_reads/SRR8288040_2.fastq.gz
+skin raw_reads/SRR8288041_1.fastq.gz raw_reads/SRR8288041_2.fastq.gz
+liver raw_reads/SRR8288056_1.fastq.gz raw_reads/SRR8288056_2.fastq.gz
+skin raw_reads/SRR8288057_1.fastq.gz raw_reads/SRR8288057_2.fastq.gz
+liver raw_reads/SRR8288058_1.fastq.gz raw_reads/SRR8288058_2.fastq.gz
+skin raw_reads/SRR8288059_1.fastq.gz raw_reads/SRR8288059_2.fastq.gz
+liver raw_reads/SRR8288060_1.fastq.gz raw_reads/SRR8288060_2.fastq.gz
+skin raw_reads/SRR8288061_1.fastq.gz raw_reads/SRR8288061_2.fastq.gz
 ```
 
 ### Reference Transcriptomes
