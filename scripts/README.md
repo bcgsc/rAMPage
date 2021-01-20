@@ -186,7 +186,7 @@ DESCRIPTION:
        For more information: https://combine-lab.github.io/salmon/
        
 USAGE(S):
-      filter-expression.sh [-a <address>] [-c <dbl>] [-s] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>
+      filter-expression.sh [-a <address>] [-c <dbl>] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>
       
 OPTION(S):
        -a <address>     email alert                           
@@ -194,7 +194,6 @@ OPTION(S):
        -h               show this help menu                   
        -o <directory>   output directory                      (required)
        -r <FASTA file>  reference transcriptome (assembly)    (required)
-       -s               strand-specific library construction  (default = false) 
        -t <int>         number of threads                     (default = 2)
                                                               
 EXAMPLE(S):
