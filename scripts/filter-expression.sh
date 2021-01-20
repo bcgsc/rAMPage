@@ -37,7 +37,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <dbl>] [-h] [-s] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <dbl>] [-h] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>\n \
         " | table
 
 		echo "OPTION(S):"
@@ -47,7 +47,6 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-r <FASTA file>\treference transcriptome (assembly)\t(required)\n \
-		\t-s\tstrand-specific library construction\t(default = false) \n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
         " | table
 
@@ -95,10 +94,9 @@ cutoff=1
 # cutoff=0.50
 outdir=""
 ref=""
-stranded=false
 
 # 4 - read options
-while getopts :a:c:ho:r:s:t: opt; do
+while getopts :a:c:ho:r:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -110,7 +108,6 @@ while getopts :a:c:ho:r:s:t: opt; do
 		outdir="$(realpath $OPTARG)"
 		;;
 	r) ref="$OPTARG" ;;
-	s) stranded=true ;;
 	t) threads="$OPTARG" ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
@@ -246,12 +243,12 @@ echo "Quantifying expression..." 1>&2
 if [[ "$paired" = true ]]; then
 	if [[ "$stranded" = true ]]; then
 		libtype=ISR
-		echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist) -2 $(awk '{print $2}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
-		$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist) -2 $(awk '{print $2}' $readslist) -o $outdir &>$outdir/quant.log
+		echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist | tr '\n' ' ' | sed 's/ $//') -2 $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -o $outdir &> $outdir/quant.log\n" 1>&2
+		$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $3}' $readslist | tr '\n' ' ' | sed 's/ $//') -2 $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -o $outdir &>$outdir/quant.log
 	else
 		libtype=IU
-		echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist) -2 $(awk '{print $3}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
-		$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist) -2 $(awk '{print $3}' $readslist) -o $outdir &>$outdir/quant.log
+		echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -2 $(awk '{print $3}' $readslist | tr '\n' ' ' | sed 's/ $//') -o $outdir &> $outdir/quant.log\n" 1>&2
+		$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -1 $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -2 $(awk '{print $3}' $readslist | tr '\n' ' ' | sed 's/ $//') -o $outdir &>$outdir/quant.log
 	fi
 else
 	if [[ "$stranded" = true ]]; then
@@ -259,20 +256,26 @@ else
 	else
 		libtype=U
 	fi
-	echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist) -o $outdir &> $outdir/quant.log\n" 1>&2
-	$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist) -o $outdir &>$outdir/quant.log
+	echo -e "COMMAND: $RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -o $outdir &> $outdir/quant.log\n" 1>&2
+	$RUN_SALMON quant --index $outdir/index --threads $threads -l $libtype -r $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -o $outdir &>$outdir/quant.log
 fi
-
-echo "Filtering the transcriptome for transcripts whose TPM >= ${cutoff}..." 1>&2
+if [[ "$cutoff" -ne 0 ]]; then
+	echo "Filtering the transcriptome for transcripts whose TPM >= ${cutoff}..." 1>&2
+fi
 echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
 
-awk -v var="$cutoff" '{if($4>=var) print}' $outdir/quant.sf >$outdir/kept.sf
-awk -v var="$cutoff" '{if($4<var) print}' $outdir/quant.sf >$outdir/discarded.sf
+if [[ "$cutoff" -eq 0 ]]; then
+	awk -v var="$cutoff" '{if($4>=var) print}' $outdir/quant.sf >$outdir/kept.sf
+	awk -v var="$cutoff" '{if($4<var) print}' $outdir/quant.sf >$outdir/discarded.sf
 
-echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var) print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
-$RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if($4>=var) print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
+	echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var) print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
+	$RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if($4>=var) print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
+else
+	echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v '{print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
+	$RUN_SEQTK subseq $ref <(awk '{print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
+fi
 
 if [[ ! -s $outdir/rnabloom.transcripts.filtered.fa ]]; then
 	touch $outdir/FILTERING.FAIL
@@ -288,20 +291,23 @@ if [[ ! -s $outdir/rnabloom.transcripts.filtered.fa ]]; then
 	exit 2
 fi
 
-before=$(grep -c '^>' $ref)
-after=$(grep -c '^>' $outdir/rnabloom.transcripts.filtered.fa)
-echo -e "\
-	Kept: kept.sf\n \
-	Discarded: discarded.sf\n \
-" | column -t 1>&2
-echo 1>&2
+if [[ "$cutoff" -ne 0 ]]; then
+	before=$(grep -c '^>' $ref)
+	after=$(grep -c '^>' $outdir/rnabloom.transcripts.filtered.fa)
 
-echo -e "\
-	Before filtering: $(printf "%'d" $before)\n \
-	After filtering: $(printf "%'d" $after)\n \
-" | column -t 1>&2
+	echo -e "\
+		Kept: kept.sf\n \
+		Discarded: discarded.sf\n \
+	" | column -t 1>&2
+	echo 1>&2
 
-echo 1>&2
+	echo -e "\
+		Before filtering: $(printf "%'d" $before)\n \
+		After filtering: $(printf "%'d" $after)\n \
+	" | column -t 1>&2
+
+	echo 1>&2
+fi
 default_name="$(realpath -s $(dirname $outdir)/filtering)"
 if [[ "$default_name" != "$outdir" ]]; then
 	count=1
