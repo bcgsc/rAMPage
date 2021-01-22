@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
-PROGRAM=$(basename $0)
+
+FULL_PROGRAM=$0
+PROGRAM=$(basename ${FULL_PROGRAM})
 
 if [[ "$PROGRAM" == "slurm_script" ]]; then
-	PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
 fi
 
 ## SCRIPT that wraps around the Makefile
-args="$PROGRAM $*"
+args="${FULL_PROGRAM} $*"
 
 # 0 - table function
 function table() {
@@ -322,14 +325,14 @@ fi
 
 if [[ "$email" = true ]]; then
 	if [[ "$verbose" == true ]]; then
-		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log." 1>&2
+		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log" 1>&2
 		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
 	else
 		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
 	fi
 else
 	if [[ "$verbose" == true ]]; then
-		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log." 1>&2
+		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log" 1>&2
 		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh $outdir/logs &>$outdir/logs/00-summary.log
 	else
 		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
