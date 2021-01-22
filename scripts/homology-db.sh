@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+
+if [[ ! -v RUN_SEQTK ]]; then
+	RUN_SEQTK=seqtk
+fi
+
+if [[ ! -v RUN_EFETCH ]]; then
+	RUN_EFETCH=efetch
+fi
+
+if [[ ! -v RUN_ESEARCH ]]; then
+	RUN_ESEARCH=esearch
+fi
+
 apd3_url="http://aps.unmc.edu/AP/APD3_update_2020_release.fasta"
 dadp_url="https://github.com/mark0428/Scraping/raw/master/DADP/DADP_mature_AMP_20181206.fa"
 

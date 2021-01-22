@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
+if [[ ! -v FASTERQ_DUMP ]]; then
+	FASTERQ_DUMP=fasterq-dump
+fi
 
 # 1 - get_help function
 function get_help() {
