@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+start_sec=$(date '+%s')
+
 FULL_PROGRAM=$0
 PROGRAM=$(basename ${FULL_PROGRAM})
 
@@ -325,14 +327,14 @@ fi
 
 if [[ "$email" = true ]]; then
 	if [[ "$verbose" == true ]]; then
-		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log" 1>&2
+		echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
 		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
 	else
 		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
 	fi
 else
 	if [[ "$verbose" == true ]]; then
-		echo -e "\nSummary of time, CPU, and memroy usage: $outdir/logs/00-summary.log" 1>&2
+		echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
 		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh $outdir/logs &>$outdir/logs/00-summary.log
 	else
 		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
@@ -343,8 +345,11 @@ fi
 echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
 $ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
 
-echo -e "\nEND: $(date)" 1>&2
+end_sec=$(date '+%s')
 
+echo -e "\nEND: $(date)" 1>&2
+runtime=$($ROOT_DIR/scripts/convert-time.sh $(echo "${end_sec}-${start_sec}" | bc))
+echo "RUNTIME: ${runtime}" 1>&2
 echo -e "\nSTATUS: DONE" 1>&2
 touch $outdir/RAMPAGE.DONE
 
