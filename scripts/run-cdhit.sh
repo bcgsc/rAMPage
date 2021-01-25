@@ -137,8 +137,8 @@ echo -e "VERSION: $cdhit_version\n" 1>&2
 log=$outdir/cdhit.log
 
 echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc)% global sequence similarity..." 1>&2
-echo -e "COMMAND: $RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>> $log\n" 1>&2
-$RUN_CDHIT -i $input -o $output -c $similarity -T $threads &>>$log
+echo -e "COMMAND: $RUN_CDHIT -i $input -o $output -c $similarity -T $threads -M 0 &>> $log\n" 1>&2
+$RUN_CDHIT -i $input -o $output -c $similarity -T $threads -M 0 &>>$log
 
 if [[ "$verbose" = true ]]; then
 	echo -e "END: $(date)\n" 1>&2
