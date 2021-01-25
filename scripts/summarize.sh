@@ -21,18 +21,17 @@ function get_help() {
 		# DESCRIPTION
 		echo "DESCRIPTION:"
 		echo -e "\
-		\tSummarizes wall clock time, CPU, and memory from /usr/bin/time -pv.\n \
+		\tSummarizes statistics from each step.\n \
 		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-f <rows|columns>] [-f] <logs directory>\n \
+		\t$PROGRAM [-a <address>] [-h] <logs directory(s)>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-f <long|wide>\tformat TSV into long or wide format\t(default = long)\n \
 		\t-h\tshow help menu\n \
 		" | table
 
@@ -75,22 +74,20 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 email=false
-format="long"
-while getopts :ha:f: opt; do
+while getopts :ha: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
 	h) get_help ;;
-	f) format="${OPTARG,,}" ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
 
 shift $((OPTIND - 1))
 
-if [[ "$#" -ne 1 ]]; then
+if [[ "$#" -eq 0 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
@@ -103,9 +100,6 @@ if [[ ! -d $(realpath $1) ]]; then
 	fi
 fi
 
-if [[ "$format" != "long" && "$format" != "wide" ]]; then
-	print_error "Invalid -f <long|wide> option."
-fi
 {
 	echo "HOSTNAME: $(hostname)"
 	echo -e "START: $(date)\n"
@@ -115,93 +109,120 @@ fi
 	echo -e "CALL: $args (wd: $(pwd))\n"
 } 1>&2
 
-indir=$(realpath $1)
-outfile=$indir/00-stats.tsv
+for logdir in "$@"; do
+	indir=$(realpath $logdir)
+	if [[ ! -d $indir ]]; then
+		continue
+	fi
+	outfile_long=$indir/00-stats.long.tsv
+	outfile_wide=$indir/00-stats.wide.tsv
+	# if workdir is unbound then
+	if [[ ! -v WORKDIR ]]; then
+		# get workdir from input
+		workdir=$(dirname $indir)
+	else
+		workdir=$(realpath $WORKDIR)
+	fi
 
-# if workdir is unbound then
-if [[ ! -v WORKDIR ]]; then
-	# get workdir from input
-	workdir=$(dirname $indir)
-else
-	workdir=$(realpath $WORKDIR)
-fi
+	if [[ ! -v SPECIES ]]; then
+		# get species from workdir
+		species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+	else
+		species=$SPECIES
+	fi
 
-if [[ ! -v SPECIES ]]; then
-	# get species from workdir
-	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
-else
-	species=$SPECIES
-fi
+	header=()
+	values=()
+	for i in $(printf '%02d\n' $(seq 1 $(ls $indir | tail -n1 | cut -f1 -d-))); do
+		if [[ "$i" != "04" ]]; then
+			file=$(find $indir -maxdepth 1 -name "$i-*")
+			step=$(basename "$file" ".log" | cut -f2 -d-)
+			case $step in
+			trimmed_reads)
+				header+=("Number of Trimmed Reads")
+				num=$(awk '/Reads passed filter:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			assembly)
+				header+=("Number of Assembled Transcripts")
+				num=$(awk '/Total number of assembled non-redundant transcripts:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			filtering)
+				header+=("Number of Filtered Transcripts")
+				num=$(awk '/After   filtering:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			translation)
+				header+=("Number of Valid ORFs")
+				num=$(awk '/Number of valid ORFs:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			homology)
+				header+=("Number of Non-redundant AMP Precursors (HMMs)")
+				num=$(awk '/Number of AMPS found \(non-redundant\):/ {print $NF}' $file)
+				values+=($num)
+				;;
+			cleavage)
+				header+=("Number of Cleaved Precursors")
+				num=$(awk '/Number of sequences remaining:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			amplify)
+				header+=("Number of Non-redundant AMPs (HMMs then AMPlify)")
+				num=$(awk '/Number of positive \(charge >= 2\), short \(length <= 50\), and high-confidence \(score >= 0.99\) unique AMPs:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			annotation)
+				header+=("Number of Annotated AMPs")
+				num=$(awk '/Number of annotated AMPs:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			exonerate)
+				header+=("Number of Novel AMPs")
+				num=$(awk '/Number of Novel AMPs:/ {print $NF}' $file)
+				values+=($num)
+				;;
+			sable) ;;
+			esac
+		fi
+	done
 
-header=()
-values=()
-for i in $(printf '%02d\n' $(seq 1 $(ls $indir | tail -n1 | cut -f1 -d-))); do
-	if [[ "$i" != "04" ]]; then
-		file=$(find $indir -maxdepth 1 -name "$i-*")
-		step=$(basename "$file" ".log" | cut -f2 -d-)
-		case $step in
-		trimmed_reads)
-			header+=("Number of Reads After Trimming")
-			num=$(awk '/Reads passed filter:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		assembly)
-			header+=("Number of Assembled Transcripts")
-			num=$(awk '/Total number of assembled non-redundant transcripts:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		filtering)
-			header+=("Number of Transcripts After Filtering")
-			num=$(awk '/After   filtering:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		translation)
-			header+=("Number of Valid ORFs")
-			num=$(awk '/Number of valid ORFs:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		homology)
-			header+=("Number of Non-redundant AMPs Found (HMMs)")
-			num=$(awk '/Number of AMPS found \(non-redundant\):/ {print $NF}' $file)
-			values+=($num)
-			;;
-		cleavage)
-			header+=("Number of AMPs After Cleavage")
-			num=$(awk '/Number of sequences remaining:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		amplify)
-			header+=("Number of Non-redundant AMPs (AMPlify)")
-			num=$(awk '/Number of positive \(charge >= 2\), short \(length <= 50\), and high-confidence \(score >= 0.99\) unique AMPs:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		annotation)
-			header+=("Number of annotated AMPs")
-			num=$(awk '/Number of annotated AMPs:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		exonerate)
-			header+=("Number of novel AMPs")
-			num=$(awk '/Number of Novel AMPs:/ {print $NF}' $file)
-			values+=($num)
-			;;
-		sable) ;;
-		esac
+	path=$(echo "$workdir" | sed "s|$ROOT_DIR/||")
+	echo "Path ${header[@]// /_}" | tr ' ' '\t' | tr '_' ' ' >$outfile_wide
+	echo "$path ${values[*]}" | tr ' ' '\t' >>$outfile_wide
+
+	echo -e "Path\t$path" >$outfile_long
+	for i in "${!header[@]}"; do
+		echo -e "${header[i]}\t${values[i]}" >>$outfile_long
+	done
+
+	if [[ "$#" -eq 1 ]]; then
+		column -s $'\t' -t $outfile_long 1>&2
+		echo 1>&2
+	fi
+	echo -e "Output:\t$outfile_long\n \t$outfile_wide\n" | column -s $'\t' -t 1>&2
+
+	if [[ -s $indir/10-amplify.log ]]; then
+		echo 1>&2
+		amp_outfile_long=$indir/00-amps.long.tsv
+		amp_outfile_wide=$indir/00-amps.wide.tsv
+
+		echo -e "Path\t$path" >$amp_outfile_long
+		grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1, $2}' >>$amp_outfile_long
+
+		echo -e "Path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1}' | tr '\n' '\t' | sed 's/\t$//')" >$amp_outfile_wide
+		echo -e "$path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $2}' | tr '\n' '\t' | sed 's/\t$//')" >>$amp_outfile_wide
+
+		if [[ "$#" -eq 1 ]]; then
+			column -s $'\t' -t $amp_outfile_long 1>&2
+			echo 1>&2
+		fi
+		echo -e "Output:\t$amp_outfile_long\n \t$amp_outfile_wide" | column -s $'\t' -t 1>&2
+		echo 1>&2
 	fi
 done
 
-if [[ "$format" == "wide" ]]; then
-	echo "Species ${header[@]// /_}" | tr ' ' '\t' | tr '_' ' ' >$outfile
-	echo "$species ${values[*]}" | tr ' ' '\t' >>$outfile
-else
-	echo -e "Species\t$species" >$outfile
-	for i in "${!header[@]}"; do
-		echo -e "${header[i]}\t${values[i]}" >>$outfile
-	done
-fi
-
-column -s $'\t' -t $outfile
-echo -e "\nOutput: $outfile" 1>&2
 echo -e "\nEND: $(date)" 1>&2
 echo -e "\nSTATUS: DONE.\n" 1>&2
 
