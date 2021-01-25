@@ -38,16 +38,23 @@ function get_help() {
 	\tConverts hh:mm:ss time-format (or only seconds) to human readable time.\n \
 	" | table
 
-		echo "USAGE:"
+		echo "USAGE(S):"
 		echo -e "\
 	\t$PROGRAM <hh:mm:ss>\n \
 	" | table
 
-		echo "OPTIONS:"
+		echo "OPTION(S):"
 		echo -e "\
 	\t-h\tshow this help menu\n \
 	\t-s\tconvert time to seconds\n \
 	" | table
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+		\t$PROGRAM 11:22:33\n \
+		\t$PROGRAM -s 11:22:33\n \
+		\t$PROGRAM 112233\n \
+		" | table
 	}
 }
 
