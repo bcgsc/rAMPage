@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
-args="$PROGRAM $*"
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
+
 # nr_fasta=$(dirname $RUN_ENTAP)/extra-db/nr.fasta
 
 # 1 - get_help function
@@ -100,7 +102,6 @@ nr="ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz"
 
 rm -f $outdir/CONFIG.FAIL
 rm -f $outdir/CONFIG.DONE
-
 
 # Download NCBI NR database
 filename=$(basename "$nr")

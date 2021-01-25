@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-PROGRAM=$(basename $0)
-args="$PROGRAM $*"
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 
 # 0 - table function
 function table() {
@@ -140,23 +141,23 @@ fasta=$(realpath $1)
 
 if [[ ! -s $fasta ]]; then
 	if [[ ! -f $fasta ]]; then
-		print_error "Input file does not exist."
+		print_error "Input file $fasta does not exist."
 	else
-		print_error "Input file is empty!"
+		print_error "Input file $fasta is empty!"
 	fi
 elif [[ "$fasta" != *.fa* ]]; then
-	print_error "Input file is not a FASTA file."
+	print_error "Input file $fasta is not a FASTA file."
 fi
 
-tsv_file=$(realpath $2)
+tsv_file=$(realpath -s $2)
 if [[ ! -s $tsv_file ]]; then
 	if [[ ! -f $tsv_file ]]; then
-		print_error "Input file does not exist."
+		print_error "Input file $tsv_file does not exist."
 	else
-		print_error "Input file is empty!"
+		print_error "Input file $tsv_file is empty!"
 	fi
 elif [[ "$tsv_file" != *.tsv ]]; then
-	print_error "Input file is not a TSV file."
+	print_error "Input file $tsv_file is not a TSV file."
 fi
 
 # This script differs, as it must be run in the output directory.

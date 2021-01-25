@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
-args="$PROGRAM $*"
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+# args="$FULL_PROGRAM $*"
+
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -82,9 +84,9 @@ fi
 fasta=$(realpath $1)
 if [[ ! -s $fasta ]]; then
 	if [[ ! -f $fasta ]]; then
-		print_error "Input file does not exist."
+		print_error "Input file $fasta does not exist."
 	else
-		print_error "Input file is empty!"
+		print_error "Input file $fasta is empty!"
 	fi
 fi
 
@@ -92,21 +94,21 @@ infile=$(realpath $2)
 # 6 check input files
 if [[ ! -s $infile ]]; then
 	if [[ ! -f $infile ]]; then
-		print_error "Input file does not exist."
+		print_error "Input file $infile does not exist."
 	else
-		print_error "Input file is empty!"
+		print_error "Input file $infile is empty!"
 	fi
 fi
 
 amplify_tsv=$(realpath $3)
 if [[ ! -s $amplify_tsv ]]; then
 	if [[ ! -f $amplify_tsv ]]; then
-		print_error "Input file does not exist."
+		print_error "Input file $amplify_tsv does not exist."
 	else
-		print_error "Input file is empty!"
+		print_error "Input file $amplify_tsv is empty!"
 	fi
 elif [[ "$amplify_tsv" != *.tsv ]]; then
-	print_error "Input file is not a TSV file."
+	print_error "Input file $amplify_tsv is not a TSV file."
 fi
 
 outdir=$(dirname $infile)

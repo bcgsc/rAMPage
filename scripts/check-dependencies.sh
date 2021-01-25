@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-PROGRAM=$(basename $0)
-
-args="$PROGRAM $*"
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then

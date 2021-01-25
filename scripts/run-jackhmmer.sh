@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
-args="$PROGRAM $*"
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -109,7 +110,7 @@ while getopts :a:d:e:ho:s:t: opt; do
 		address="$OPTARG"
 		email=true
 		;;
-	d) db="$(realpath $OPTARG)" ;;
+	d) db="$(realpath -s $OPTARG)" ;;
 	e) evalue="$OPTARG" ;;
 	h) get_help ;;
 	o)

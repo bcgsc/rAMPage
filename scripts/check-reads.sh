@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-PROGRAM=$(basename $0)
+
 set -euo pipefail
-args="$PROGRAM $*"
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 
 # 0 - table function
 function table() {

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-
+set -euo pipefail
+PROGRAM=$(basename $0)
 function table() {
 	if column -L <(echo) &>/dev/null; then
 		cat | column -s $'\t' -t -L

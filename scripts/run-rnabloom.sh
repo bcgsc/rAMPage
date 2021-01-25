@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-PROGRAM=$(basename $0)
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
 
-args="$PROGRAM $*"
+args="$FULL_PROGRAM $*"
 
 # 0 - table function
 function table() {
@@ -381,12 +382,12 @@ fi
 if [[ "$debug" = false ]]; then
 	echo "Running RNA-Bloom..." 1>&2
 
-	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}-\n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>> $logfile\n" | tee $logfile 1>&2
 
 	${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>>$logfile
 else
 	echo -e "DEBUG MODE: Skipping RNA-Bloom..." 1>&2
-	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- \n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>> $logfile\n" | tee $logfile 1>&2
 fi
 
 if [[ "${#references[@]}" -ne 0 ]]; then
@@ -428,7 +429,7 @@ fi
 echo "Fetching total number of transcripts..." 1>&2
 # echo "COMMAND: tac $logfile | grep -m 1 "after:" | awk '{print $NF}'" 1>&2
 # tx_total=$(tac $logfile | grep -m 1 "after:" | awk '{print $NF}')
-echo "COMMAND: grep \"after:\" $logfile | tail -n1 | awk '{print \$NF}')" 1>&2
+# echo "COMMAND: grep \"after:\" $logfile | tail -n1 | awk '{print \$NF}')" 1>&2
 tx_total=$(grep "after:" $logfile | tail -n1 | awk '{print $NF}')
 echo -e "Total number of assembled non-redundant transcripts: $tx_total\n" 1>&2
 
