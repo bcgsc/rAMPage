@@ -89,7 +89,6 @@ if [[ ! -s $fasta ]]; then
 		print_error "Input file $fasta is empty!"
 	fi
 fi
-
 infile=$(realpath $2)
 # 6 check input files
 if [[ ! -s $infile ]]; then
@@ -113,6 +112,7 @@ fi
 
 outdir=$(dirname $infile)
 outfile=$outdir/SABLE_results.tsv
+cp $fasta $outdir/amps.final.faa
 
 echo -e "Sequence ID\tSequence\tAnnotation\tScore\tCharge\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outfile
 while read line; do
@@ -126,10 +126,12 @@ while read line; do
 	# get AMPlify score and charge
 	score=$(awk -F "\t" -v var=$updated_seqname '/var\t/ {print $4}' $amplify_tsv)
 	charge=$(awk -F "\t" -v var=$updated_seqname '/var\t/ {print $6}' $amplify_tsv)
-	annotation=$(grep -F "${seqname} " $fasta | grep -Eo "exonerate=\S+|diamond=\S+" | tr ' ' '\n' | cut -f2 -d= | tr '\n' ' ' || true)
+	annotation=$(grep -F "${updated_seqname} " $fasta | grep -Eo "exonerate=\S+|diamond=\S+" | tr ' ' '\n' | cut -f2 -d= | tr '\n' ' ' || true)
 	if [[ -z $annotation ]]; then
 		annotation=" "
 	fi
 	ss=$($ROOT_DIR/scripts/longest-ss.py "$structure")
 	echo -e "$seqname\t$sequence\t$annotation\t$score\t$charge\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >>$outfile
+
+	sed -i "/${seqname} / s/$/ SS=${structure}/" $outdir/amps.final.faa
 done <$infile
