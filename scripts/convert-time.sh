@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 function table() {
 	if column -L <(echo) &>/dev/null; then
 		cat | column -s $'\t' -t -L
@@ -47,7 +49,9 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 	\t-h\tshow this help menu\n \
+	\t-m\tkeep milliseconds\t(only when time is < 1 hour)\n \
 	\t-s\tconvert time to seconds\n \
+	\t-u\thide units\t(only applies with -s)\n \
 	" | table
 
 		echo "EXAMPLE(S):"
@@ -62,13 +66,15 @@ function get_help() {
 if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
-
+units=true
 in_seconds=false
-
-while getopts :hs opt; do
+ms=false
+while getopts :hsum opt; do
 	case $opt in
 	h) get_help ;;
+	m) ms=true ;;
 	s) in_seconds=true ;;
+	u) units=false ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -94,29 +100,55 @@ if [[ "$num_fields" -eq 3 ]]; then
 	hours_in_days=$(echo "${hours}/24" | bc)
 	hours_in_hours=$(echo "${hours}%24" | bc)
 	total_seconds=$(echo "${hours_in_seconds}+${minutes_in_seconds}+${seconds}" | bc)
+
 	if [[ "${in_seconds}" == true ]]; then
-		string=$(printf "%'ds" ${total_seconds})
+		if [[ "$units" = true ]]; then
+			string=$(printf "%'ds" ${total_seconds})
+		else
+			string=$(printf "%'d" ${total_seconds})
+		fi
 	else
 		string=$(printf "%'dd %2dh %2dm %2ds" ${hours_in_days} ${hours_in_hours} ${minutes} ${seconds})
 	fi
 elif [[ "$num_fields" -eq 2 ]]; then
 	# means there is NO hour, and there are milliseconds
-	hours=0
-	minutes=$(echo "$time" | awk -F: '{print $1}' | sed 's/^0//')
-	seconds=$(echo "$time" | awk -F "[:.]" '{print $2}' | sed 's/^0//')
+	minutes=$(echo "$time" | awk -F "[:.]" '{print $1}' | sed 's/^0//')
+	if [[ -z "$minutes" ]]; then
+		minutes=0
+	fi
+	if [[ "$ms" = true ]]; then
+		seconds=$(echo "$time" | awk -F "[:]" '{print $2}' | sed 's/^0//')
+	else
+		seconds=$(echo "$time" | awk -F "[:.]" '{print $2}' | sed 's/^0//')
+	fi
 	minutes_in_seconds=$(echo "${minutes}*60" | bc)
-
-	hours_in_days=$(echo "${hours}/24" | bc)
-	hours_in_hours=$(echo "${hours}%24" | bc)
 
 	total_seconds=$(echo "${minutes_in_seconds}+${seconds}" | bc)
 	if [[ "${in_seconds}" = true ]]; then
-		string=$(printf "%'ds" ${total_seconds})
+		if [[ "$units" = true ]]; then
+			if [[ "$ms" = true ]]; then
+				string=$(printf "%'fs" ${total_seconds})
+			else
+				string=$(printf "%'ds" ${total_seconds})
+			fi
+		else
+			if [[ "$ms" = true ]]; then
+				string=$(printf "%'f" ${total_seconds})
+			else
+				string=$(printf "%'d" ${total_seconds})
+			fi
+		fi
 	else
-		string=$(printf "%'dd %2dh %2dm %2ds" ${hours_in_days} ${hours_in_hours} ${minutes} ${seconds})
+		if [[ "$ms" = true ]]; then
+			string=$(printf "%'dd %2dh %2dm %2fs" 0 0 ${minutes} ${seconds})
+		else
+			string=$(printf "%'dd %2dh %2dm %2ds" 0 0 ${minutes} ${seconds})
+		fi
 	fi
 else
 	# assume that the time is already in total_seconds
+	mseconds=$(echo "${time}" | awk -F "." '{print $2}')
+	time=$(echo "${time}" | awk -F "." '{print $1}')
 	min=$(echo "${time}/60" | bc)
 	sec=$(echo "${time}%60" | bc)
 	hour=$(echo "${min}/60" | bc)
