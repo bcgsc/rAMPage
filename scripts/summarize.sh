@@ -172,7 +172,7 @@ for logdir in "$@"; do
 				;;
 			amplify)
 				header+=("Number of Non-redundant AMPs (HMMs then AMPlify)")
-				num=$(awk '/Number of positive \(charge >= 2\), short \(length <= 50\), and high-confidence \(score >= 0.99\) unique AMPs:/ {print $NF}' $file)
+				num=$(awk '/Number of Final AMPs:/ {print $NF}' $file)
 				values+=($num)
 				;;
 			annotation)
@@ -209,18 +209,35 @@ for logdir in "$@"; do
 		echo 1>&2
 		amp_outfile_long=$indir/00-amps.long.tsv
 		amp_outfile_wide=$indir/00-amps.wide.tsv
+		amp_outfile_wide_ordered=$indir/00-amps.wide.ordered.tsv
 
 		echo -e "Path\t$path" >$amp_outfile_long
-		grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1, $2}' >>$amp_outfile_long
-
+		awk 'BEGIN{OFS="\t"} /\samps\..+\.nr\.faa\s+[0-9]+/ {print $1, $2}' $indir/10-amplify.log >>$amp_outfile_long
+		#		grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1, $2}' >>$amp_outfile_long
 		echo -e "Path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1}' | tr '\n' '\t' | sed 's/\t$//')" >$amp_outfile_wide
 		echo -e "$path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $2}' | tr '\n' '\t' | sed 's/\t$//')" >>$amp_outfile_wide
 
+		key_order=("amps.conf.nr.faa" "amps.short.nr.faa" "amps.charge.nr.faa" "amps.conf.charge.nr.faa" "amps.short.charge.nr.faa" "amps.conf.short.nr.faa" "amps.conf.short.charge.nr.faa")
+
+		declare -A dict
+		while read file num; do
+			dict[$file]=$num
+		done < <(grep '\samps\..*\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log)
+
+		echo -e "Path\t$(echo ${key_order[*]} | tr ' ' '\t')" >$amp_outfile_wide_ordered
+		echo -ne "$path\t" >>$amp_outfile_wide_ordered
+
+		for i in "${key_order[@]}"; do
+			echo -ne "${dict[$i]}\t" >>$amp_outfile_wide_ordered
+		done
+
+		sed -i 's/\t$//' $amp_outfile_wide_ordered
+		echo >>$amp_outfile_wide_ordered
 		if [[ "$#" -eq 1 ]]; then
 			column -s $'\t' -t $amp_outfile_long 1>&2
 			echo 1>&2
 		fi
-		echo -e "Output:\t$amp_outfile_long\n \t$amp_outfile_wide" | column -s $'\t' -t 1>&2
+		echo -e "Output:\t$amp_outfile_long\n \t$amp_outfile_wide\n \t$amp_outfile_wide_ordered" | column -s $'\t' -t 1>&2
 		echo 1>&2
 	fi
 done
