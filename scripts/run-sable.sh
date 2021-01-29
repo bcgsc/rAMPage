@@ -172,8 +172,8 @@ if [[ -s $outdir/OUT_SABLE_graph ]]; then
 	echo -e "COMMAND: $ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph $tsv_file &>>$outdir/sable.log\n" 1>&2
 	$ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph $tsv_file &>>$outdir/sable.log
 
-	# combine AMPlify score with this file
 else
+
 	touch $outdir/SABLE.FAIL
 
 	if [[ "$email" = true ]]; then
