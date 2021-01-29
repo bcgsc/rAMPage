@@ -22,6 +22,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-h\tshow this help menu\n \
+		\t-s <separator>\toutput separator\t(default = space)\n \
 		" | column -s$'\t' -t -L
 
 		# EXAMPLE
@@ -47,11 +48,13 @@ function print_error() {
 if [[ "$#" -eq 0 ]]; then
 	get_help
 fi
+sep=' '
 
 # 4 - get options
-while getopts :h opt; do
+while getopts :hs: opt; do
 	case $opt in
 	h) get_help ;;
+	s) sep=$OPTARG ;;
 	\?)
 		print_error "Invalid option: -$OPTARG"
 		;;
@@ -70,9 +73,9 @@ fi
 # 7 - no status files
 
 # 8 - no env needed
-
 for i in $@; do
 	# if the thing after the hyphen starts with a letter or not
+	i=${i//,/}
 	if [[ "$(echo "$i" | grep "\-" -c)" -gt 0 ]]; then
 		first=$(echo "$i" | awk -F "-" '{print $1}')
 		#		echo "first is $first"
@@ -110,5 +113,5 @@ for i in $@; do
 	else
 		echo "$i"
 	fi
-done | tr '\n' ' ' | sed 's/ $//'
+done | sed ":a;N;\$!ba;s/\n/${sep}/g"| sed "s/${sep}$/\n/"
 # done | paste -s -d ' '
