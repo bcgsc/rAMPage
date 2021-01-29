@@ -90,18 +90,18 @@ done
 
 shift $((OPTIND - 1))
 
-if [[ "$#" -ne 1 ]]; then
+if [[ "$#" -lt 1 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
-if [[ ! -d $(realpath $1) ]]; then
-
-	if [[ ! -e $(realpath $1) ]]; then
-		print_error "Input directory $(realpath $1) does not exist."
-	else
-		print_error "Given input directory is not a directory."
-	fi
-fi
+# if [[ ! -d $(realpath $1) ]]; then
+#
+# 	if [[ ! -e $(realpath $1) ]]; then
+# 		print_error "Input directory $(realpath $1) does not exist."
+# 	else
+# 		print_error "Given input directory is not a directory."
+# 	fi
+# fi
 {
 	echo "HOSTNAME: $(hostname)"
 	echo -e "START: $(date)\n"
@@ -113,44 +113,60 @@ fi
 # first line - Step, Time, CPU, Memory
 # first column - step names
 
-indir=$(realpath $1)
-outfile=$indir/00-summary.tsv
+for i in "$@"; do
+	indir=$(realpath $i)
 
-# if workdir is unbound then
-if [[ ! -v WORKDIR ]]; then
-	# get workdir from input
-	workdir=$(dirname $indir)
-else
-	workdir=$(realpath $WORKDIR)
-fi
-
-if [[ ! -v SPECIES ]]; then
-	# get species from workdir
-	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
-else
-	species=$SPECIES
-fi
-
-echo -e "Step\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$outfile
-
-for logfile in $indir/*.log; do
-	if [[ "$logfile" == $indir/00-summary.log || "$logfile" == $indir/00-stats.log ]]; then
+	if [[ ! -d $indir ]]; then
 		continue
 	fi
-	line=$(grep -Ff <(echo -e "Elapsed (wall clock) time (h:mm:ss or m:ss)\nPercent of CPU this job got:\nMaximum resident set size (kbytes):") $logfile | awk '{print $NF}' | tr '\n' '\t' | sed 's/\t$//')
-	if [[ -z "$line" ]]; then
-		# line="0\t0\t0"
-		line="NA\tNA\tNA"
+	outfile=$indir/00-summary.tsv
+
+	# if workdir is unbound then
+	if [[ ! -v WORKDIR ]]; then
+		# get workdir from input
+		workdir=$(dirname $indir)
+	else
+		workdir=$(realpath $WORKDIR)
 	fi
-	step=$(basename $logfile ".log" | cut -f2 -d-)
-	echo -e "$step\t$line" >>$outfile
+
+	if [[ ! -v SPECIES ]]; then
+		# get species from workdir
+		species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+	else
+		species=$SPECIES
+	fi
+
+	echo -e "Path\tStep\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tElapsed (wall clock) time (seconds)\tMaximum resident set size (kbytes)" >$outfile
+
+	for logfile in $indir/*.log; do
+		if [[ "$logfile" == $indir/00-summary.log || "$logfile" == $indir/00-stats.log ]]; then
+			continue
+		fi
+		path=${workdir/$ROOT_DIR\//}
+		cpu=$(awk -F ": " '/Percent of CPU this job got:/ {print $2}' $logfile | sed 's/%$//')
+		raw_time=$(awk -F ": " '/Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):/ {print $2}' $logfile)
+		time=$($ROOT_DIR/scripts/convert-time.sh -s -u ${raw_time})
+		memory=$(awk -F ": " '/Maximum resident set size \(kbytes\):/ {print $2}' $logfile)
+		#	line=$(grep -Ff <(echo -e "Elapsed (wall clock) time (h:mm:ss or m:ss)\nPercent of CPU this job got:\nMaximum resident set size (kbytes):") $logfile | awk '{print $NF}' | tr '\n' '\t' | sed 's/\t$//')
+		line="$(printf "%'d" $cpu)\t${raw_time}\t${time}\t$(printf "%'d" $memory)"
+		if [[ -z "$line" ]]; then
+			# line="0\t0\t0"
+			line="NA\tNA\tNA\tNA"
+		fi
+		step=$(basename $logfile ".log" | cut -f2 -d-)
+		echo -e "$path\t$step\t$line" >>$outfile
+	done
+	if [[ "$#" -eq 1 ]]; then
+		column -s $'\t' -t $outfile 1>&2
+		echo 1>&2
+	fi
+	echo "Output: $outfile" 1>&2
+	echo 1>&2
 done
 
-column -s $'\t' -t $outfile
-echo -e "\nEND: $(date)" 1>&2
+echo -e "END: $(date)" 1>&2
 echo -e "\nSTATUS: DONE.\n" 1>&2
 
-echo "Output: $outfile" 1>&2
 if [[ "$email" = true ]]; then
 	species=$(echo "$species" | sed 's/^./\u&. /')
 	echo "$indir" | mail -s "${species}: SUMMARY" "$address"
