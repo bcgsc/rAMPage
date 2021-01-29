@@ -97,7 +97,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # default parameters
-evalue=1e-5
+evalue="1e-5"
 threads=8
 email=false
 similarity=1.00
