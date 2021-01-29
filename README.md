@@ -5,7 +5,9 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 ## Description
 
-rAMPage is a _de novo_ AMP discovery pipeline...TODO
+rAMPage is a _de novo_ AMP discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs.
+
+![](Flowchart.png)
 
 ## Quick Links
 
@@ -27,7 +29,7 @@ rAMPage is a _de novo_ AMP discovery pipeline...TODO
 	git clone https://github.com/bcgsc/rAMPage.git
 	```
 1. Download and install the dependencies (specified in the [Dependencies](#dependencies) section below), into [`rAMPage/src`](src/).
-	* some of these dependencies need to be configured: `SignalP`, `ProP`, `SABLE`, `EnTAP` (see [configurations](#configurations))
+	* some of these dependencies need to be configured: `SignalP`, `ProP`, `SABLE`, `E<sub>N</sub>TAP` (see [configurations](#configurations))
 1. Update _all_ the paths in [`rAMPage/scripts/config.sh`](scripts/config.sh) to reflect dependencies in [`rAMPage/src`](src/) and dependencies pre-installed elsewhere.
 1. Source [`scripts/config.sh`](scripts/config.sh) in the root of the repository.
 	```shell
@@ -89,8 +91,9 @@ rAMPage
 | GNU `grep` | v3.4 |
 | GNU `make` | v4.3 |
 | GNU `column` | 2.36 |
+| `bc` | v1.07.1 |
 | `gzip` | v1.10|
-| `python` | v3.7.7
+| `python` | v3.7.7 |
 <!-- - [ ] Perl v5.32.0 -->
 
 ### Tools
@@ -109,7 +112,7 @@ rAMPage
 | [SignalP](https://services.healthtech.dtu.dk/services/SignalP-5.0/9-Downloads.php#) | v3.0
 | [ProP](https://services.healthtech.dtu.dk/services/ProP-1.0/9-Downloads.php#) | v1.0c |
 | [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.0.0) |v1.0.0|
-| [EnTAP](https://github.com/harta55/EnTAP/tree/v0.10.7-beta) | v0.10.7-beta|
+| [E<sub>N</sub>TAP](https://github.com/harta55/EnTAP/tree/v0.10.7-beta) | v0.10.7-beta|
 | [Exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate) | v2.4.0|
 | [SABLE](https://sourceforge.net/projects/meller-sable/) | v4.0 |
 
@@ -136,7 +139,7 @@ The file to edit is `src/prop-1.0c/prop`:
 
 \*edit the one corresponding to your system, Linux used in the example
 
-##### Configuring EnTAP
+##### Configuring E<sub>N</sub>TAP
 
 Download **and** decompress the following [databases](https://entap.readthedocs.io/en/latest/Getting_Started/configuration.html):
 
@@ -192,6 +195,15 @@ A 2 or 3-column space-delimited text file named `input.txt`, located in the work
 
 Read paths in this input text file should be relative to the location of the input text file.
 
+_Need help downloading reads?_ The `scripts/get-reads.sh` script can be used to download reads. These dependencies are required:
+
+|Dependency| Tested Version |
+|----------|----------------|
+| [SRA toolkit](https://github.com/ncbi/sra-tools/releases/tag/2.10.5)<br/> | v2.10.5 |
+| [EDirect](https://www.ncbi.nlm.nih.gov/books/NBK179288/) | v13.8 |
+
+The input `runs.txt` should have one _SRR_ accession on each line.
+
 #### Example: _M. gulosa_
 
 | POOLING ID | READ 1 | READ 2 |
@@ -202,6 +214,18 @@ Read paths in this input text file should be relative to the location of the inp
 
 ```
 venom raw_reads/SRR6466797_1.fastq.gz raw_reads/SRR6466797_2.fastq.gz
+```
+
+Using `scripts/get-reads.sh`:
+
+```
+scripts/get-reads.sh -o insecta/mgulosa/venom/raw_reads -p insecta/mgulosa/venom/runs.txt
+```
+
+`insecta/mgulosa/venom/runs.txt`:
+
+```
+SRR6466797
 ```
 
 #### Example: _P. toftae_
@@ -228,6 +252,25 @@ liver raw_reads/SRR8288058_1.fastq.gz raw_reads/SRR8288058_2.fastq.gz
 skin raw_reads/SRR8288059_1.fastq.gz raw_reads/SRR8288059_2.fastq.gz
 liver raw_reads/SRR8288060_1.fastq.gz raw_reads/SRR8288060_2.fastq.gz
 skin raw_reads/SRR8288061_1.fastq.gz raw_reads/SRR8288061_2.fastq.gz
+```
+
+Using `scripts/get-reads.sh`:
+
+```
+scripts/get-reads.sh -o amphibia/ptoftae/skin-liver/raw_reads -p amphibia/ptoftae/skin-liver/runs.txt
+```
+
+`amphibia/ptoftae/skin-liver/runs.txt`:
+
+```
+SRR8288040
+SRR8288041
+SRR8288056
+SRR8288057
+SRR8288058
+SRR8288059
+SRR8288060
+SRR8288061
 ```
 
 ### Reference Transcriptomes
