@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 if [[ ! -v FASTERQ_DUMP ]]; then
 	FASTERQ_DUMP=fasterq-dump
 fi
 
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
 	{
@@ -25,13 +35,13 @@ function get_help() {
 		\t  - 2: failed to download\n \
 		\n \
 		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <SRA RUN (i.e. SRR) accession list>\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# OPTIONS
 		echo "OPTION(S):"
@@ -41,23 +51,34 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-p\tdownload each run in parallel\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
-    	" | column -s$'\t' -t -L
+    	" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -o /path/to/raw_reads /path/to/sra/runs.txt\n \
-		" | column -s$'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
 }
 
+# 1.5 - print_line
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -114,11 +135,15 @@ rm -f $outdir/READS.DONE
 rm -f $outdir/READS.FAIL
 
 # 8 - print environment details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)" 1>&2
-
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
-echo -e "PATH=$PATH\n" 1>&2
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n"
+
+	echo "CALL: $args (wd: $(pwd))"
+} 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false

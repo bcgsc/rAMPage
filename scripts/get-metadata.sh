@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help
 function get_help() {
 	# DESCRIPTION
@@ -9,28 +19,39 @@ function get_help() {
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tGets the sample attributes given the accession(s).\n \
-		" | column -s$'\t' -t -L
+		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <SRA accession(s)>\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
+}
+# 1.5 - print_line
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 # 2 - print_error
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -71,6 +92,14 @@ if [[ -f $outdir/METADATA.DONE ]]; then
 fi
 
 # 8 - no env print
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n"
+
+	echo "CALL: $args (wd: $(pwd))"
+} 1>&2
 
 file=$outdir/metadata.xml
 accessions=$(echo "$*" | sed 's/ /\" OR \"/g' | sed 's/^/\"/' | sed 's/$/\"/')
