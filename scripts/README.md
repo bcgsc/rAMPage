@@ -1,13 +1,13 @@
 # Scripts
 
-This directory holds all the scripts used in the rAMPage pipeline. To use these scripts individually
+This directory holds all the scripts used in the rAMPage pipeline. Each of the scripts below are used in the Makefile. Optional helper scripts can be found in the `helpers` directory.
 
 ### Quick Links
 
 1. [Checking Dependencies](#checking-dependencies)
 1. [Checking Reads](#checking-reads)
 1. [Trimming Reads](#trimming-reads)
-1. [Making A Reads List](#making-a-reads-list)
+1. [Building A Reads List](#building-a-reads-list)
 1. [Transcriptome Assembly](#transcriptome-assembly)
 1. [Filtering By Expression](#filtering-by-expression)
 1. [_in silico_ Translation](#in-silico-translation)
