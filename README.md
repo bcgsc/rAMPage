@@ -195,7 +195,7 @@ A 2 or 3-column space-delimited text file named `input.txt`, located in the work
 
 Read paths in this input text file should be relative to the location of the input text file.
 
-_Need help downloading reads?_ The `scripts/get-reads.sh` script can be used to download reads. These dependencies are required:
+_Need help downloading reads?_ The `scripts/helpers/get-reads.sh` script can be used to download reads. These dependencies are required:
 
 |Dependency| Tested Version |
 |----------|----------------|
@@ -216,10 +216,10 @@ The input `runs.txt` should have one _SRR_ accession on each line.
 venom raw_reads/SRR6466797_1.fastq.gz raw_reads/SRR6466797_2.fastq.gz
 ```
 
-Using `scripts/get-reads.sh`:
+Using `scripts/helpers/get-reads.sh`:
 
 ```
-scripts/get-reads.sh -o insecta/mgulosa/venom/raw_reads -p insecta/mgulosa/venom/runs.txt
+scripts/helpers/get-reads.sh -o insecta/mgulosa/venom/raw_reads -p insecta/mgulosa/venom/runs.txt
 ```
 
 `insecta/mgulosa/venom/runs.txt`:
@@ -254,10 +254,10 @@ liver raw_reads/SRR8288060_1.fastq.gz raw_reads/SRR8288060_2.fastq.gz
 skin raw_reads/SRR8288061_1.fastq.gz raw_reads/SRR8288061_2.fastq.gz
 ```
 
-Using `scripts/get-reads.sh`:
+Using `scripts/helpers/get-reads.sh`:
 
 ```
-scripts/get-reads.sh -o amphibia/ptoftae/skin-liver/raw_reads -p amphibia/ptoftae/skin-liver/runs.txt
+scripts/helpers/get-reads.sh -o amphibia/ptoftae/skin-liver/raw_reads -p amphibia/ptoftae/skin-liver/runs.txt
 ```
 
 `amphibia/ptoftae/skin-liver/runs.txt`:
