@@ -17,6 +17,15 @@ fi
 apd3_url="http://aps.unmc.edu/AP/APD3_update_2020_release.fasta"
 dadp_url="https://github.com/mark0428/Scraping/raw/master/DADP/DADP_mature_AMP_20181206.fa"
 
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
+
 # 1 - get_help
 function get_help() {
 	{
@@ -26,28 +35,38 @@ function get_help() {
 		\tDownloads AMP sequences from NCBI protein database: antimicrobial[All Fields] AND class[Organism]\n \
 		\tDownloads AMP sequences from The Antimicrobial Peptide Database (APD3): http://aps.unmc.edu/AP/main.php\n \
 		\tDownloads Anuran AMP sequences from Database of Anuran Defense Peptides (DADP): http://split4.pmfst.hr/dadp/\n \
-		" | column -s$'\t' -t -L
+		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory>\n \
-		" | column -s$'\t' -t -L
+		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		" | column -s$'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
+}
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 # 2 - print_error
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -72,9 +91,9 @@ done
 shift $((OPTIND - 1))
 
 # 5 - incorrect number
-if [[ "$#" -ne 0 ]]; then
-	print_error "Incorrect number of arguments."
-fi
+# if [[ "$#" -ne 0 ]]; then
+# 	print_error "Incorrect number of arguments."
+# fi
 
 # 6 - check inputs - no inputs to check
 if [[ -z $outdir ]]; then
@@ -107,72 +126,85 @@ echo "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')" 1>&2
 echo -e "COMMAND: $RUN_SEQTK seq $outdir/$apd3 > $outdir/${apd3%.*}.faa\n" 1>&2
 $RUN_SEQTK seq $outdir/$apd3 >$outdir/${apd3%.*}.faa
 
+{
+	echo "PROGRAM: $(command -v $RUN_ESEARCH)"
+	echo -e "VERSION: $($RUN_ESEARCH --help | awk 'NR==1 {print $NF}')\n"
+
+	echo "PROGRAM: $(command -v $RUN_EFETCH)"
+	echo -e "VERSION: $($RUN_EFETCH --help | awk 'NR==1 {print $NF}')\n"
+} 1>&2
 today=$(date '+%Y%b%d')
-for i in $(ls $ROOT_DIR/*/*/*/*.CLASS | awk -F "/" '{print $NF}' | sort -u); do
-	if [[ "$i" == "AMPHIBIA.CLASS" ]]; then
-		class="Amphibia"
-		outfile=$outdir/amps.${class}.prot.${today}.faa
-		echo "Searching the NCBI protein database: antimicrobial[All Fields] and ${class}[organism]..." 1>&2
-		echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
-		$RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
 
-		echo "Filtering for amphibian AMPs..." 1>&2
-		echo -e "COMMAND: grep --no-group-separator -A1 -i amphibians $outdir/${apd3%.*}.faa > $outdir/${apd3%.*}.amphibians.faa\n" 1>&2
-		grep --no-group-separator -A1 -i amphibians $outdir/${apd3%.*}.faa >$outdir/${apd3%.*}.amphibians.faa
+# AMPHIBIA
+class="Amphibia"
+outfile=$outdir/amps.${class}.prot.${today}.faa
+echo "Searching the NCBI protein database: antimicrobial[All Fields] and ${class}[organism]..." 1>&2
+echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
+$RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
 
-		echo "Downloading additional Anuran AMPs from DADP..." 1>&2
-		dadp=$(basename $dadp_url)
-		echo -e "COMMAND: wget -o $outdir/DADP.log -O $outdir/$dadp $dadp_url\n" 1>&2
-		#		dadp_start=$(date '+%s')
-		wget -o $outdir/DADP.log -O $outdir/$dadp $dadp_url
-		#		dadp_end=$(date '+%s')
-		#		$ROOT_DIR/scripts/get-runtime.sh $dadp_start $dadp_end 1>&2
-		#		echo 1>&2
+echo "Filtering for amphibian AMPs..." 1>&2
+echo -e "COMMAND: grep --no-group-separator -A1 -i amphibians $outdir/${apd3%.*}.faa > $outdir/${apd3%.*}.amphibians.faa\n" 1>&2
+grep --no-group-separator -A1 -i amphibians $outdir/${apd3%.*}.faa >$outdir/${apd3%.*}.amphibians.faa
 
-		echo "Combining the NCBI AMPs with APD3 and DADP sequences..." 1>&2
-		echo -e "COMMAND: cat $outfile $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa > $outdir/amps.${class}.prot.${today}.combined.faa\n" 1>&2
-		cat $outfile $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa >$outdir/amps.${class}.prot.${today}.combined.faa
-		if [[ -L $outdir/amps.${class}.prot.combined.faa ]]; then
-			unlink $outdir/amps.${class}.prot.combined.faa
-		fi
+echo "Downloading additional Anuran AMPs from DADP..." 1>&2
+dadp=$(basename $dadp_url)
+echo -e "COMMAND: wget -o $outdir/DADP.log -O $outdir/$dadp $dadp_url\n" 1>&2
+#		dadp_start=$(date '+%s')
+wget -o $outdir/DADP.log -O $outdir/$dadp $dadp_url
+#		dadp_end=$(date '+%s')
+#		$ROOT_DIR/scripts/get-runtime.sh $dadp_start $dadp_end 1>&2
+#		echo 1>&2
 
-		ln -s $outdir/amps.${class}.prot.${today}.combined.faa $outdir/amps.${class}.prot.combined.faa
+echo "Combining the NCBI AMPs with APD3 and DADP sequences..." 1>&2
+echo -e "COMMAND: cat $outfile $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa > $outdir/amps.${class}.prot.${today}.combined.faa\n" 1>&2
+cat $outfile $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa >$outdir/amps.${class}.prot.${today}.combined.faa
+if [[ -L $outdir/amps.${class}.prot.combined.faa ]]; then
+	unlink $outdir/amps.${class}.prot.combined.faa
+fi
 
-		echo "Combining the APD3 and DADP sequences (mature only)..." 1>&2
-		echo -e "COMMAND: cat $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa > $outdir/amps.${class}.prot.combined.mature.faa\n" 1>&2
-		cat $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa >$outdir/amps.${class}.prot.combined.mature.faa
+ln -s $outdir/amps.${class}.prot.${today}.combined.faa $outdir/amps.${class}.prot.combined.faa
 
-	elif [[ "$i" == "INSECTA.CLASS" ]]; then
-		class="Insecta"
-		outfile=$outdir/amps.${class}.prot.${today}.faa
-		echo "Searching the NCBI protein database: antimicrobial[All Fields] and ${class}[organism]..." 1>&2
-		echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
-		$RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
-		echo "Filtering for insect AMPs..." 1>&2
-		echo -e "COMMAND: grep --no-group-separator -A1 -i insects $outdir/${apd3%.*}.faa > $outdir/${apd3%.*}.insects.faa\n" 1>&2
-		grep --no-group-separator -A1 -i insects $outdir/${apd3%.*}.faa >$outdir/${apd3%.*}.insects.faa
+echo "Combining the APD3 and DADP sequences (mature only)..." 1>&2
+echo -e "COMMAND: cat $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa > $outdir/amps.${class}.prot.combined.mature.faa\n" 1>&2
+cat $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa >$outdir/amps.${class}.prot.combined.mature.faa
+#-----------------------------------------------------------------------------------
 
-		echo "Combining the NCBI AMPs with APD3 sequences..." 1>&2
-		echo -e "COMMAND: cat $outfile $outdir/${apd3%.*}.insects.faa > $outdir/amps.${class}.prot.${today}.combined.faa\n" 1>&2
-		cat $outfile $outdir/${apd3%.*}.insects.faa >$outdir/amps.${class}.prot.${today}.combined.faa
+# INSECTS
 
-		if [[ -L $outdir/amps.${class}.prot.combined.faa ]]; then
-			unlink $outdir/amps.${class}.prot.combined.faa
-		fi
+class="Insecta"
+outfile=$outdir/amps.${class}.prot.${today}.faa
+echo "Searching the NCBI protein database: antimicrobial[All Fields] and ${class}[organism]..." 1>&2
+echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
+$RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
+echo "Filtering for insect AMPs..." 1>&2
+echo -e "COMMAND: grep --no-group-separator -A1 -i insects $outdir/${apd3%.*}.faa > $outdir/${apd3%.*}.insects.faa\n" 1>&2
+grep --no-group-separator -A1 -i insects $outdir/${apd3%.*}.faa >$outdir/${apd3%.*}.insects.faa
 
-		ln -s $outdir/amps.${class}.prot.${today}.combined.faa $outdir/amps.${class}.prot.combined.faa
+echo "Combining the NCBI AMPs with APD3 sequences..." 1>&2
+echo -e "COMMAND: cat $outfile $outdir/${apd3%.*}.insects.faa > $outdir/amps.${class}.prot.${today}.combined.faa\n" 1>&2
+cat $outfile $outdir/${apd3%.*}.insects.faa >$outdir/amps.${class}.prot.${today}.combined.faa
 
-		if [[ -L $outdir/amps.${class}.prot.mature.faa ]]; then
-			unlink $outdir/amps.${class}.prot.mature.faa
-		fi
-		ln -s $outdir/${apd3%.*}.insects.faa $outdir/amps.${class}.prot.mature.faa
-	else
-		echo "ERROR: No valid class taxon (*.CLASS file) found. This file is generated after running $ROOT_DIR/scripts/setup.sh." 1>&2
-		printf '%.0s=' $(seq $(tput cols)) 1>&2
-		echo 1>&2
-		exit 2
-	fi
-done
+if [[ -L $outdir/amps.${class}.prot.combined.faa ]]; then
+	unlink $outdir/amps.${class}.prot.combined.faa
+fi
+
+ln -s $outdir/amps.${class}.prot.${today}.combined.faa $outdir/amps.${class}.prot.combined.faa
+
+if [[ -L $outdir/amps.${class}.prot.mature.faa ]]; then
+	unlink $outdir/amps.${class}.prot.mature.faa
+fi
+ln -s $outdir/${apd3%.*}.insects.faa $outdir/amps.${class}.prot.mature.faa
+
+#-------------------------------------------------------------------------------------
+
+# Do the remaining ones if they exist
+if [[ "$#" -gt 0 ]]; then
+	for class in "$@"; do
+		outfile=$outdir/amps.${class^}.prot.${today}.faa
+		echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class,,}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
+		$RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class,,}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
+	done
+fi
 
 echo -e "END: $(date)\n" 1>&2
 

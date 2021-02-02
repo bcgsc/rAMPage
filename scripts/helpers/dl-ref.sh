@@ -2,41 +2,48 @@
 
 set -euo pipefail
 PROGRAM=$(basename $0)
-
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
-if column -L <(echo) &>/dev/null; then
-	l_opt="-L"
-	blank=""
-else
-	l_opt=""
-	blank="echo"
-fi
-
 function get_help() {
 	{
 		# DESCRIPTION
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tUsing cURL, gets draft assemblies given accession numbers.\n \
-		" | column -s$'\t' -t $l_opt
-		$blank
+		" | table
 
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <FTP Genbank path>\n \
-		" | column -s$'\t' -t $l_opt
-		$blank
+		" | table
 
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o\toutput directory\t(required)\n \
-		" | column -s$'\t' -t $l_opt
-		$blank
+		" | table
 	} 1>&2
 	exit 1
+}
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 
 # 2 - print_error function
@@ -44,8 +51,7 @@ function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }

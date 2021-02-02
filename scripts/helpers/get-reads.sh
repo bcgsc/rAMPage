@@ -131,8 +131,8 @@ elif [[ ! -s $(realpath $1) ]]; then
 fi
 
 # 7 - remove status files
-rm -f $outdir/READS.DONE
-rm -f $outdir/READS.FAIL
+rm -f $outdir/READS_DL.DONE
+rm -f $outdir/READS_DL.FAIL
 
 # 8 - print environment details
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
@@ -223,7 +223,7 @@ done <$sra
 
 # if fail = true, then write 'FAIL' file.
 if [[ "$fail" = true ]]; then
-	touch $outdir/READS.FAIL
+	touch $outdir/READS_DL.FAIL
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
 	if [[ "$email" = true ]]; then
@@ -237,19 +237,23 @@ if [[ "$fail" = true ]]; then
 	exit 2
 fi
 
-workdir=$(dirname $outdir)
+# if [[ ! -v WORKDIR ]]; then
+# 	workdir=$(dirname $outdir)
+# else
+# 	workdir=$WORKDIR
+# fi
 
 # write a file to indicate whether reads are SINGLE or PAIRED end
-if ls $outdir/*_?.fastq.gz 1>/dev/null 2>&1; then
-	touch $workdir/PAIRED.END
-else
-	touch $workdir/SINGLE.END
-fi
+# if ls $outdir/*_?.fastq.gz 1>/dev/null 2>&1; then
+# 	touch $workdir/PAIRED.END
+# else
+# 	touch $workdir/SINGLE.END
+# fi
 
 echo -e "\nEND: $(date)\n" 1>&2
 
 # echo 1>&2
-touch $outdir/READS.DONE
+touch $outdir/READS_DL.DONE
 echo "STATUS: DONE." 1>&2
 
 if [[ "$email" = true ]]; then

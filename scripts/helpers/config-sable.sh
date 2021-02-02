@@ -5,38 +5,55 @@ PROGRAM=$(basename $FULL_PROGRAM)
 args="$FULL_PROGRAM $*"
 
 # nr_fasta=$(dirname $RUN_ENTAP)/extra-db/nr.fasta
-
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
-	echo "DESCRIPTION:" 1>&2
-	echo -e "\
+	{
+		echo "DESCRIPTION:" 1>&2
+		echo -e "\
 		\tConfigures environment variables for the run.sable script.\n\
 		\tFor more information: $(dirname $RUN_SABLE)/README\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | table
+		echo 1>&2
 
-	echo "USAGE(S):" 1>&2
-	echo -e "\
+		echo "USAGE(S):" 1>&2
+		echo -e "\
 		\t$PROGRAM [OPTIONS]\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | table
+		echo 1>&2
 
-	echo "OPTION(S):" 1>&2
-	echo -e "\
+		echo "OPTION(S):" 1>&2
+		echo -e "\
 		\t-h\tshow this help menu\n\
 		\t-t\tnumber of threads\t(default = 8)\n\
-		" | column -s$'\t' -t 1>&2
-
+		" | table
+	} 1>&2
 	exit 1
 }
-
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
