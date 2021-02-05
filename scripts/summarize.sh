@@ -156,8 +156,9 @@ for logdir in "$@"; do
 				values+=($num)
 				;;
 			translation)
-				header+=("Number of Valid ORFs")
-				num=$(awk '/Number of valid ORFs:/ {print $NF}' $file)
+				header+=("Number of Filtered Transcripts with Valid ORFs")
+				# num=$(awk '/Number of valid ORFs:/ {print $NF}' $file)
+				num=$(awk '/Number of transcripts with valid ORFs:/ {print $NF}' $file)
 				values+=($num)
 				;;
 			homology)
@@ -183,6 +184,7 @@ for logdir in "$@"; do
 			exonerate)
 				header+=("Number of Novel AMPs")
 				num=$(awk '/Number of Novel AMPs:/ {print $NF}' $file)
+				# num=$(awk '/Number of high-confidence \(score >= [0-9]\.?[0-9]*\), short \(length <= [0-9]+\), and positive \(charge >= -?[0-9]+\) unique AMPs:/ {print $NF}' $file)
 				values+=($num)
 				;;
 			sable) ;;
@@ -217,7 +219,7 @@ for logdir in "$@"; do
 		echo -e "Path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1}' | tr '\n' '\t' | sed 's/\t$//')" >$amp_outfile_wide
 		echo -e "$path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $2}' | tr '\n' '\t' | sed 's/\t$//')" >>$amp_outfile_wide
 
-		key_order=("amps.conf.nr.faa" "amps.short.nr.faa" "amps.charge.nr.faa" "amps.conf.charge.nr.faa" "amps.short.charge.nr.faa" "amps.conf.short.nr.faa" "amps.conf.short.charge.nr.faa")
+		key_order=("amps.conf.nr.faa" "amps.short.nr.faa" "amps.charge.nr.faa" "amps.conf.charge.nr.faa" "amps.short.charge.nr.faa" "amps.conf.short.nr.faa" "amps.conf.short.charge.nr.faa" "amps.conf_0.90.short.charge.nr.faa")
 
 		declare -A dict
 		while read file num; do
@@ -228,7 +230,9 @@ for logdir in "$@"; do
 		echo -ne "$path\t" >>$amp_outfile_wide_ordered
 
 		for i in "${key_order[@]}"; do
-			echo -ne "${dict[$i]}\t" >>$amp_outfile_wide_ordered
+			if [[ -f $(dirname $indir)/amplify ]]; then
+				echo -ne "${dict[$i]}\t" >>$amp_outfile_wide_ordered
+			fi
 		done
 
 		sed -i 's/\t$//' $amp_outfile_wide_ordered
