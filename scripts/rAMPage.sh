@@ -342,8 +342,23 @@ else
 fi
 
 # summarize the log files here
-echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
-$ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
+if [[ "$email" = true ]]; then
+	if [[ "$verbose" == true ]]; then
+		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+		/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
+	else
+		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+		$ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
+	fi
+else
+	if [[ "$verbose" == true ]]; then
+		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+		/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
+	else
+		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+		$ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
+	fi
+fi
 
 end_sec=$(date '+%s')
 
