@@ -232,7 +232,7 @@ $RUN_ENTAP --runP -i $input -t $threads --ini $config_custom --out-dir $outdir $
 code="$?"
 
 if [[ "$code" -eq 140 ]]; then
-	echo -e "\nERROR: No alignments found using DIAMOND.\n" 1>&2
+	echo -e "\nWARNING: No alignments found using DIAMOND.\n" 1>&2
 elif [[ "$code" -eq 0 ]]; then
 	: # do nothing, continue with script
 else
