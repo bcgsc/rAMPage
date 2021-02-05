@@ -5,9 +5,9 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 ## Description
 
-rAMPage is a _de novo_ AMP discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs.
+rAMPage is a _de novo_ anti-microbial peptide (AMP) discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs.
 
-![](Flowchart.png)
+<!--![](Flowchart.png)-->
 
 ## Quick Links
 
@@ -379,18 +379,18 @@ DESCRIPTION:
       A wrapper around rAMPage.sh to allow running of multiple assemblies.
       
 USAGE(S):
-      stAMPede.sh [-a <address>] [-d] [-p] [-s] [-t <int>] [-v] <accessions TXT file>
+      stAMPede.sh [-a <address>] [-d] [-h] [-m] [-p] [-s] [-t <int>] [-v] <accessions TXT file>
       
 OPTION(S):
-       -a <address>  email address for alerts                                                 
-       -d            debug mode                                                               
-       -h            show help menu                                                           
-       -m <target>   Makefile target                                                          (default = exonerate)
-       -p            allow parallel processes for each dataset                                
-       -s            simultaenously run rAMPAge on all datasets (default if SLURM available)  
-       -t <int>      number of threads                                                        (default = 48)
-       -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)                
-                                                                                              
+       -a <address>  email address for alerts                                   
+       -d            debug mode                                                 
+       -h            show help menu                                             
+       -m <target>   Makefile target                                            (default = exonerate)
+       -p            allow parallel processes for each dataset                  
+       -s            simultaenously run rAMPAge on all datasets                 (default if SLURM available)
+       -t <int>      number of threads                                          (default = 48)
+       -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)  
+                                                                                
 ACCESSIONS TXT FORMAT:
        CLASS/SPECIES/TISSUE_OR_CONDITION/input.txt strandedness
        amphibia/ptoftae/skin-liver/input.txt nonstranded
@@ -424,6 +424,8 @@ insecta/mgulosa/venom/input.txt stranded
 ```
 
 ## Directory Structure
+
+Example directory structure:
 
 ```
 rAMPage
