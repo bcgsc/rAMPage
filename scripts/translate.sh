@@ -179,12 +179,15 @@ echo "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')" 1>&2
 $RUN_SEQTK seq rnabloom.transcripts.filtered.fa.transdecoder.pep >rnabloom.transcripts.filtered.transdecoder.faa
 sed -i 's/\*\+$//' rnabloom.transcripts.filtered.transdecoder.faa
 sed -i 's/X\+$//' rnabloom.transcripts.filtered.transdecoder.faa
+
+num_transcripts_orf=$(awk -F ">" '/^>/ {print $2}' rnabloom.transcripts.filtered.transdecoder.faa | awk -F "." '{print $1}' | sort -u | wc -l)
 if [[ -s "rnabloom.transcripts.filtered.transdecoder.faa" ]]; then
 	echo -e "Protein sequences: $outdir/rnabloom.transcripts.filtered.transdecoder.faa\n" 1>&2
 	num_transcripts=$(grep -c '^>' $input)
 	num_prot=$(grep -c '^>' rnabloom.transcripts.filtered.transdecoder.faa)
 	echo "Number of transcripts: $(printf "%'d" $num_transcripts)" 1>&2
-	echo -e "Number of valid ORFs: $(printf "%'d" $num_prot)" 1>&2
+	echo "Number of valid ORFs: $(printf "%'d" $num_prot)" 1>&2
+	echo -e "Number of transcripts with valid ORFs: $(printf "%'d" $num_transcripts_orf)\n" 1>&2
 else
 	touch $outdir/TRANSLATION.FAIL
 	if [[ "$email" = true ]]; then
