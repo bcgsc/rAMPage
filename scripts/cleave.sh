@@ -369,7 +369,13 @@ echo -e "COMMAND: $RUN_SEQTK subseq $outfile <($RUN_SEQTK comp $outfile | awk '{
 $RUN_SEQTK subseq $outfile <($RUN_SEQTK comp $outfile | awk '{if($2>=2 && $2<=200) print $1}') >$outfile_len
 echo -e "Removed $($RUN_SEQTK comp $outfile | awk '{if($2<2 || $2>200) print $1}' | wc -l) sequences.\n" 1>&2
 
-echo -e "Number of sequences remaining: $(grep -c '^>' $outfile_len || true)\n" 1>&2
+if [[ "$(grep -c '^>' $outfile_len)" -eq 0 ]]; then
+	num=0
+else
+	num=$(grep -c '^>' $outfile_len)
+fi
+
+echo -e "Number of sequences remaining: $(printf "%'d" $num)\n" 1>&2
 
 echo -e "Output: $outfile_len\n" 1>&2
 
