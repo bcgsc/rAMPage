@@ -24,11 +24,12 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-h] [-o <output FASTA file>] [-s <0 to 1>] [-t <int>] [-v] <input protein FASTA file>\n \
+		\t$PROGRAM [-d] [-h] [-o <output FASTA file>] [-s <0 to 1>] [-t <int>] [-v] <input protein FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
+		\t-d\tremove absolute duplicates (same length, 100% sequence similarity; overrides -s)\n \
 		\t-h\tshow help menu\n \
 		\t-o <FILE>\toutput FASTA file\t(default = *.nr.faa)\n \
 		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n\
@@ -73,10 +74,11 @@ threads=2
 similarity=0.90
 output=""
 verbose=false
-
+remove_duplicates=false
 # 4 - getopts
-while getopts :ho:s:t:v opt; do
+while getopts :dho:s:t:v opt; do
 	case $opt in
+	d) remove_duplicates=true ;;
 	h) get_help ;;
 	o) output="$(realpath $OPTARG)" ;;
 	s) similarity="$OPTARG" ;;
@@ -130,6 +132,21 @@ if [[ "$verbose" = true ]]; then
 		echo -e "THREADS: $threads\n"
 	} 1>&2
 fi
+if [[ "$remove_duplicates" == true ]]; then
+	similarity=1.0
+	length_cutoffs="-S 0 -s 1"
+else
+	length_cutoffs=""
+fi
+
+if (($(echo "$similarity < 0" | bc -l) || $(echo "$similarity > 1" | bc -l))); then
+	print_error "Sequence similarity cut-off must be between 0 and 1."
+fi
+
+if [[ "$similarity" == "1.0" || "$similarity" -eq 1 ]]; then
+	remove_duplicates=true
+	length_cutoffs="-S 0 -s 1"
+fi
 
 echo "PROGRAM: $(command -v $RUN_CDHIT)" 1>&2
 cdhit_version=$({ $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}' | tr -d '='; } || true)
@@ -137,11 +154,27 @@ echo -e "VERSION: $cdhit_version\n" 1>&2
 
 log=$outdir/cdhit.log
 
+if [[ $(echo "$similarity >= 0.7" | bc -l) && $(echo "$similarity <= 1.0" | bc -l) ]]; then
+	wordsize=5
+elif [[ $(echo "$similarity >= 0.6" | bc -l) ]]; then
+	wordsize=4
+elif [[ $(echo "$similarity >= 0.5" | bc -l) ]]; then
+	wordsize=3
+else
+	wordsize=2
+fi
+
 echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc)% global sequence similarity..." 1>&2
-echo -e "COMMAND: $RUN_CDHIT -i $input -o $output -c $similarity -T $threads -M 0 &>> $log\n" 1>&2
-$RUN_CDHIT -i $input -o $output -c $similarity -T $threads -M 0 &>>$log
+echo -e "COMMAND: $RUN_CDHIT -d 0 -l 4 -i $input -o $output -c $similarity -n $wordsize -T $threads -M 0 $length_cutoffs &>> $log\n" 1>&2
+$RUN_CDHIT -d 0 -l 4 -i $input -o $output -c $similarity -n $wordsize -T $threads -M 0 $length_cutoffs &>>$log
+
+num_seqs=$(grep -c '^>' $input || true)
+num_seqs_nr=$(grep -c '^>' $output || true)
+
+echo "# sequences: $(printf "%'d" $num_seqs)" 1>&2
+echo "# nr sequences: $(printf "%'d" $num_seqs_nr)" 1>&2
 
 if [[ "$verbose" = true ]]; then
-	echo -e "END: $(date)\n" 1>&2
+	echo -e "\nEND: $(date)\n" 1>&2
 	echo -e "STATUS: DONE." 1>&2
 fi
