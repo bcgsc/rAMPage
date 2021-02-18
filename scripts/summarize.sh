@@ -132,60 +132,61 @@ for logdir in "$@"; do
 	else
 		species=$SPECIES
 	fi
-
-	header=()
-	values=()
+	declare -A values
+	# 	header=()
+	#	values=()
 	for i in $(printf '%02d\n' $(seq 1 $(ls $indir | tail -n1 | cut -f1 -d-))); do
 		if [[ "$i" != "04" ]]; then
 			file=$(find $indir -maxdepth 1 -name "$i-*")
 			step=$(basename "$file" ".log" | cut -f2 -d-)
 			case $step in
 			trimmed_reads)
-				header+=("Number of Trimmed Reads")
 				num=$(awk '/Reads passed filter:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Trimmed Reads"]=$num
+				# header+=("Number of Trimmed Reads")
+				# values+=($num)
 				;;
 			assembly)
-				header+=("Number of Assembled Transcripts")
+				# header+=("Number of Assembled Transcripts")
 				num=$(awk '/Total number of assembled non-redundant transcripts:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Assembled Transcripts"]=$num
 				;;
 			filtering)
-				header+=("Number of Filtered Transcripts")
+				# header+=("Number of Filtered Transcripts")
 				num=$(awk '/After   filtering:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Filtered Transcripts"]=$num
 				;;
 			translation)
-				header+=("Number of Filtered Transcripts with Valid ORFs")
+				# header+=("Number of Filtered Transcripts with Valid ORFs")
 				# num=$(awk '/Number of valid ORFs:/ {print $NF}' $file)
 				num=$(awk '/Number of transcripts with valid ORFs:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Filtered Transcripts with Valid ORFs"]=$num
 				;;
 			homology)
-				header+=("Number of Non-redundant AMP Precursors (HMMs)")
+				# header+=("Number of Non-redundant AMP Precursors (HMMs)")
 				num=$(awk '/Number of AMPS found \(non-redundant\):/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Non-redundant AMP Precursors (HMMs)"]=$num
 				;;
 			cleavage)
-				header+=("Number of Cleaved Precursors")
+				# header+=("Number of Cleaved Precursors")
 				num=$(awk '/Number of sequences remaining:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Cleaved Precursors"]=$num
 				;;
 			amplify)
-				header+=("Number of Non-redundant AMPs (HMMs then AMPlify)")
+				# header+=("Number of Non-redundant AMPs (HMMs then AMPlify)")
 				num=$(awk '/Number of Final AMPs:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Non-redundant AMPs (HMMs then AMPlify)"]=$num
 				;;
 			annotation)
-				header+=("Number of Annotated AMPs")
+				# header+=("Number of Annotated AMPs")
 				num=$(awk '/Number of annotated AMPs:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Annotated AMPs"]=$num
 				;;
 			exonerate)
-				header+=("Number of Novel AMPs")
+				# header+=("Number of Novel AMPs")
 				num=$(awk '/Number of Novel AMPs:/ {print $NF}' $file)
 				# num=$(awk '/Number of high-confidence \(score >= [0-9]\.?[0-9]*\), short \(length <= [0-9]+\), and positive \(charge >= -?[0-9]+\) unique AMPs:/ {print $NF}' $file)
-				values+=($num)
+				values["Number of Novel AMPs"]=$num
 				;;
 			sable) ;;
 			esac
@@ -193,12 +194,14 @@ for logdir in "$@"; do
 	done
 
 	path=$(echo "$workdir" | sed "s|$ROOT_DIR/||")
-	echo "Path ${header[@]// /_}" | tr ' ' '\t' | tr '_' ' ' >$outfile_wide
+	echo "Path ${!values[*]}" | sed 's/ //g' | tr ' ' '\t' | tr '_' ' ' >$outfile_wide
 	echo "$path ${values[*]}" | tr ' ' '\t' >>$outfile_wide
 
+	headers=("Number of Trimmed Reads" "Number of Assembled Transcripts" "Number of Filtered Transcripts" "Number of Filtered Transcripts with Valid ORFs" "Number of Non-redundant AMP Precursors (HMMs)" "Number of Cleaved Precursors" "Number of Non-redundant AMPs (HMMs then AMPlify)" "Number of Annotated AMPs" "Number of Novel AMPs")
+
 	echo -e "Path\t$path" >$outfile_long
-	for i in "${!header[@]}"; do
-		echo -e "${header[i]}\t${values[i]}" >>$outfile_long
+	for i in "${headers[@]}"; do
+		echo -e "${i}\t${values[$i]}" >>$outfile_long
 	done
 
 	if [[ "$#" -eq 1 ]]; then
@@ -214,29 +217,35 @@ for logdir in "$@"; do
 		amp_outfile_wide_ordered=$indir/00-amps.wide.ordered.tsv
 
 		echo -e "Path\t$path" >$amp_outfile_long
-		awk 'BEGIN{OFS="\t"} /\samps\..+\.nr\.faa\s+[0-9]+/ {print $1, $2}' $indir/10-amplify.log >>$amp_outfile_long
+		awk 'BEGIN{OFS="\t"} /\samps.*\.nr\.faa\s+[0-9]+/ {print $1, $2}' $indir/10-amplify.log >>$amp_outfile_long
 		#		grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1, $2}' >>$amp_outfile_long
-		echo -e "Path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1}' | tr '\n' '\t' | sed 's/\t$//')" >$amp_outfile_wide
-		echo -e "$path\t$(grep '\samps\..\+\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $2}' | tr '\n' '\t' | sed 's/\t$//')" >>$amp_outfile_wide
+		echo -e "Path\t$(grep '\samps.*\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $1}' | tr '\n' '\t' | sed 's/\t$//')" >$amp_outfile_wide
+		echo -e "$path\t$(grep '\samps.*\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log | awk 'BEGIN{OFS="\t"}{print $2}' | tr '\n' '\t' | sed 's/\t$//')" >>$amp_outfile_wide
 
-		key_order=("amps.conf.nr.faa" "amps.short.nr.faa" "amps.charge.nr.faa" "amps.conf.charge.nr.faa" "amps.short.charge.nr.faa" "amps.conf.short.nr.faa" "amps.conf.short.charge.nr.faa" "amps.conf_0.90.short.charge.nr.faa")
+		# key_order=("amps.nr.faa" "amps.conf.nr.faa" "amps.charge.nr.faa" "amps.short.nr.faa" "amps.conf.charge.nr.faa" "amps.conf.short.nr.faa" "amps.short.charge.nr.faa" "amps.conf.short.charge.nr.faa")
 
 		declare -A dict
 		while read file num; do
 			dict[$file]=$num
-		done < <(grep '\samps\..*\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log)
+		done < <(grep '\samps.*\.nr\.faa\s\+[0-9]\+' $indir/10-amplify.log)
 
-		echo -e "Path\t$(echo ${key_order[*]} | tr ' ' '\t')" >$amp_outfile_wide_ordered
+		echo -ne "Path\t" >$amp_outfile_wide_ordered
+		#		for i in "${key_order[@]}"; do
+		for i in "${!dict[@]}"; do
+			echo -ne "$i\t" >>$amp_outfile_wide_ordered
+		done
+		sed -i 's/\t$/\n/' $amp_outfile_wide_ordered
 		echo -ne "$path\t" >>$amp_outfile_wide_ordered
-
-		for i in "${key_order[@]}"; do
-			if [[ -f $(dirname $indir)/amplify ]]; then
+		#		for i in "${key_order[@]}"; do
+		for i in "${!dict[@]}"; do
+			if [[ -e $(dirname $indir)/amplify/$i ]]; then
 				echo -ne "${dict[$i]}\t" >>$amp_outfile_wide_ordered
+			else
+				echo -ne"NA\t" >>$amp_outfile_wide_ordered
 			fi
 		done
+		sed -i 's/\t$/\n/' $amp_outfile_wide_ordered
 
-		sed -i 's/\t$//' $amp_outfile_wide_ordered
-		echo >>$amp_outfile_wide_ordered
 		if [[ "$#" -eq 1 ]]; then
 			column -s $'\t' -t $amp_outfile_long 1>&2
 			echo 1>&2
