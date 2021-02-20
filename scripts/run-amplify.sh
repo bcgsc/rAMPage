@@ -26,7 +26,7 @@ function get_help() {
 		\tOUTPUT:\n \
 		\t-------\n \
 		\t  - amps.conf.short.charge.nr.faa\n \
-		\t  - AMPlify_results.conf.short.charge.tsv\n \
+		\t  - AMPlify_results.conf.short.charge.nr.tsv\n \
 		\n \
 		\tEXIT CODES:\n \
 		\t-----------\n \
@@ -101,9 +101,8 @@ custom_threads=false
 charge=2
 outdir=""
 debug=false
-rr=1.0
 # 4 - read options
-while getopts :a:c:dhl:o:r:s:t: opt; do
+while getopts :a:c:dhl:o:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -111,7 +110,6 @@ while getopts :a:c:dhl:o:r:s:t: opt; do
 		;;
 	c) charge="$OPTARG" ;;
 	d) debug=true ;;
-	r) rr="$OPTARG" ;;
 	s) confidence="$OPTARG" ;;
 	h) get_help ;;
 	l) length="$OPTARG" ;;
@@ -161,14 +159,8 @@ if [[ ! -v SPECIES ]]; then
 else
 	species=$SPECIES
 fi
-if (($(echo "$rr <= 0" | bc -l) || $(echo "$rr > 1" | bc -l))); then
-	print_error "Invalid argument for -r <0 to 1>: $rr"
-fi
-# if [[ "$rr" -lt 0 || "$rr" -gt 1 ]]; then
-# 	print_error "Invalid argument for -r <0 to 1>: $rr"
-# fi
 
-if (($(echo "$confidence < 0.5" | bc -l) || $(echo "$rr > 1" | bc -l))); then
+if (($(echo "$confidence < 0.5" | bc -l) || $(echo "$confidence > 1" | bc -l))); then
 	print_error "Invalid argument for -c <0.5 to 1>: $confidence"
 fi
 
@@ -303,8 +295,8 @@ len_seq=$($RUN_SEQTK comp $input | awk '{if($2<2 || $2>200) print $1}' | wc -l)
 
 if [[ "$len_seq" -ne 0 ]]; then
 	echo "Removing sequences with length < 2 or > 200 amino acids..." 1>&2
-	echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.faa <($RUN_SEQTK comp $input | awk '{if(\$2>=2 && \$2<=200) print \$1}') > ${input/.faa/.len.faa}\n" 1>&2
-	$RUN_SEQTK subseq $outdir/AMPlify_results.faa <($RUN_SEQTK comp $input | awk '{if($2>=2 && $2<=200) print $1}') >${input/.faa/.len.faa}
+	echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <($RUN_SEQTK comp $input | awk '{if(\$2>=2 && \$2<=200) print \$1}') > ${input/.faa/.len.faa}\n" 1>&2
+	$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <($RUN_SEQTK comp $input | awk '{if($2>=2 && $2<=200) print $1}') >${input/.faa/.len.faa}
 	echo -e "Removed $len_seq sequences.\n" 1>&2
 	input=${input/.faa/.len.faa}
 	echo -e "Output: $input\n" 1>&2
@@ -346,18 +338,18 @@ if [[ ! -s $file ]]; then
 fi
 
 # remove empty lines
-(cd $outdir && ln -fs $(basename $file) AMPlify_results.txt)
-file=$outdir/AMPlify_results.txt
+(cd $outdir && ln -fs $(basename $file) AMPlify_results.nr.txt)
+file=$outdir/AMPlify_results.nr.txt
 sed -i --follow-symlinks '/^$/d' $file
 
 # convert TXT to TSV
 if [[ "$debug" = false ]]; then
-	if [[ -s $outdir/AMPlify_results.faa ]]; then
-		rm $outdir/AMPlify_results.faa
+	if [[ -s $outdir/AMPlify_results.nr.faa ]]; then
+		rm $outdir/AMPlify_results.nr.faa
 	fi
 
 	echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
-	echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" >$outdir/AMPlify_results.tsv
+	echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" >$outdir/AMPlify_results.nr.tsv
 	while read line; do
 		seq_id=$(echo "$line" | awk '{print $NF}')
 		read line
@@ -381,22 +373,22 @@ if [[ "$debug" = false ]]; then
 		pepcharge=$((num_pos - num_neg))
 
 		len=$(echo -n "$sequence" | wc -c)
-		echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.faa
-		echo "$sequence" >>$outdir/AMPlify_results.faa
+		echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.nr.faa
+		echo "$sequence" >>$outdir/AMPlify_results.nr.faa
 
-		echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn" >>$outdir/AMPlify_results.tsv
+		echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn" >>$outdir/AMPlify_results.nr.tsv
 	done <$file
 else
-	if [[ -s $outdir/AMPlify_results.faa && -s $outdir/AMPlify_results.tsv ]]; then
+	if [[ -s $outdir/AMPlify_results.nr.faa && -s $outdir/AMPlify_results.nr.tsv ]]; then
 		# echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
 		echo -e "DEBUG MODE: Skipping TXT to TSV conversion...\n" 1>&2
 	else
-		if [[ -s $outdir/AMPlify_results.faa ]]; then
-			rm $outdir/AMPlify_results.faa
+		if [[ -s $outdir/AMPlify_results.nr.faa ]]; then
+			rm $outdir/AMPlify_results.nr.faa
 		fi
 
 		echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
-		echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" >$outdir/AMPlify_results.tsv
+		echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" >$outdir/AMPlify_results.nr.tsv
 		while read line; do
 			seq_id=$(echo "$line" | awk '{print $NF}')
 			read line
@@ -420,15 +412,15 @@ else
 			pepcharge=$((num_pos - num_neg))
 
 			len=$(echo -n "$sequence" | wc -c)
-			echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.faa
-			echo "$sequence" >>$outdir/AMPlify_results.faa
+			echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.nr.faa
+			echo "$sequence" >>$outdir/AMPlify_results.nr.faa
 
-			echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn" >>$outdir/AMPlify_results.tsv
+			echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn" >>$outdir/AMPlify_results.nr.tsv
 		done <$file
 	fi
 fi
 
-header=$(head -n1 $outdir/AMPlify_results.tsv)
+header=$(head -n1 $outdir/AMPlify_results.nr.tsv)
 
 input_count=$(grep -c '^>' $input || true)
 
@@ -442,27 +434,14 @@ echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&
 #----------------------------------------------------------
 filter_counter=1
 echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50)..." 1>&2
-echo "$header" >$outdir/AMPlify_results.amps.tsv
-echo -e "COMMAND: awk -F \"\\\t\" '{if(\$5==\"AMP\") print}' <(tail -n +2 $outdir/AMPlify_results.tsv) >> $outdir/AMPlify_results.amps.tsv\n" 1>&2
-awk -F "\t" '{if($5=="AMP") print}' <(tail -n +2 $outdir/AMPlify_results.tsv) >>$outdir/AMPlify_results.amps.tsv
+echo "$header" >$outdir/AMPlify_results.amps.nr.tsv
+echo -e "COMMAND: awk -F \"\\\t\" '{if(\$5==\"AMP\") print}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv) >> $outdir/AMPlify_results.amps.nr.tsv\n" 1>&2
+awk -F "\t" '{if($5=="AMP") print}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv) >>$outdir/AMPlify_results.amps.nr.tsv
 
 echo "Converting those sequences to FASTA format..." 1>&2
 # 4th field is prediction, and 1st field is sequence ID:
-echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.faa <(awk -F \"\\\t\" '{if(\$5==\"AMP\") print \$1}' <(tail -n +2 $outdir/AMPlify_results.tsv)) > ${outfile} || true\n" 1>&2
-$RUN_SEQTK subseq $outdir/AMPlify_results.faa <(awk -F "\t" '{if($5=="AMP") print $1}' <(tail -n +2 $outdir/AMPlify_results.tsv)) >${outfile} || true
-
-if [[ -s ${outfile} || $(grep -c '^>' $outfile) -gt 1 ]]; then
-	echo "Removing duplicate sequences..." 1>&2
-	$ROOT_DIR/scripts/run-cdhit.sh -c $rr -o ${outfile_nr} -t $threads ${outfile}
-	#	echo 1>&2
-
-	echo "Filtering for those resulting unique sequences in the AMPlify results..." 1>&2
-	echo "$header" >$outdir/AMPlify_results.amps.nr.tsv
-	echo -e "COMMAND: grep -Ff <(awk '/^>/ {print \$1}' ${outfile_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.amps.tsv >> $outdir/AMPlify_results.amps.nr.tsv\n" 1>&2
-	grep -Ff <(awk '/^>/ {print $1}' ${outfile_nr} | tr -d '>' | sed 's/$/\t/') $outdir/AMPlify_results.amps.tsv >>$outdir/AMPlify_results.amps.nr.tsv || true
-else
-	cp $outfile $outfile_nr
-fi
+echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F \"\\\t\" '{if(\$5==\"AMP\") print \$1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) > ${outfile} || true\n" 1>&2
+$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F "\t" '{if($5=="AMP") print $1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) >${outfile} || true
 
 echo "SUMMARY" 1>&2
 print_line
@@ -798,9 +777,9 @@ echo -e "$(basename $outfile_nr)\t$count\n \
 echo -e "\
 	File (nr = non-redundant)\tDescription\n \
 	-------------------------\t-----------\n \
-	AMPlify_results.txt\traw AMPlify results\n \
-	AMPlify_results.tsv\traw AMPlify results parsed into a TSV\n \
-	AMPlify_results.faa\tsequences of raw AMPlify results with new headers\n \
+	AMPlify_results.nr.txt\traw AMPlify results\n \
+	AMPlify_results.nr.tsv\traw AMPlify results parsed into a TSV\n \
+	AMPlify_results.nr.faa\tsequences of raw AMPlify results with new headers\n \
 	$(basename $outfile_nr)\tnr sequences in AMPlify results labelled 'AMP'\n \
 	$outfile_conf_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence\n \
 	$outfile_charge_nr_ln\tnr sequences labelled 'AMP' with charge >= $charge\n \
@@ -817,9 +796,9 @@ echo -e "\
 	echo -e "\
 		File (nr = non-redundant)\tDescription\n \
 		-------------------------\t-----------\n \
-		AMPlify_results.txt\traw AMPlify results\n \
-		AMPlify_results.tsv\traw AMPlify results parsed into a TSV\n \
-		AMPlify_results.faa\tsequences of raw AMPlify results with new headers\n \
+		AMPlify_results.nr.txt\traw AMPlify results\n \
+		AMPlify_results.nr.tsv\traw AMPlify results parsed into a TSV\n \
+		AMPlify_results.nr.faa\tsequences of raw AMPlify results with new headers\n \
 		$(basename $outfile_nr)\tnr sequences in AMPlify results labelled 'AMP'\n \
 		$outfile_conf_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence\n \
 		$outfile_charge_nr_ln\tnr sequences labelled 'AMP' with charge >= $charge\n \
