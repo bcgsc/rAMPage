@@ -164,7 +164,7 @@ for logdir in "$@"; do
 				;;
 			homology)
 				# header+=("Number of Non-redundant AMP Precursors (HMMs)")
-				num=$(awk '/Number of AMPS found \(non-redundant\):/ {print $NF}' $file)
+				num=$(awk '/Number of AMPs found \(non-redundant\):/ {print $NF}' $file)
 				values["Number of Non-redundant AMP Precursors (HMMs)"]=$num
 				;;
 			cleavage)
