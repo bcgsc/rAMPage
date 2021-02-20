@@ -26,6 +26,7 @@ function get_help() {
 		\t  - cleaved.mature.len.faa\n \
 		\t  - CLEAVE.DONE or CLEAVE.FAIL\n \
 		\t  - CLEAVE_LEN.DONE or CLEAVE_LEN.FAIL\n \
+		\t  - CLEAVE_LEN_NR.DONE or CLEAVE_LEN_NR.FAIL\n \
 		\n \
 		\tEXIT CODES:\n \
 		\t-----------\n \
@@ -34,21 +35,24 @@ function get_help() {
 		\t  - 2: SignalP not found\n \
 		\t  - 3: cleavage failed\n \
 		\t  - 4: length filtering failed\n \
+		\t  - 5: redundancy removal failed\n \
 		\n \
 		\tFor more information on ProP: https://services.healthtech.dtu.dk/service.php?ProP-1.0\n \
 		" | table
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c] [-h] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c] [-d] [-h] [-s <0 to 1>] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
 		\t-c\tallow consecutive (i.e. adjacent) segments to be recombined\n \
+		\t-d\tdebug mode (skips running ProP)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
+		\t-s <0 to 1>\tredundancy removal cut-off\t(default = 1.0)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -95,8 +99,10 @@ email=false
 # similarity=0.90
 consecutive=false
 outdir=""
+similarity=1.0
+debug=false
 # 4 - read options
-while getopts :a:cho: opt; do
+while getopts :a:cho:s:d opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -105,11 +111,14 @@ while getopts :a:cho: opt; do
 	c)
 		consecutive=true
 		;;
+	d)
+		debug=true
+		;;
 	h) get_help ;;
 	o)
 		outdir="$(realpath $OPTARG)"
 		;;
-		#		s) similarity="$OPTARG";;
+	s) similarity="$OPTARG" ;;
 	\?)
 		print_error "Invalid option: -$OPTARG" 1>&2
 		;;
@@ -135,11 +144,17 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
 fi
 
+if (($(echo "$similarity <= 0" | bc -l) || $(echo "$similarity > 1" | bc -l))); then
+	print_error "Invalid argument for -r <0 to 1>: $similarity"
+fi
+
 # 7 - remove existing status files
 rm -f $outdir/CLEAVE.DONE
 rm -f $outdir/CLEAVE.FAIL
 rm -f $outdir/CLEAVE_LEN.DONE
 rm -f $outdir/CLEAVE_LEN.FAIL
+rm -f $outdir/CLEAVE_LEN_NR.DONE
+rm -f $outdir/CLEAVE_LEN_NR.FAIL
 
 # 8 - print env details
 {
@@ -274,12 +289,12 @@ fi
 echo "Predicting cleavage sites..." 1>&2
 echo "COMMAND: $RUN_PROP -p -s $infile > $tempfile" 1>&2
 
-$RUN_PROP -p -s $infile >$tempfile
-
-cp $tempfile $outdir/prop.raw.out
-sed -i 's/ \+$//' $tempfile
-sed -i 's/^[[:space:]]*[0-9]\+[[:space:]]*/Sequence: /' $tempfile
-
+if [[ "$debug" = false ]]; then
+	$RUN_PROP -p -s $infile >$tempfile
+	cp $tempfile $outdir/prop.raw.out
+	sed -i 's/ \+$//' $tempfile
+	sed -i 's/^[[:space:]]*[0-9]\+[[:space:]]*/Sequence: /' $tempfile
+fi
 # echo 1>&2
 echo -e "Output: $tempfile\n" 1>&2
 
@@ -289,37 +304,42 @@ echo "Writing ProP results into a separate file for each sequence..." 1>&2
 echo -e "COMAMND: awk -v var=\"$outdir\" 'BEGIN{x=\"/dev/null\"}/^Sequence:/{x=var\"/F\"++i\".txt\";}{print > x;}' $tempfile\n" 1>&2
 # echo -e "COMAMND: awk -v var=\"$outdir\" 'BEGIN{x=\"/dev/null\"}/^\\t[0-9]+/{x=var\"/F\"++i\".txt\";}{print > x;}' $tempfile\n" 1>&2
 # awk -v var="$outdir" 'BEGIN{x="/dev/null"}/^\t[0-9]+/{x=var"/F"++i".txt";}{print > x;}' $tempfile
-awk -v var="$outdir" 'BEGIN{x="/dev/null"}/^Sequence:/{x=var"/F"++i".txt";}{print > x;}' $tempfile
+if [[ "$debug" = false ]]; then
+	awk -v var="$outdir" 'BEGIN{x="/dev/null"}/^Sequence:/{x=var"/F"++i".txt";}{print > x;}' $tempfile
+fi
 # exit 0
 echo "Converting ProP output to a TSV file..." 1>&2
 tsv=$outdir/prop.tsv
 
-echo -e "Sequence\tSignal Peptide\tPropeptide Cleavage" >$tsv
-for i in $outdir/F*.txt; do
-	seqname=$(head -n1 $i | awk '{print $NF}')
-	signal_site=$(awk '/Signal peptide cleavage site predicted/ {print $NF}' $i)
+if [[ "$debug" = false ]]; then
+	echo -e "Sequence\tSignal Peptide\tPropeptide Cleavage" >$tsv
+	for i in $outdir/F*.txt; do
+		seqname=$(head -n1 $i | awk '{print $NF}')
+		signal_site=$(awk '/Signal peptide cleavage site predicted/ {print $NF}' $i)
 
-	if [[ "$signal_site" == "none" ]]; then # || -z "$signal_site" ]] for if -s isn't used for prop
-		signal_site=0
-	else
-		signal_site=$(awk '/Signal peptide cleavage site predicted/ {print $(NF-3)}' $i)
-	fi
+		if [[ "$signal_site" == "none" ]]; then # || -z "$signal_site" ]] for if -s isn't used for prop
+			signal_site=0
+		else
+			signal_site=$(awk '/Signal peptide cleavage site predicted/ {print $(NF-3)}' $i)
+		fi
 
-	prop_sites=$(awk '/\*ProP\*/ {print $2}' $i | tr '\n' ',' | sed 's/,$//')
+		prop_sites=$(awk '/\*ProP\*/ {print $2}' $i | tr '\n' ',' | sed 's/,$//')
 
-	if [[ -z "$prop_sites" ]]; then
-		prop_sites=0
-	fi
+		if [[ -z "$prop_sites" ]]; then
+			prop_sites=0
+		fi
 
-	echo -e "$seqname\t$signal_site\t$prop_sites" >>$tsv
-	rm $i
-done
-
+		echo -e "$seqname\t$signal_site\t$prop_sites" >>$tsv
+		rm $i
+	done
+fi
 # Sambina's cleaving script
 echo "Cleaving peptides..." 1>&2
 # start_cleave=$(date '+%s')
 echo -e "COMMAND: $ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir\n" 1>&2
-$ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir
+if [[ "$debug" = false ]]; then
+	$ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir
+fi
 # end_cleave=$(date '+%s')
 # $ROOT_DIR/scripts/get-runtime.sh $start_cleave $end_cleave
 # echo 1>&2
@@ -329,14 +349,13 @@ echo "Output Files:" 1>&2
 echo -e "\
 - signal_seq.faa: contains all the signal sequences\n\
 - adjacent_seq.faa: contains all the recombined peptide sequences that have adjacent cleaved sequences\n\
-- mature_cleaved_seq.FASTA: contains all the cleaved sequences\n\
+- mature_cleaved_seq.faa: contains all the cleaved sequences\n\
 \t- includes all mature, prop and prepro sequences\n\
-- recombined_seq.FASTA: Contains all the non-adjacent recombined sequences, both two and three cleaved sequences stitched together\n\
+- recombined_seq.faa: Contains all the non-adjacent recombined sequences, both two and three cleaved sequences stitched together\n\
 \t- includes all mature, pro, and prepro sequences)\n\
 " 1>&2
 
 echo "Combining mature_cleaved_seq.faa and recombined_seq.faa into cleaved.mature.faa..." 1>&2
-
 if [[ "$consecutive" = true ]]; then
 	cat $outdir/mature_cleaved_seq.faa $outdir/recombined_seq.faa $outdir/adjacent_seq.faa >$outdir/cleaved.mature.faa
 else
@@ -367,17 +386,8 @@ echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&
 echo "Removing sequences with length < 2 or > 200 amino acids..." 1>&2
 echo -e "COMMAND: $RUN_SEQTK subseq $outfile <($RUN_SEQTK comp $outfile | awk '{if(\$2>=2 && \$2<=200) print \$1}') > $outfile_len\n" 1>&2
 $RUN_SEQTK subseq $outfile <($RUN_SEQTK comp $outfile | awk '{if($2>=2 && $2<=200) print $1}') >$outfile_len
-echo -e "Removed $($RUN_SEQTK comp $outfile | awk '{if($2<2 || $2>200) print $1}' | wc -l) sequences.\n" 1>&2
-
-if [[ "$(grep -c '^>' $outfile_len)" -eq 0 ]]; then
-	num=0
-else
-	num=$(grep -c '^>' $outfile_len)
-fi
-
-echo -e "Number of sequences remaining: $(printf "%'d" $num)\n" 1>&2
-
-echo -e "Output: $outfile_len\n" 1>&2
+remove_seqs=$($RUN_SEQTK comp $outfile | awk '{if($2<2 || $2>200) print $1}' | wc -l)
+echo -e "Removed $(printf "%'d" $remove_seqs) sequences due to length.\n" 1>&2
 
 if [[ ! -s $outfile_len ]]; then
 	touch $outdir/CLEAVE_LEN.FAIL
@@ -390,7 +400,36 @@ if [[ ! -s $outfile_len ]]; then
 		echo "Email alert sent to $address." 1>&2
 	fi
 	exit 4
+else
+	touch $outdir/CLEAVE_LEN.DONE
 fi
+
+echo "Removing duplicate sequences..." 1>&2
+outfile_len_nr=$outdir/cleaved.mature.len.nr.faa
+$ROOT_DIR/scripts/run-cdhit.sh -s $similarity -o ${outfile_len_nr} ${outfile_len}
+
+if [[ ! -s ${outfile_len_nr} ]]; then
+	touch $outdir/CLEAVE_LEN_NR.FAIL
+	echo "ERROR: Redundancy removal output file $outfile_len_nr does not exist or is empty." 1>&2
+	if [[ "$email" = true ]]; then
+		species=$(echo "$species" | sed 's/^./\u&. /')
+		echo "$outdir" | mail -s "${species}: STAGE 09: CLEAVAGE: FAILED" $address
+		echo -e "\nEmail alert sent to $address." 1>&2
+	fi
+	exit 5
+else
+	touch $outdir/CLEAVE_LEN_NR.DONE
+fi
+
+num_len=$(grep -c '^>' $outfile_len || true)
+num_nr=$(grep -c '^>' $outfile_len_nr || true)
+
+remove_seqs=$(echo "$num_len - $num_nr" | bc)
+echo -e "\nRemoved $(printf "%'d" $remove_seqs) duplicate sequences.\n" 1>&2
+
+echo -e "Number of sequences remaining: $(printf "%'d" $num_nr)\n" 1>&2
+
+# echo -e "Output: $outfile_len_nr\n" 1>&2
 
 default_name="$(realpath -s $(dirname $outdir)/cleavage)"
 if [[ "$default_name" != "$outdir" ]]; then
@@ -420,10 +459,9 @@ echo -e "END: $(date)\n" 1>&2
 
 # echo 1>&2
 
-touch $outdir/CLEAVE_LEN.DONE
 echo -e "STATUS: DONE.\n" 1>&2
 
-echo "Output: $outdir/cleaved.mature.len.faa" 1>&2
+echo "Output: $outfile_len_nr" 1>&2
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished cleaving peptides for $org" $address
