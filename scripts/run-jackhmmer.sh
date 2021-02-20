@@ -280,7 +280,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		touch $outdir/SEQUENCES_NR.DONE
 
 		count=$(grep -c '^>' $outdir/jackhmmer.nr.faa)
-		echo -e "Number of AMPS found (non-redundant): $(printf "%'d" $count)\n" 1>&2
+		echo -e "Number of AMPs found (non-redundant): $(printf "%'d" $count)\n" 1>&2
 	else
 		touch $outdir/SEQUENCES_NR.FAIL
 		touch $outdir/HOMOLOGY.FAIL
