@@ -226,7 +226,7 @@ echo -e "VERSION: $(command -v $RUN_AMPLIFY | awk -F "/" '{print $(NF-2)}' | cut
 # echo "VERSION: 1.0.0" 1>&2
 
 # 1 - FILTER BY NOTHING
-outfile=$outdir/amps.faa
+# outfile=$outdir/amps.faa
 outfile_nr=$outdir/amps.nr.faa
 
 # 2 - FILTER BY SCORE
@@ -440,8 +440,8 @@ awk -F "\t" '{if($5=="AMP") print}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)
 
 echo "Converting those sequences to FASTA format..." 1>&2
 # 4th field is prediction, and 1st field is sequence ID:
-echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F \"\\\t\" '{if(\$5==\"AMP\") print \$1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) > ${outfile} || true\n" 1>&2
-$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F "\t" '{if($5=="AMP") print $1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) >${outfile} || true
+echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F \"\\\t\" '{if(\$5==\"AMP\") print \$1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) > ${outfile_nr} || true\n" 1>&2
+$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F "\t" '{if($5=="AMP") print $1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) >${outfile_nr} || true
 
 echo "SUMMARY" 1>&2
 print_line
@@ -773,8 +773,8 @@ echo -e "$(basename $outfile_nr)\t$count\n \
 	$outfile_short_charge_lower_nr_ln\t$count_short_charge_lower\n \
 	$outfile_conf_short_charge_nr_ln\t$count_conf_short_charge\n \
 	" | sed 's/^\s\+//g' | sed '/^$/d' | grep -v "NA" >$outdir/amps.summary.tsv
-
-echo -e "\
+{
+	echo -e "\
 	File (nr = non-redundant)\tDescription\n \
 	-------------------------\t-----------\n \
 	AMPlify_results.nr.txt\traw AMPlify results\n \
@@ -790,7 +790,24 @@ echo -e "\
 	$outfile_short_charge_lower_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower_lower}, length <= $length, and charge >= $charge\n \
 	$outfile_short_charge_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower}, length <= $length, and charge >= $charge\n \
 	$outfile_conf_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence, length <= $length, and charge >= $charge\n \
-	" | sed 's/^\s\+//g' | sed '/^$/d' | table >$outdir/README
+	"
+
+	echo -e "\
+		FASTA\tTSV\n \
+		-----\t---\n \
+		AMPlify_results.nr.faa\tAMPlify_results.nr.tsv\n \
+		$outfile_nr\tAMPlify_results.amps.nr.tsv\n \
+		$outfile_conf_nr_ln\tAMPlify_results.conf.nr.tsv\n \
+		$outfile_charge_nr_ln\tAMPlify_results.charge.nr.tsv\n \
+		$outfile_short_nr_ln\tAMPlify_results.short.nr.tsv\n \
+		$outfile_conf_charge_nr_ln\tAMPlify_results.conf.charge.nr.tsv\n \
+		$outfile_conf_short_nr_ln\tAMPlify_results.conf.short.nr.tsv\n \
+		$outfile_short_charge_nr_ln\tAMPlify_results.short.charge.nr.tsv\n \
+		$outfile_short_charge_lower_lower_nr_ln\tAMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv\n \
+		$outfile_short_charge_lower_nr_ln\tAMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv\n \
+		$outfile_conf_short_charge_nr_ln\tAMPlify_results.conf.short.charge.nr.tsv\n \
+	"
+} | sed 's/^\s\+//g' | sed '/^$/d' | table >$outdir/README
 
 {
 	echo -e "\
@@ -810,6 +827,21 @@ echo -e "\
 		$outfile_short_charge_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower}, length <= $length, and charge >= $charge\n \
 		$outfile_conf_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence, length <= $length, and charge >= $charge\n \
 		"
+	echo -e "\
+		FASTA\tTSV\n \
+		-----\t---\n \
+		AMPlify_results.nr.faa\tAMPlify_results.nr.tsv\n \
+		$outfile_nr\tAMPlify_results.amps.nr.tsv\n \
+		$outfile_conf_nr_ln\tAMPlify_results.conf.nr.tsv\n \
+		$outfile_charge_nr_ln\tAMPlify_results.charge.nr.tsv\n \
+		$outfile_short_nr_ln\tAMPlify_results.short.nr.tsv\n \
+		$outfile_conf_charge_nr_ln\tAMPlify_results.conf.charge.nr.tsv\n \
+		$outfile_conf_short_nr_ln\tAMPlify_results.conf.short.nr.tsv\n \
+		$outfile_short_charge_nr_ln\tAMPlify_results.short.charge.nr.tsv\n \
+		$outfile_short_charge_lower_lower_nr_ln\tAMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv\n \
+		$outfile_short_charge_lower_nr_ln\tAMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv\n \
+		$outfile_conf_short_charge_nr_ln\tAMPlify_results.conf.short.charge.nr.tsv\n \
+	"
 	echo -e "\
 	File (nr = non-redundant)\tAMP Count\n \
 	-------------------------\t-----------"
