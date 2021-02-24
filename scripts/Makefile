@@ -73,26 +73,26 @@ annotation/final_annotations.final.tsv annotation/final_results/final_annotation
 # 10. amplify
 amplify: amplify/amps.final.faa
 
-amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE logs/10-amplify.log &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.faa $(ROOT_DIR)/scripts/run-cdhit.sh cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
+amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE logs/10-amplify.log &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.nr.faa cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.faa &> logs/10-amplify.log; \
+			$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -o amplify cleavage/cleaved.mature.len.faa &> logs/10-amplify.log; \
+			$< -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	fi
 
 # 9. cleavage
-cleavage: cleavage/cleaved.mature.len.faa
+cleavage: cleavage/cleaved.mature.len.nr.faa
 
-cleavage/cleaved.mature.len.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
+cleavage/cleaved.mature.len.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh $(ROOT_DIR)/scripts/run-cdhit.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs)/09-cleavage.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
