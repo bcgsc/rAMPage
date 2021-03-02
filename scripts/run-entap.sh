@@ -2,6 +2,12 @@
 set -uo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
+
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
 args="$FULL_PROGRAM $*"
 
 # 0 - table function
