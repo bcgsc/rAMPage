@@ -137,56 +137,66 @@ for logdir in "$@"; do
 	#	values=()
 	for i in $(printf '%02d\n' $(seq 1 $(ls $indir | tail -n1 | cut -f1 -d-))); do
 		if [[ "$i" != "04" ]]; then
-			file=$(find $indir -maxdepth 1 -name "$i-*")
+			file=$(find $indir -maxdepth 1 -name "$i-*" | head -n1)
 			step=$(basename "$file" ".log" | cut -f2 -d-)
+			# echo $file
 			case $step in
 			trimmed_reads)
 				num=$(awk '/Reads passed filter:/ {print $NF}' $file)
 				values["Number of Trimmed Reads"]=$num
 				# header+=("Number of Trimmed Reads")
 				# values+=($num)
+				# echo "Trimmed Reads: $num"
 				;;
 			assembly)
 				# header+=("Number of Assembled Transcripts")
 				num=$(awk '/Total number of assembled non-redundant transcripts:/ {print $NF}' $file)
 				values["Number of Assembled Transcripts"]=$num
+				# echo "Assembly: $num"
 				;;
 			filtering)
 				# header+=("Number of Filtered Transcripts")
 				num=$(awk '/After   filtering:/ {print $NF}' $file)
 				values["Number of Filtered Transcripts"]=$num
+				# echo "Filtering: $num"
 				;;
 			translation)
 				# header+=("Number of Filtered Transcripts with Valid ORFs")
 				# num=$(awk '/Number of valid ORFs:/ {print $NF}' $file)
 				num=$(awk '/Number of transcripts with valid ORFs:/ {print $NF}' $file)
 				values["Number of Filtered Transcripts with Valid ORFs"]=$num
+				# echo "Translation: $num"
 				;;
 			homology)
 				# header+=("Number of Non-redundant AMP Precursors (HMMs)")
 				num=$(awk '/Number of AMPs found \(non-redundant\):/ {print $NF}' $file)
 				values["Number of Non-redundant AMP Precursors (HMMs)"]=$num
+				# echo "Homology: $num"
 				;;
 			cleavage)
 				# header+=("Number of Cleaved Precursors")
 				num=$(awk '/Number of sequences remaining:/ {print $NF}' $file)
 				values["Number of Cleaved Precursors"]=$num
+				# echo "Cleavage: $num"
 				;;
 			amplify)
 				# header+=("Number of Non-redundant AMPs (HMMs then AMPlify)")
 				num=$(awk '/Number of Final AMPs:/ {print $NF}' $file)
 				values["Number of Non-redundant AMPs (HMMs then AMPlify)"]=$num
+				# echo "AMPlify: $num"
 				;;
 			annotation)
 				# header+=("Number of Annotated AMPs")
 				num=$(awk '/Number of annotated AMPs:/ {print $NF}' $file)
 				values["Number of Annotated AMPs"]=$num
+				# echo "Annotation: $num"
 				;;
 			exonerate)
 				# header+=("Number of Novel AMPs")
 				num=$(awk '/Number of Novel AMPs:/ {print $NF}' $file)
 				# num=$(awk '/Number of high-confidence \(score >= [0-9]\.?[0-9]*\), short \(length <= [0-9]+\), and positive \(charge >= -?[0-9]+\) unique AMPs:/ {print $NF}' $file)
 				values["Number of Novel AMPs"]=$num
+				# echo "Novel: $num"
 				;;
 			sable) ;;
 			esac
@@ -194,8 +204,26 @@ for logdir in "$@"; do
 	done
 
 	path=$(echo "$workdir" | sed "s|$ROOT_DIR/||")
-	echo "Path ${!values[*]}" | sed 's/ //g' | tr ' ' '\t' | tr '_' ' ' >$outfile_wide
-	echo "$path ${values[*]}" | tr ' ' '\t' >>$outfile_wide
+
+	headers=("Number of Trimmed Reads" "Number of Assembled Transcripts" "Number of Filtered Transcripts" "Number of Filtered Transcripts with Valid ORFs" "Number of Non-redundant AMP Precursors (HMMs)" "Number of Cleaved Precursors" "Number of Non-redundant AMPs (HMMs then AMPlify)" "Number of Annotated AMPs" "Number of Novel AMPs")
+
+	# echo "${headers[*]}"
+
+	echo -ne "Path\t" >$outfile_wide
+
+	for i in "${headers[@]}"; do
+		echo -ne "$i\t" >>$outfile_wide
+	done
+	sed -i 's/\t$//' $outfile_wide
+	echo -ne "\n$path\t" >>$outfile_wide
+
+	for i in "${headers[@]}"; do
+		echo -ne "${values[$i]}\t" >>$outfile_wide
+	done
+	sed -i 's/\t$//' $outfile_wide
+	echo >>$outfile_wide
+	# echo "Path ${!values[*]}" | sed 's/ //g' | tr ' ' '\t' | tr '_' ' ' >$outfile_wide
+	# echo "$path ${values[*]}" | tr ' ' '\t' >>$outfile_wide
 
 	headers=("Number of Trimmed Reads" "Number of Assembled Transcripts" "Number of Filtered Transcripts" "Number of Filtered Transcripts with Valid ORFs" "Number of Non-redundant AMP Precursors (HMMs)" "Number of Cleaved Precursors" "Number of Non-redundant AMPs (HMMs then AMPlify)" "Number of Annotated AMPs" "Number of Novel AMPs")
 
