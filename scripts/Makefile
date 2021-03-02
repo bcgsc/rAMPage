@@ -9,6 +9,8 @@ ENTAPDIR := $(shell dirname $(RUN_ENTAP))
 DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
+REF_AMP_PRECURSOR := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.precursor.faa)
+REF_AMP_MATURE := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.mature.faa)
 
 .PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation
 
@@ -35,7 +37,7 @@ sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/script
 
 # 12. exonerate
 exonerate: exonerate/labelled.amps.exonerate.nr.faa
-exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
+exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP_PRECURSOR) $(REF_AMP_MATURE) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
 	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
