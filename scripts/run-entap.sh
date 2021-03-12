@@ -233,7 +233,7 @@ else
 fi
 
 echo -e "COMMAND: $RUN_ENTAP --runP -i $input -t $threads --ini $config_custom  --out-dir $outdir $db &> $outdir/entap.log\n" 1>&2
-$RUN_ENTAP --runP -i $input -t $threads --ini $config_custom --out-dir $outdir $db &>$outdir/entap.log
+$RUN_ENTAP --overwrite --runP -i $input -t $threads --ini $config_custom --out-dir $outdir $db &>$outdir/entap.log
 
 code="$?"
 
@@ -290,20 +290,20 @@ if [[ "$code" -eq 0 ]]; then
 	processed=$outdir/$(basename $input | sed 's/.faa$/.annotated.faa/')
 	cp $input $processed
 	for seq in $(awk -F ">" '/^>/ {print $2}' $outdir/final_results/final_annotated.faa); do
-		sed -i "/${seq} / s/ length=/-annotated&/" $processed
+		# sed -i "/${seq} / s/ length=/-annotated&/" $processed
 		subject=$(awk -F "\t" -v var=$seq '{if($1==var) print $2}' $final_tsv)
 		if [[ -n $subject ]]; then
-			sed -i "/${seq}-annotated/ s/$/ diamond=$subject/" $processed
+			sed -i "/${seq} / s/$/ diamond=$subject/" $processed
 		fi
 		taxonomy=$(awk -F "\t" -v var=$seq '{if($1==var) print $14}' $final_tsv | tr ' ' '_')
 		if [[ -n $taxonomy ]]; then
-			sed -i "/${seq}-annotated/ s/$/ taxonomy=$taxonomy/" $processed
+			sed -i "/${seq} / s/$/ taxonomy=$taxonomy/" $processed
 		fi
 		ipscan=$(awk -F "\t" -v var=$seq '{if ($1==var) print $44}' $final_tsv | cut -d \( -f1)
 		if [[ -n $ipscan ]]; then
-			sed -i "/${seq}-annotated/ s/$/ InterProScan=$ipscan/" $processed
+			sed -i "/${seq} / s/$/ InterProScan=$ipscan/" $processed
 		fi
-		sed -i "s/${seq}\t/${seq}-annotated\t/" $final_tsv
+		# sed -i "s/${seq}\t/${seq}-annotated\t/" $final_tsv
 	done
 else
 	processed=$outdir/$(basename $input | sed 's/.faa$/.annotated.faa/')
@@ -318,7 +318,7 @@ else
 	done
 fi
 
-num_annotated=$(grep -c '\-annotated' $processed)
+num_annotated=$(grep -c '^>' $outdir/final_results/final_annotated.faa)
 num_total=$(grep -c '^>' $processed)
 
 echo -e "Number of annotated AMPs: $(printf "%'d" $num_annotated)/$(printf "%'d" $num_total)\n" 1>&2
