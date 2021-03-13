@@ -57,7 +57,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -c -o /path/to/cleavage /path/to/homology/jackhmmer.nr.faa\n \
+		\t$PROGRAM -a user@example.com -c -o /path/to/cleavage/outdir /path/to/homology/jackhmmer.nr.faa\n \
 		" | table
 	} 1>&2
 	exit 1

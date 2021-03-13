@@ -37,7 +37,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/sable/dir /path/to/exonerate/labelled.amps.exonerate.nr.faa  /path/to/amplify/AMPlify_results.final.tsv\n \
+		\t$PROGRAM -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/amplify/AMPlify_results.final.tsv\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -106,22 +106,6 @@ fi
 
 rm -f $outdir/SABLE.FAIL
 
-{
-	echo "HOSTNAME: $(hostname)"
-	echo -e "START: $(date)\n"
-
-	echo -e "PATH=$PATH\n"
-
-	echo "CALL: $args (wd: $(pwd))"
-	echo -e "THREADS: $threads\n"
-} 1>&2
-
-echo "PROGRAM: $(command -v $RUN_SABLE)"
-echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
-
-echo "PROGRAM: $(command -v $BLAST_DIR/psiblast)" 1>&2
-echo -e "VERSION: $($BLAST_DIR/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
-
 # if workdir is unbound then
 if [[ ! -v WORKDIR ]]; then
 	# get workdir from input
@@ -138,13 +122,15 @@ else
 fi
 
 fasta=$(realpath $1)
-
-if [[ ! -s $fasta ]]; then
-	if [[ ! -f $fasta ]]; then
-		print_error "Input file $fasta does not exist."
-	else
-		print_error "Input file $fasta is empty!"
-	fi
+if [[ ! -f $fasta ]]; then
+	print_error "Input file $fasta does not exist."
+elif [[ ! -s $fasta ]]; then
+	# print_error "Input file $fasta is empty!"
+	echo "Input file $fasta is empty. There are no sequences to characterize." 1>&2
+	echo -e "Sequence ID\tSequence\tAnnotation\tScore\tCharge\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outdir/SABLE_results.tsv
+	rm -f $outdir/SABLE.FAIL
+	touch $outdir/SABLE.DONE
+	exit 0
 elif [[ "$fasta" != *.fa* ]]; then
 	print_error "Input file $fasta is not a FASTA file."
 fi
@@ -159,6 +145,22 @@ if [[ ! -s $tsv_file ]]; then
 elif [[ "$tsv_file" != *.tsv ]]; then
 	print_error "Input file $tsv_file is not a TSV file."
 fi
+
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n"
+
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
+} 1>&2
+
+echo "PROGRAM: $(command -v $RUN_SABLE)"
+echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
+
+echo "PROGRAM: $(command -v $BLAST_DIR/psiblast)" 1>&2
+echo -e "VERSION: $($BLAST_DIR/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2
 
 # This script differs, as it must be run in the output directory.
 echo "Predicting secondary structures using SABLE..." 1>&2

@@ -31,7 +31,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-h] [-t <int>] -i <input FASTA file> -o <output directory> <database FASTA file(s)>\n \
+		\t$PROGRAM [-a <address>] [-h] [-t <int>] -i <input FASTA file> -o <output directory> <database DMND file(s)>\n \
 		" | table
 
 		echo -e "OPTION(S):"
@@ -45,7 +45,7 @@ function get_help() {
 
 		echo -e "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -t 8 -i /path/to/amps.summary.tsv -o /path/to/output/directory nr.fasta uniprot.fasta\n \
+		\t$PROGRAM -a user@example.com -t 8 -o /path/to/annotation/outdir -i /path/to/amplify/amps.final.faa nr.dmnd uniprot.dmnd\n \
 		" | table
 
 	} 1>&2
@@ -115,16 +115,6 @@ else
 	mkdir -p $outdir
 fi
 
-if [[ -z $input ]]; then
-	print_error "Required argument -i <input FASTA file> missing."
-else
-	if [[ ! -f $input ]]; then
-		print_error "Given input FASTA file $input does not exist."
-	elif [[ ! -s $input ]]; then
-		print_error "Given input FASTA file $input is empty."
-	fi
-fi
-
 if [[ ! -v WORKDIR ]]; then
 	workdir=$(dirname $outdir)
 else
@@ -142,6 +132,35 @@ if [[ ! -v CLASS ]]; then
 	class=$(echo "$workdir" | awk -F "/" '{print $(NF-2)}')
 else
 	class=$CLASS
+fi
+
+if [[ -z $input ]]; then
+	print_error "Required argument -i <input FASTA file> missing."
+else
+	if [[ ! -f $input ]]; then
+		print_error "Given input FASTA file $input does not exist."
+	elif [[ ! -s $input ]]; then
+		echo "Given input FASTA file $input is empty. There are no sequences to annotate."
+		rm -f $outdir/ANNOTATION.FAIL
+		touch $outdir/ANNOTATION.DONE
+		mkdir -p $outdir/final_results
+		touch $outdir/final_results/final_annotations.final.tsv
+		touch $outdir/final_results/final_annotated.faa
+		touch $outdir/amps.final.annotated.faa
+
+		echo -e "Query Sequence\tSubject Sequence\tPercent Identical\tAlignment Length\tMismatches\tGap Openings\tQuery Start\tQuery End\tSubject Start\tSubject End\tE Value\tCoverage\tDescription\tSpecies\tTaxonomic Lineage\tOrigin Database\tContaminant\tInformative\tUniProt Database Cross Reference\tUniProt Additional Information\tUniProt KEGG Terms\tUniProt GO Biological\tUniProt GO Cellular\tUniProt GO Molecular\tEggNOG Seed Ortholog\tEggNOG Seed E-Value\tEggNOG Seed Score\tEggNOG Predicted Gene\tEggNOG Tax Scope\tEggNOG Tax Scope Max\tEggNOG Member OGs\tEggNOG Description\tEggNOG KEGG Terms\tEggNOG GO Biological\tEggNOG GO Cellular\tEggNOG GO Molecular\tEggNOG Protein Domains\tIPScan GO Biological\tIPScan GO Cellular\tIPScan GO Molecular\tIPScan Pathways\tIPScan InterPro ID\tIPScan Protein Database\tIPScan Protein Description\tIPScan E-Value" >$outdir/final_results/final_annotations.final.tsv
+
+		(cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
+
+		if [[ "$email" = true ]]; then
+			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+			species=$(echo "$species" | sed 's/^./\u&. /')
+			echo "$outdir" | mail -s "${species}: STAGE 11: ANNOTATION: SUCCESS" "$address"
+			echo -e "\nEmail alert sent to $address." 1>&2
+		fi
+		exit 0
+		# print_error "Given input FASTA file $input is empty."
+	fi
 fi
 
 if [[ "$#" -eq 0 ]]; then

@@ -56,7 +56,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads /path/to/input.txt\n \
+		\t$PROGRAM -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads/outdir /path/to/input.txt\n \
 		" | table
 	} 1>&2
 	exit 1

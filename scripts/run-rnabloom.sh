@@ -77,7 +77,7 @@ function get_help() {
 		# EXAMPLE
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -m 500G -s -t 8 -o /path/to/assembly /path/to/trimmed_reads/readslist.txt\n \
+		\t$PROGRAM -a user@example.com -m 500G -s -t 8 -o /path/to/assembly/outdir /path/to/trimmed_reads/readslist.txt\n \
         " | table
 	} 1>&2
 	exit 1

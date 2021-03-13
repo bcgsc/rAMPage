@@ -61,7 +61,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -e 1e-3 -s 0.90 -t 8 -o /path/to/homology /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
+		\t$PROGRAM -a user@example.com -e 1e-3 -s 0.90 -t 8 -o /path/to/homology/outdir /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
 		" | table
 	} 1>&2
 

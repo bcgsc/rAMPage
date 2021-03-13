@@ -53,7 +53,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -c 1.0 -s -t 8 -o /path/to/filtering -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/readslist.txt\n \
+		\t$PROGRAM -a user@example.com -c 1.0 -s -t 8 -o /path/to/filtering/outdir -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/readslist.txt\n \
 		" | table
 	} 1>&2
 	exit 1

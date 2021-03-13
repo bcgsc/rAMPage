@@ -42,7 +42,7 @@ function get_help() {
 		# EXAMPLE
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -s -i /path/to/trimmed_reads input.txt\n \
+		\t$PROGRAM -a user@example.com -s -i /path/to/trimmed_reads/outdir input.txt\n \
 		" | table
 
 	} 1>&2
