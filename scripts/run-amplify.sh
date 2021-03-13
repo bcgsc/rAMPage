@@ -39,7 +39,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <int>] [-d] [-h] [-l <int>] [-r <0 to 1>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-r <0 to 1>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -47,6 +47,7 @@ function get_help() {
 		\t-a <address>\temail address for alerts\n \
 		\t-c <int>\tcharge cut-off [i.e. keep charge(sequences >= int]\t(default = 2)\n \
 		\t-d\tdebug mode\t(skips running AMPlify)\n \
+		\t-f\tforce final AMPs to be the lowest number of non-zero AMPs\n \
 		\t-h\tshow this help menu\n \
 		\t-l <int>\tlength cut-off [i.e. keep len(sequences) <= int]\t(default = 30)\n \
 		\t-r <0 to 1>\tredundancy removal cut-off\t(default = 1.0)\n \
@@ -57,7 +58,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -c 2 -l 30 -s 0.90 -t 8 -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 30 -s 0.90 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -101,8 +102,9 @@ custom_threads=false
 charge=2
 outdir=""
 debug=false
+forced_characterization=false
 # 4 - read options
-while getopts :a:c:dhl:o:s:t: opt; do
+while getopts :a:c:dfhl:o:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -110,6 +112,7 @@ while getopts :a:c:dhl:o:s:t: opt; do
 		;;
 	c) charge="$OPTARG" ;;
 	d) debug=true ;;
+	f) forced_characterization=true ;;
 	s) confidence="$OPTARG" ;;
 	h) get_help ;;
 	l) length="$OPTARG" ;;
@@ -158,6 +161,11 @@ if [[ ! -v SPECIES ]]; then
 	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
 else
 	species=$SPECIES
+fi
+
+# if force_char is bound then use it instead of -f
+if [[ -v FORCE_CHAR ]]; then
+	forced_characterization=$FORCE_CHAR
 fi
 
 if (($(echo "$confidence < 0.5" | bc -l) || $(echo "$confidence > 1" | bc -l))); then
@@ -854,14 +862,18 @@ echo 1>&2
 # sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
 # soft link the file that has the least number of AMPs but isn't 0
 final_amps=$(awk -F "\t" '{if($2!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
-(cd $outdir && ln -fs ${final_amps} amps.final.faa)
-
 filename=$(echo "$final_amps" | sed 's/amps/AMPlify_results/' | sed 's/\.faa/.tsv/')
-(cd $outdir && ln -fs ${filename} AMPlify_results.final.tsv)
+
+if [[ $forced_characterization = true ]]; then
+	(cd $outdir && ln -fs ${final_amps} amps.final.faa && ln -fs ${filename} AMPlify_results.final.tsv)
+else
+	(cd $outdir && ln -fs $(basename $outfile_conf_short_charge_nr_ln) amps.final.faa && ln -fs $(basename $outfile_conf_short_charge_nr_tsv_ln) AMPlify_results.final.tsv)
+fi
 
 final_count=$(grep -c '^>' $outdir/amps.final.faa || true)
 echo "SYMLINKS:" 1>&2
 cd $outdir && ls -l amps.final.faa AMPlify_results.final.tsv | awk '{print $(NF-2), $(NF-1), $NF}' | column -s $' ' -t 1>&2
+
 echo 1>&2
 # echo "---> $outdir/${filename} softlinked to $outdir/amps.final.faa" 1>&2
 # echo -e "---> $outdir/${final_amps} softlinked to $outdir/AMPlify_results.final.tsv\n" 1>&2
