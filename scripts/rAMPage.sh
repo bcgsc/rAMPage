@@ -39,7 +39,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <taxonomic class>] [-d] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-c <taxonomic class>] [-d] [-f] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTIONS:"
@@ -47,6 +47,7 @@ function get_help() {
 		\t-a <address>\temail address for alerts\n \
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
 		\t-d\tdebug mode of Makefile\n \
+		\t-f\tforce characterization even if no AMPs found\n \
 		\t-h\tshow help menu\n \
 		\t-m <target>\tMakefile target\t(default = exonerate)\n \
 		\t-n <species>\ttaxnomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
@@ -131,7 +132,8 @@ species=""
 verbose=false
 target="exonerate"
 debug=""
-while getopts :ha:c:dr:m:n:o:pst:v opt; do
+forced_characterization=false
+while getopts :ha:c:dfr:m:n:o:pst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -145,6 +147,7 @@ while getopts :ha:c:dr:m:n:o:pst:v opt; do
 	d)
 		debug="--debug"
 		;;
+	f) forced_characterization=true ;;
 	h) get_help ;;
 	m) target=$(echo "$OPTARG" | sed 's/.\+/\L&/') ;;
 	n)
@@ -281,6 +284,7 @@ fi
 	echo "STRANDED=$STRANDED"
 	echo "CLASS=$CLASS"
 	echo "SPECIES=$SPECIES"
+	echo "FORCE_CHAR"=$forced_characterization
 	print_line
 	echo
 } | tee -a $outdir/logs/00-rAMPage.log 1>&2
