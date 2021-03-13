@@ -25,10 +25,19 @@ function get_help() {
 	{
 		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
-		echo -e "\
-	\tUses Exonerate to remove known AMP sequences.\n \
-	" | table
-
+		if [[ ! -v CLASS ]]; then
+			echo -e "\
+		\tUses Exonerate to remove known AMP sequences. Known AMP sequences are:\n \
+		\t- amp_seqs/amps.\$CLASS.prot.precursor.faa\n \
+		\t- amp_seqs/amps.\$CLASS.prot.mature.faa\n \
+		" | table
+		else
+			echo -e "\
+			\tUses Exonerate to remove known AMP sequences. Known AMP sequences are:\n \
+			\t- amp_seqs/amps.$CLASS.prot.precursor.faa\n \
+			\t- amp_seqs/amps.$CLASS.prot.mature.faa\n \
+		" | table
+		fi
 		echo "USAGE(S):"
 		echo -e "\
 	\t$PROGRAM [-a <address>] [-h] -o <output directory> <query FASTA file> <annotation TSV file>\n \
@@ -39,6 +48,11 @@ function get_help() {
 	\t-a <address>\temail address for alerts\n \
 	\t-h\tshow this help menu\n \
 	\t-o <directory>\toutput directory\t(required)\n \
+	" | table
+
+		echo "EXAMPLE(S):"
+		echo -e "\
+	\t$PROGRAM -a user@example.com -o /path/to/exonerate/outdir /path/to/annotation/amps.final.annotated.faa /path/to/annotation/final_annotations.final.tsv\n \
 	" | table
 	} 1>&2
 	exit 1
@@ -102,18 +116,6 @@ else
 	mkdir -p $outdir
 fi
 
-if [[ ! -f $(realpath $1) ]]; then
-	print_error "Input file $(realpath $1) does not exist."
-elif [[ ! -s $(realpath $1) ]]; then
-	print_error "Input file $(realpath $1) is empty."
-fi
-
-if [[ ! -f $(realpath $2) ]]; then
-	print_error "Input file $(realpath $2) does not exist."
-elif [[ ! -s $(realpath $2) ]]; then
-	print_error "Input file $(realpath $2) is empty."
-fi
-
 # if workdir not set, infer from indir
 if [[ ! -v WORKDIR ]]; then
 	workdir=$(dirname $outdir)
@@ -132,6 +134,32 @@ if [[ ! -v CLASS ]]; then
 	class=$(echo "$workdir" | awk -F "/" '{print $(NF-2)}')
 else
 	class=$CLASS
+fi
+if [[ ! -f $(realpath $1) ]]; then
+	print_error "Input file $(realpath $1) does not exist."
+elif [[ ! -s $(realpath $1) ]]; then
+	#	print_error "Input file $(realpath $1) is empty."
+	# elif [[ $(wc -l $(realpath $1) | awk '{print $1}') -eq 1 ]]; then
+	echo "Input file $(realpath $1) is empty. There are no sequences to align."
+	rm -f $outdir/EXONERATE.FAIL
+	touch $outdir/EXONERATE.DONE
+	echo -e "Query\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Query\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	touch $outdir/amps.exonerate.some_none.nr.faa
+	join -t$'\t' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv >$outdir/annotation.tsv
+	if [[ -s $(realpath $2) && $(wc -l $(realpath $1) | awk '{print $1}') -eq 1 ]]; then
+		join -t $'\t' $outdir/annotation.tsv $file >$outdir/final_annotation.tsv
+	else
+		(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
+	fi
+	exit 0
+	# print_error "Input file $(realpath $1) is empty."
+fi
+
+if [[ ! -f $(realpath $2) ]]; then
+	print_error "Input file $(realpath $2) does not exist."
+elif [[ ! -s $(realpath $2) ]]; then
+	print_error "Input file $(realpath $2) is empty."
 fi
 
 # 8 - print env details
@@ -262,8 +290,10 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		echo "Filtering for AMPs with some alignment..." 1>&2
 		amps_mature_some_list=$outdir/amps.exonerate.mature.some.txt
 		amps_mature_some_fasta=$outdir/amps.exonerate.mature.some.nr.faa
-		echo "COMMAND: awk -F \"\t\" '{if(\$4!=100) print \$1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list" 1>&2
-		awk -F "\t" '{if($4!=100) print $1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list
+		echo "COMMAND: grep -Fxvf $amps_mature_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_mature_some_list" 1>&2
+		grep -Fxvf $amps_mature_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_mature_some_list
+		# echo "COMMAND: awk -F \"\t\" '{if(\$4!=100) print \$1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list" 1>&2
+		# awk -F "\t" '{if($4!=100) print $1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list
 		echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_mature_some_list >$amps_mature_some_fasta\n" 1>&2
 		$RUN_SEQTK subseq $query $amps_mature_some_list >$amps_mature_some_fasta
 
