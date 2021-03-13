@@ -7,7 +7,7 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 rAMPage is a _de novo_ anti-microbial peptide (AMP) discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs.
 
-<!--![](Flowchart.png)-->
+![](Flowchart.png)
 
 ## Quick Links
 
@@ -318,18 +318,19 @@ USAGE(S):
       rAMPage.sh [-a <address>] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>
       
 OPTIONS:
-       -a <address>    email address for alerts                 
-       -c <class>      taxonomic class of the dataset           (default = top-level directory in $outdir)
-       -d              debug mode of Makefile                   
-       -h              show help menu                           
-       -m <target>     Makefile target                          (default = exonerate)
-       -n <species>    taxnomic species or name of the dataset  (default = second-level directory in $outdir)
-       -o <directory>  output directory                         (default = directory of input reads TXT file)
-       -p              run processes in parallel                
-       -r <FASTA.gz>   reference transcriptome                  (accepted multiple times, *.fna.gz *.fsa_nt.gz)
-       -s              strand-specific library construction     (default = false)
-       -t <int>        number of threads                        (default = 48)
-       -v              verbose (uses /usr/bin/time -pv)         
+       -a <address>    email address for alerts                      
+       -c <class>      taxonomic class of the dataset                (default = top-level directory in $outdir)
+       -d              debug mode of Makefile                        
+       -f              force characterization even if no AMPs found  
+       -h              show help menu                                
+       -m <target>     Makefile target                               (default = exonerate)
+       -n <species>    taxnomic species or name of the dataset       (default = second-level directory in $outdir)
+       -o <directory>  output directory                              (default = directory of input reads TXT file)
+       -p              run processes in parallel                     
+       -r <FASTA.gz>   reference transcriptome                       (accepted multiple times, *.fna.gz *.fsa_nt.gz)
+       -s              strand-specific library construction          (default = false)
+       -t <int>        number of threads                             (default = 48)
+       -v              verbose (uses /usr/bin/time -pv)              
                                                                 
 EXAMPLE(S):
       rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
@@ -442,4 +443,4 @@ rAMPage
 
 ## Citation
 
-Diana Lin, Ka Ming Nip, Chenkai Li, Rene L. Warren, Caren Helbing, Linda Hoang, Inanc Birol
+Diana Lin, Ka Ming Nip, Sambina Aninta, Chenkai Li, Rene L. Warren, Caren Helbing, Linda Hoang, Inanc Birol
