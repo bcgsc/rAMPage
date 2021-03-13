@@ -89,7 +89,7 @@ OPTION(S):
        -t <int>        number of threads                   (default = 4)
                                                            
 EXAMPLE(S):
-      trim-reads.sh -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads /path/to/input.txt
+      trim-reads.sh -a user@example.com -p -t 8 -i /path/to/raw_reads -o /path/to/trimmed_reads/outdir /path/to/input.txt
 ```
 
 ## Building a Reads List
@@ -110,7 +110,7 @@ OPTION(S):
        -s              strand-specific library construction               (default = false)
                                                                           
 EXAMPLE(S):
-      build-reads-list.sh -a user@example.com -s -i /path/to/trimmed_reads input.txt
+      build-reads-list.sh -a user@example.com -s -i /path/to/trimmed_reads/outdir input.txt
 ```
 
 ## Transcriptome Assembly
@@ -161,7 +161,7 @@ EXAMPLE READS LIST (STRANDED):
        ...     ...                       ...
        
 EXAMPLE(S):
-      run-rnabloom.sh -a user@example.com -m 500G -s -t 8 -o /path/to/assembly /path/to/trimmed_reads/readslist.txt
+      run-rnabloom.sh -a user@example.com -m 500G -s -t 8 -o /path/to/assembly/outdir /path/to/trimmed_reads/readslist.txt
 ```
 
 ## Filtering By Expression
@@ -197,7 +197,7 @@ OPTION(S):
        -t <int>         number of threads                     (default = 2)
                                                               
 EXAMPLE(S):
-      filter-expression.sh -a user@example.com -c 1.0 -s -t 8 -o /path/to/filtering -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/readslist.txt
+      filter-expression.sh -a user@example.com -c 1.0 -s -t 8 -o /path/to/filtering/outdir -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/readslist.txt
 ```
 
 ## _in silico_ Translation
@@ -230,7 +230,7 @@ OPTION(S):
        -o <directory>  output directory          (required)
                                                  
 EXAMPLE(S):
-      translate.sh -a user@example.com -o /path/to/translation /path/to/filtering/rnabloom.transcripts.filtered.fa
+      translate.sh -a user@example.com -o /path/to/translation/outdir /path/to/filtering/rnabloom.transcripts.filtered.fa
 ```
 
 ## Homology Search
@@ -273,7 +273,7 @@ OPTION(S):
        -t <int>        number of threads                          (default = 8)
                                                                   
 EXAMPLE(S):
-      run-jackhmmer.sh -a user@example.com -e 1e-3 -s 0.90 -t 8 -o /path/to/homology /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa
+      run-jackhmmer.sh -a user@example.com -e 1e-3 -s 0.90 -t 8 -o /path/to/homology/outdir /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa
 ```
 
 ## Cleavage
@@ -310,7 +310,7 @@ OPTION(S):
        -o <directory>  output directory                                             (required)
                                                                                     
 EXAMPLE(S):
-      cleave.sh -a user@example.com -c -o /path/to/cleavage /path/to/homology/jackhmmer.nr.faa
+      cleave.sh -a user@example.com -c -o /path/to/cleavage/outdir /path/to/homology/jackhmmer.nr.faa
 ```
 
 ## AMPlify
@@ -324,7 +324,7 @@ DESCRIPTION:
        OUTPUT:
        -------
          - amps.conf.short.charge.nr.faa
-         - AMPlify_results.conf.short.charge.tsv
+         - AMPlify_results.conf.short.charge.nr.tsv
        
        EXIT CODES:
        -----------
@@ -335,21 +335,22 @@ DESCRIPTION:
        For more information on AMPlify: https://github.com/bcgsc/amplify
        
 USAGE(S):
-      run-amplify.sh [-a <address>] [-c <int>] [-l <int>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
+      run-amplify.sh [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-r <0 to 1>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
       
 OPTION(S):
        -a <address>    email address for alerts                                   
        -c <int>        charge cut-off [i.e. keep charge(sequences >= int]         (default = 2)
        -d              debug mode                                                 (skips running AMPlify)
+       -f              force final AMPs to be the lowest number of non-zero AMPs  
        -h              show this help menu                                        
-       -l <int>        length cut-off [i.e. keep len(sequences) <= int]           (default = 50)
+       -l <int>        length cut-off [i.e. keep len(sequences) <= int]           (default = 30)
        -r <0 to 1>     redundancy removal cut-off                                 (default = 1.0)
        -o <directory>  output directory                                           (required)
-       -s <0 to 1>     AMPlify score cut-off [i.e. keep score(sequences) >= dbl]  (default = 0.99)
+       -s <0 to 1>     AMPlify score cut-off [i.e. keep score(sequences) >= dbl]  (default = 0.90)
        -t <int>        number of threads                                          (default = all)
                                                                                   
 EXAMPLE(S):
-      run-amplify.sh -a user@example.com -c 2 -l 50 -s 0.99 -t 8 -o /path/to/amplify /path/to/cleavage/cleaved.mature.len.faa
+      run-amplify.sh -a user@example.com -c 2 -l 30 -s 0.90 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa
 ```
 
 ## Annotation
@@ -362,7 +363,7 @@ DESCRIPTION:
        For more information: https://entap.readthedocs.io/en/latest/introduction.html
        
 USAGE(S):
-      run-entap.sh [-a <address>] [-t <int>] -i <input FASTA file> -o <output directory> <database FASTA file(s)>
+      run-entap.sh [-a <address>] [-h] [-t <int>] -i <input FASTA file> -o <output directory> <database DMND file(s)>
       
 OPTION(S):
        -a <address>    email address for alerts  
@@ -372,7 +373,7 @@ OPTION(S):
        -t <int>        number of threads         (default = 8)
                                                  
 EXAMPLE(S):
-      run-entap.sh -a user@example.com -t 8 -i /path/to/amps.summary.tsv -o /path/to/output/directory nr.fasta uniprot.fasta
+      run-entap.sh -a user@example.com -t 8 -o /path/to/annotation/outdir -i /path/to/amplify/amps.final.faa nr.dmnd uniprot.dmnd
 ```
 
 ## Exonerate
@@ -381,16 +382,20 @@ EXAMPLE(S):
 PROGRAM: exonerate.sh
 
 DESCRIPTION:
-    Uses Exonerate to remove known AMP sequences.
-    
+       Uses Exonerate to remove known AMP sequences. Known AMP sequences are:
+       - amp_seqs/amps.$CLASS.prot.precursor.faa
+       - amp_seqs/amps.$CLASS.prot.mature.faa
+       
 USAGE(S):
-    exonerate.sh [-a <address>] [-t <target FASTA file>] -o <output directory> <query FASTA file> <annotation TSV file>
+    exonerate.sh [-a <address>] [-h] -o <output directory> <query FASTA file> <annotation TSV file>
     
 OPTION(S):
      -a <address>    email address for alerts  
      -h              show this help menu       
      -o <directory>  output directory          (required)
-     -t <FASTA>      target FASTA file         (default = $ROOT_DIR/amp_seqs/amps.$CLASS.prot.combined.faa)
+                                               
+EXAMPLE(S):
+    exonerate.sh -a user@example.com -o /path/to/exonerate/outdir /path/to/annotation/amps.final.annotated.faa /path/to/annotation/final_annotations.final.tsv
 ```
 
 ## SABLE
@@ -409,5 +414,5 @@ OPTION(S):
        -t <INT>        number of threads        (default = 8)
                                                 
 EXAMPLE(S):
-      run-sable.sh -o /path/to/sable/dir /path/to/exonerate/labelled.amps.exonerate.nr.faa  /path/to/amplify/AMPlify_results.final.tsv
+      run-sable.sh -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/amplify/AMPlify_results.final.tsv
 ```
