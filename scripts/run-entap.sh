@@ -197,6 +197,11 @@ fi
 rm -f $outdir/ANNOTATION.DONE
 rm -f $outdir/ANNOTATION.FAIL
 
+if ! command -v $JAVA_EXEC; then
+	print_error "JAVA_EXEC has not been set in scripts/config.sh."
+fi
+
+export PATH=$(dirname $JAVA_EXEC):$PATH
 # 8 - print env details
 {
 	echo "HOSTNAME: $(hostname)"
@@ -210,10 +215,10 @@ rm -f $outdir/ANNOTATION.FAIL
 
 echo "Checking EnTAP..." 1>&2
 echo "PROGRAM: $(command -v $RUN_ENTAP)" 1>&2
-echo -e "VERSION: $($RUN_ENTAP --version | awk '/version:/ {print $3}')\n" 1>&2
+echo -e "VERSION: $($RUN_ENTAP --version | awk '/version:/ {print $3}' || exit 1)\n" 1>&2
 
 echo "Checking Java..." 1>&2
-java_version=$($JAVA_EXEC -version 2>&1 | awk '/version/{print $3}' | sed 's/"//g')
+java_version=$($JAVA_EXEC -version 2>&1 | awk '/version/{print $3}' | sed 's/"//g' || exit 1)
 
 if [[ "$java_version" != 1.8* ]]; then
 	echo "ERROR: The InterProScan option in EnTAP requires Java Runtime Environment (JRE) 8." 1>&2
@@ -223,12 +228,12 @@ if [[ "$java_version" != 1.8* ]]; then
 	get_help
 #	echo "The InterProScan option in EnTAP requires Java Runtime Environment (JRE) 8." 1>&2
 fi
-echo "PROGRAM: $(command -v $JAVA_EXEC)" 1>&2
+echo "PROGRAM: $(command -v $JAVA_EXEC || exit 1)" 1>&2
 echo -e "VERSION: $java_version\n" 1>&2
 
 echo "Checking InterProScan..." 1>&2
-echo "PROGRAM: $(command -v $RUN_INTERPROSCAN)" 1>&2
-echo "VERSION: $($RUN_INTERPROSCAN --version | head -n1 | awk '{print $NF}')"
+echo "PROGRAM: $(command -v $RUN_INTERPROSCAN || exit 1)" 1>&2
+echo "VERSION: $($RUN_INTERPROSCAN --version | head -n1 | awk '{print $NF}' || exit 1)"
 # CONFIG THE FILE
 entap_dir=$(dirname $RUN_ENTAP)
 config_custom=$outdir/entap_config.ini
