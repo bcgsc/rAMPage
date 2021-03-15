@@ -19,25 +19,25 @@ all: sable/SABLE_results.tsv
 
 sable: sable/SABLE_results.tsv
 
-sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK exonerate/EXONERATE.DONE amplify/AMPLIFY.DONE
+sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK exonerate/EXONERATE.DONE amplify/AMPLIFY.DONE
 	@echo "STAGE 13: SABLE: $$(realpath logs)/13-sable.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		else \
-			$< -a $(EMAIL) -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			$< -a $(EMAIL) -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		else \
-			$< -o sable exonerate/labelled.amps.exonerate.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			$< -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
 		fi; \
 	fi
 
 # 12. exonerate
-exonerate: exonerate/labelled.amps.exonerate.nr.faa
-exonerate/EXONERATE.DONE exonerate/labelled.amps.exonerate.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP_PRECURSOR) $(REF_AMP_MATURE) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
+exonerate: exonerate/amps.exonerate.some_none.nr.faa
+exonerate/EXONERATE.DONE exonerate/final_annotation.tsv exonerate/amps.exonerate.some_none.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP_PRECURSOR) $(REF_AMP_MATURE) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
 	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
@@ -59,15 +59,15 @@ annotation/final_annotations.final.tsv annotation/final_results/final_annotation
 	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -a $(EMAIL) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			$< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	else \
 		if [[ $(VERBOSE) == true ]]; then \
-			/usr/bin/time -pv $< -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			/usr/bin/time -pv $< -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			$< -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	fi
 
