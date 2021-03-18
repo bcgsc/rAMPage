@@ -2,6 +2,14 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 function get_help() {
 
 	if command -v $RUN_PROP &>/dev/null; then
@@ -11,17 +19,17 @@ function get_help() {
 			echo -e "\
 			\tConfigures the environment variables needed for running ProP. Uses 'sed' to change variables in $RUN_PROP (changes can be made manually as well).\n \
 			\tSee specifics below for more information.\n \
-			" | column -s $'\t' -t -L
+			" | table
 
 			echo "USAGE(S):"
 			echo -e "\
 			\t$PROGRAM [OPTIONS]\n \
-			" | column -s $'\t' -t -L
+			" | table
 
 			echo "OPTION(S):"
 			echo -e "\
 			\t-h\tshow this help menu\n \
-			" | column -s $'\t' -t -L
+			" | table
 
 			echo "SPECIFICS:"
 			echo -e "\
@@ -30,7 +38,7 @@ function get_help() {
 			\tsetenv ECHO=$(command -v echo) -e\n \
 			\tsetenv GNUPLOT=$(command -v gnuplot)\n \
 			\tsetenv PPM2GIF=$(command -v ppmtogif)\n \
-			" | column -s $'\t' -t -L
+			" | table
 		} 1>&2
 
 	else

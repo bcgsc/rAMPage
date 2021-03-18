@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
 
 set -uo pipefail
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
+if [[ ! -v FASTERQ_DUMP ]]; then
+	FASTERQ_DUMP=fasterq-dump
+fi
 
-PROGRAM=$(basename $0)
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 
 # 1 - get_help
 function get_help() {
@@ -12,13 +25,13 @@ function get_help() {
 		echo -e "\
 		\tDownloads the reads for one single accession, using fasterq-dump.\n \
 		\tFor more information: https://github.com/ncbi/sra-tools/wiki/HowTo:-fasterq-dump\n \
-		" | column -s $'\t' -t -L
+		" | table
 
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <SRR accession>\n \
-		" | column -s$'\t' -t -L
+		" | table
 
 		# OPTIONS
 		echo "OPTION(S):"
@@ -27,17 +40,27 @@ function get_help() {
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-t <int>\tnumber of threads\t(default = 2)\n \
-		" | column -s$'\t' -t -L
+		" | table
 	} 1>&2
 	exit 1
+}
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
 }
 # 2 -  print_line
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -94,6 +117,14 @@ fi
 # 7 - no status files
 
 # 8 - no print env
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n"
+
+	echo "CALL: $args (wd: $(pwd))"
+} 1>&2
 
 logfile=$outdir/${accession}.log
 templog=$outdir/${accession}_temp.log

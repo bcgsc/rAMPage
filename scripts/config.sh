@@ -2,16 +2,21 @@
 
 export ROOT_DIR=$(pwd)
 
+if [[ $ROOT_DIR != */rAMPage* ]]; then
+	echo "The script scripts/config.sh must be sourced from the root of the rAMPage repository." 1>&2
+	exit 1
+fi
+
 if [[ -f $ROOT_DIR/CONFIG.DONE ]]; then
 	rm $ROOT_DIR/CONFIG.DONE
 fi
 
 ## FOR DOWNLOADING REFERENCE AMP SEQUENCES
-export RUN_ESEARCH=$ROOT_DIR/src/edirect/13.8/bin/esearch
-export RUN_EFETCH=$ROOT_DIR/src/edirect/13.8/bin/efetch
+# export RUN_ESEARCH=$ROOT_DIR/src/edirect/13.8/bin/esearch
+# export RUN_EFETCH=$ROOT_DIR/src/edirect/13.8/bin/efetch
 
 ## FOR DOWNLOADING READS
-export FASTERQ_DUMP=$ROOT_DIR/src/sratoolkit.2.10.5-centos_linux64/bin/fasterq-dump
+# export FASTERQ_DUMP=$ROOT_DIR/src/sratoolkit.2.10.5-centos_linux64/bin/fasterq-dump
 
 ## FOR TRIMMING READS
 export RUN_FASTP=$ROOT_DIR/fastp/0.20.1/bin/fastp
@@ -44,5 +49,14 @@ export RUN_AMPLIFY=$ROOT_DIR/src/AMPlify-1.0.0/src/AMPlify.py
 ## SABLE
 export RUN_SABLE=$ROOT_DIR/src/sable_v4_distr/run.sable
 export BLAST_DIR=$ROOT_DIR/src/blast/2.10.0/bin
+export NR_DIR_FORMATTED=$ROOT_DIR/src/EnTAP-0.10.7-beta/bin/nr
 
-touch $ROOT_DIR/CONFIG.DONE
+## EXONERATE
+export RUN_EXONERATE=$ROOT_DIR/src/exonerate/2.4.0/bin/exonerate
+
+## ENTAP
+export RUN_ENTAP=$ROOT_DIR/src/EnTAP-0.10.7-beta/EnTAP
+export RUN_DIAMOND=$ROOT_DIR/src/EnTAP-0.10.7-beta/libs/diamond-0.9.9/bin/diamond
+export RUN_INTERPROSCAN=$ROOT_DIR/src/interproscan-5.30-69.0/interproscan.sh # required
+
+touch -a $ROOT_DIR/CONFIG.DONE

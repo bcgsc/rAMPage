@@ -1,0 +1,2 @@
+amphibia/ptoftae/skin-liver/input.txt nonstranded
+insecta/mgulosa/venom/input.txt stranded

@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
+# 0 - table function
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 
 # 1 - get_help function
 function get_help() {
@@ -10,6 +21,7 @@ function get_help() {
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tRuns jackhmmer from the HMMER package to find AMPs via homology search of protein sequences.\n \
+		\tRequires $ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa or $ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa file.\n \
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
@@ -29,40 +41,52 @@ function get_help() {
 		\t  - 5: sequence redundancy removal failed\n \
 		\n \
 		\tFor more information: http://eddylab.org/software/hmmer/Userguide.pdf\n \
-		" | column -s$'\t' -t -L
+		" | table
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [OPTIONS] -o <output directory> <input FASTA file>\n \
-		" | column -s$'\t' -t -L
+		\t$PROGRAM [-a <address>] [-e <E-value>] [-h] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
+		" | table
 
 		# OPTIONS
 		echo "OPTION(S):"
 		echo -e "\
-		\t-a <address>\temail alert\n \
+		\t-a <address>\temail address for alerts\n \
 		\t-e <E-value>\tE-value threshold\t(default = 1e-3)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n \
+		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 1.00)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
-		" | column -s$'\t' -t -L
+		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/homology /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
-		" | column -s $'\t' -t -L
+		\t$PROGRAM -a user@example.com -e 1e-3 -s 0.90 -t 8 -o /path/to/homology/outdir /path/to/translation/rnabloom.transcripts.filtered.transdecoder.faa\n \
+		" | table
 	} 1>&2
 
 	exit 1
 }
 
+# 1.5 - print_line function
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
+		echo -e "CALL: $args (wd: $(pwd))\n"
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -73,19 +97,20 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # default parameters
-evalue=1e-5
+evalue="1e-5"
 threads=8
 email=false
-similarity=0.90
+similarity=1.00
 outdir=""
-
+db=""
 # 4 - read options
-while getopts :a:e:ho:s:t: opt; do
+while getopts :a:d:e:ho:s:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
+	d) db="$(realpath -s $OPTARG)" ;;
 	e) evalue="$OPTARG" ;;
 	h) get_help ;;
 	o)
@@ -115,18 +140,43 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
-workdir=$(realpath $(dirname $outdir))
-if [[ -f "$workdir/AMPHIBIA.CLASS" ]]; then
-	db=$ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa
-elif [[ -f "$workdir/INSECTA.CLASS" ]]; then
-	db=$ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa
+if [[ ! -v WORKDIR ]]; then
+	workdir=$(dirname $outdir)
 else
-	echo "ERROR: No valid class taxon (*.CLASS file) found. This file is generated after running $ROOT_DIR/scripts/setup.sh." 1>&2
-	exit 2
+	workdir=$(realpath $WORKDIR)
 fi
+
+if [[ ! -v SPECIES ]]; then
+	# get species from workdir
+	species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}')
+else
+	species=$SPECIES
+fi
+if [[ ! -v CLASS ]]; then
+	class=$(echo "$workdir" | awk -F "/" '{print $(NF-2)}')
+else
+	class=$CLASS
+fi
+
+if [[ -z "$db" ]]; then
+	db=$ROOT_DIR/amp_seqs/amps.${class^}.prot.combined.faa
+fi
+
+if [[ ! -s $db ]]; then
+	print_error "Required FASTA databse $db does not exist."
+fi
+# workdir=$(realpath $(dirname $outdir))
+# if [[ -f "$workdir/AMPHIBIA.CLASS" ]]; then
+# db=$ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa
+# elif [[ -f "$workdir/INSECTA.CLASS" ]]; then
+# db=$ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa
+# else
+# echo "ERROR: No valid class taxon (*.CLASS file) found. This file is generated after running $ROOT_DIR/scripts/setup.sh." 1>&2
+# exit 2
+# fi
 
 # 7 - remove status files
 rm -f $outdir/HOMOLOGY.DONE
@@ -139,12 +189,17 @@ rm -f $outdir/SEQUENCES_NR.DONE
 rm -f $outdir/SEQUENCES_NR.FAIL
 
 # 8 - print env details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s')
-
 logfile="$outdir/jackhmmer.log"
-echo -e "PATH=$PATH\n" | tee $logfile 1>&2
+
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
+
+	echo -e "PATH=$PATH\n" | tee $logfile
+
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
+} 1>&2
 
 if ! command -v mail &>/dev/null; then
 	email=false
@@ -167,8 +222,8 @@ if [[ ! -s $outdir/jackhmmer.tbl ]]; then
 
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 		# echo "$outdir" | mail -s "Failed homology search on $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
@@ -193,8 +248,8 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 			touch $outdir/HOMOLOGY.FAIL
 			if [[ "$email" = true ]]; then
 				# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-				echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+				# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+				echo "$outdir" | mail -s "${species^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 				# echo "$outdir" | mail -s "Failed to fetch sequences after homology search on $org" $address
 				echo "Email alert sent to $address." 1>&2
 			fi
@@ -205,8 +260,8 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 			touch $outdir/HOMOLOGY.FAIL
 			if [[ "$email" = true ]]; then
 				# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-				org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-				echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+				# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+				echo "$outdir" | mail -s "${species^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 				# echo "$outdir" | mail -s "No sequences remaining after homology search on $org" $address
 				echo "Email alert sent to $address." 1>&2
 			fi
@@ -225,15 +280,15 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 		touch $outdir/SEQUENCES_NR.DONE
 
 		count=$(grep -c '^>' $outdir/jackhmmer.nr.faa)
-		echo -e "Number of AMPS found (non-redundant): $(printf "%'d" $count)\n" 1>&2
+		echo -e "Number of AMPs found (non-redundant): $(printf "%'d" $count)\n" 1>&2
 	else
 		touch $outdir/SEQUENCES_NR.FAIL
 		touch $outdir/HOMOLOGY.FAIL
 
 		if [[ "$email" = true ]]; then
 			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-			org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-			echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
+			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+			echo "$outdir" | mail -s "${species^}: STAGE 08: HOMOLOGY SEARCH: FAILED" $address
 			# echo "$outdir" | mail -s "Failed redundancy removal after homology search on $org" $address
 			echo "Email alert sent to $address." 1>&2
 		fi
@@ -248,8 +303,8 @@ else
 	if [[ "$email" = true ]]; then
 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		# echo "$outdir" | mail -s "Failed homology search on $org" $address
-		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		echo "$outdir" | mail -s "${species^}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 
@@ -277,17 +332,19 @@ if [[ "$default_name" != "$outdir" ]]; then
 fi
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 touch $outdir/HOMOLOGY.DONE
-echo "STATUS: DONE." 1>&2
+echo -e "STATUS: DONE.\n" 1>&2
+
+echo "Output: $outdir/jackhmmer.nr.faa" 1>&2
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	# echo "$outdir" | mail -s "Finished homology search on $org" $address
-	org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-	echo "$outdir" | mail -s "${org^}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
+	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+	species=$(echo "$species" | sed 's/^./\u&. /')
+	# echo "$outdir" | mail -s "${species^}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
+	echo "$outdir" | mail -s "${species}: STAGE 08: HOMOLOGY SEARCH: SUCCESS" $address
 	echo -e "\nEmail alert sent to ${address}." 1>&2
 fi

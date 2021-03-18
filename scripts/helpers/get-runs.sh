@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
 	# DESCRIPTION
@@ -22,13 +32,13 @@ function get_help() {
 		\t-------------\n \
 		\t  - 0: successfully completed\n \
 		\t  - 1: general error\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -o <output directory> <SRA accessions TXT file>\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# OPTIONS
 		echo "OPTION(S):"
@@ -36,25 +46,36 @@ function get_help() {
 		\t-a <address>\temail alert\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		" | column -s$'\t' -t -L
+		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -o /path/to/sra /path/to/accessions.txt\n \
-		" | column -s $'\t' -t -L
+		" | table
 	} 1>&2
 
 	exit 1
 
 }
 
+# 1.5 - print_line
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -110,11 +131,14 @@ fi
 rm -f $outdir/RUNS.DONE
 
 # 8 - print environment details
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)" 1>&2
-# start_sec=$(date '+%s')
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)\n"
 
-echo -e "PATH=$PATH\n" 1>&2
+	echo -e "PATH=$PATH\n"
+
+	echo "CALL: $args (wd: $(pwd))"
+} 1>&2
 
 accessions=$(cat $1)
 
@@ -152,9 +176,7 @@ echo -e "COMMAND: $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions\n" 1>
 $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 # soft link to a generic name

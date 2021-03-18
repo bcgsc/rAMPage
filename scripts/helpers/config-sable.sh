@@ -1,39 +1,59 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PROGRAM=$(basename $0)
-# nr_fasta=$(dirname $RUN_ENTAP)/extra-db/nr.fasta
+FULL_PROGRAM=$0
+PROGRAM=$(basename $FULL_PROGRAM)
+args="$FULL_PROGRAM $*"
 
+# nr_fasta=$(dirname $RUN_ENTAP)/extra-db/nr.fasta
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
-	echo "DESCRIPTION:" 1>&2
-	echo -e "\
+	{
+		echo "DESCRIPTION:" 1>&2
+		echo -e "\
 		\tConfigures environment variables for the run.sable script.\n\
 		\tFor more information: $(dirname $RUN_SABLE)/README\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | table
+		echo 1>&2
 
-	echo "USAGE(S):" 1>&2
-	echo -e "\
+		echo "USAGE(S):" 1>&2
+		echo -e "\
 		\t$PROGRAM [OPTIONS]\n \
-		" | column -s $'\t' -t 1>&2
-	echo 1>&2
+		" | table
+		echo 1>&2
 
-	echo "OPTION(S):" 1>&2
-	echo -e "\
+		echo "OPTION(S):" 1>&2
+		echo -e "\
 		\t-h\tshow this help menu\n\
 		\t-t\tnumber of threads\t(default = 8)\n\
-		" | column -s$'\t' -t 1>&2
-
+		" | table
+	} 1>&2
 	exit 1
 }
-
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -72,9 +92,13 @@ fi
 # 7 - do NOT remove status files, only want this configuration done once
 
 # 8 - print env
-echo "HOSTNAME: $(hostname)" 1>&2
-echo -e "START: $(date)" 1>&2
-# start_sec=$(date '+%s')
+{
+	echo "HOSTNAME: $(hostname)"
+	echo -e "START: $(date)"
+
+	echo "CALL: $args (wd: $(pwd))"
+	echo -e "THREADS: $threads\n"
+} 1>&2
 
 if command -v pigz &>/dev/null; then
 	if [[ "$custom_threads" = true ]]; then
@@ -95,7 +119,6 @@ nr="ftp://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz"
 
 rm -f $outdir/CONFIG.FAIL
 rm -f $outdir/CONFIG.DONE
-
 
 # Download NCBI NR database
 filename=$(basename "$nr")
@@ -196,9 +219,7 @@ else
 	exit 2
 fi
 echo "END: $(date)" 1>&2
-# end_sec=$(date '+%s')
 
-# $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 # echo 1>&2
 
 echo "STATUS: DONE." 1>&2

@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 PROGRAM=$(basename $0)
-
+function table() {
+	if column -L <(echo) &>/dev/null; then
+		cat | column -s $'\t' -t -L
+	else
+		cat | column -s $'\t' -t
+		echo
+	fi
+}
 # 1 - get_help function
 function get_help() {
 	# DESCRIPTION
@@ -22,13 +29,13 @@ function get_help() {
 		\t  - 1: general error\n \
 		\n \
 		\tFor more information: https://github.com/bcgsc/RNA-Bloom\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# USAGE
 		echo "USAGE(S):"
 		echo -e "\
 		\t$PROGRAM [OPTIONS] -d <I/O directory> <metadata TSV file>\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		# OPTIONS
 		echo "OPTION(S):"
@@ -36,24 +43,33 @@ function get_help() {
 		\t-a <address>\temail alert\n \
 		\t-d <directory>\tInput directory (trimmed reads) and output directory for reads list\t(required)\n \
 		\t-h\tShow this help menu\n \
-        " | column -s$'\t' -t -L
+        " | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
 		\t$PROGRAM -d /path/to/trimmed_reads /path/to/sra/metadata.tsv\n \
-    	" | column -s$'\t' -t -L
+    	" | table
 	} 1>&2
 
 	exit 1
 }
-
+function print_line() {
+	if command -v tput &>/dev/null; then
+		end=$(tput cols)
+	else
+		end=50
+	fi
+	{
+		printf '%.0s=' $(seq 1 $end)
+		echo
+	} 1>&2
+}
 # 2 - print_error function
 function print_error() {
 	{
 		message="$1"
 		echo "ERROR: $message"
-		printf '%.0s=' $(seq 1 $(tput cols))
-		echo
+		print_line
 		get_help
 	} 1>&2
 }
@@ -97,7 +113,7 @@ fi
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
-	print_error "input file $(realpath $1) is empty."
+	print_error "Input file $(realpath $1) is empty."
 fi
 
 if ! command -v mail &>/dev/null; then
@@ -111,31 +127,27 @@ rm -f $dir/READSLIST.DONE
 # 8 - print env details
 echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
-# start_sec=$(date '+%s') 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
 
 infile=$(realpath $1)
-workdir=$(dirname $dir)
 
-outfile=$dir/reads.txt
+outfile=$dir/readslist.txt
 
-if [[ -f $workdir/STRANDED.LIB ]]; then
-	stranded=true
-elif [[ -f $workdir/NONSTRANDED.LIB ]]; then
-	stranded=false
-elif [[ -f $workdir/AGNOSTIC.LIB ]]; then
-	stranded=false
+if [[ ! -v STRANDED ]]; then
+	echo -e "\nPlease indicate whether your dataset has stranded or nonstranded library construction:" 1>&2
+	echo -e "\te.g. export STRANDED=true\n" 1>&2
+	exit 1
 else
-	print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
+	stranded=$STRANDED
 fi
 
-if [[ -f $workdir/PAIRED.END ]]; then
-	paired=true
-elif [[ -f $workdir/SINGLE.END ]]; then
-	paired=false
+if [[ ! -v PAIRED ]]; then
+	echo "Please indicate whether your dataset has paired or single-end reads:" 1>&2
+	echo -e "\te.g. export PAIRED=true\n" 1>&2
+	exit 1
 else
-	print_error "*.END file not found. Please check that the reads have been downloaded correctly."
+	paired=$PAIRED
 fi
 
 num_cols=$(head -n1 $infile | awk -F $'\t' '{print NF}')
@@ -145,9 +157,9 @@ if [[ "$num_cols" -eq 1 ]]; then
 	# if there is only one field, do not pool
 	if [[ "$paired" = true ]]; then
 		if [[ "$stranded" = true ]]; then
-			paste -d" " <(for i in $(seq $num_rows); do echo "no_pooling"; done) <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.paired.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.paired.fastq.gz/') >$outfile
+			paste -d" " <(for i in $(seq $num_rows); do echo "no_pooling"; done) <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.fastq.gz/') >$outfile
 		else
-			paste -d" " <(for i in $(seq $num_rows); do echo "no_pooling"; done) <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.paired.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.paired.fastq.gz/') >$outfile
+			paste -d" " <(for i in $(seq $num_rows); do echo "no_pooling"; done) <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.fastq.gz/') >$outfile
 		fi
 	else
 		paste -d" " <(for i in $(seq $num_rows); do echo "no_pooling"; done) <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/.fastq.gz/') >$outfile
@@ -176,9 +188,9 @@ else
 		fi
 		if [[ "$paired" = true ]]; then
 			if [[ "$stranded" = true ]]; then
-				paste -d" " <(cut -f${num_cols} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.paired.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.paired.fastq.gz/') >$outfile
+				paste -d" " <(cut -f${num_cols} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.fastq.gz/') >$outfile
 			else
-				paste -d" " <(cut -f${num_cols} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.paired.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.paired.fastq.gz/') >$outfile
+				paste -d" " <(cut -f${num_cols} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.fastq.gz/') >$outfile
 			fi
 		else
 			paste -d" " <(cut -f${num_cols} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/.fastq.gz/') >$outfile
@@ -232,9 +244,9 @@ else
 		fi
 		if [[ "$paired" = true ]]; then
 			if [[ "$stranded" = true ]]; then
-				paste -d" " <(cut -f${indices} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.paired.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.paired.fastq.gz/') >$outfile
+				paste -d" " <(cut -f${indices} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.fastq.gz/') >$outfile
 			else
-				paste -d" " <(cut -f${indices} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.paired.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.paired.fastq.gz/') >$outfile
+				paste -d" " <(cut -f${indices} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_1.fastq.gz/') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/_2.fastq.gz/') >$outfile
 			fi
 		else
 			paste -d" " <(cut -f${indices} -d$'\t' $infile | tail -n +2 | sed 's/[-_ ][0-9]\+\t/\t/g' | sed 's/[-_ ][0-9]\+$//g' | sed 's/ *(.\+)//g' | sed 's/;.*\t/\t/g' | sed 's/;.*$//g' | sed 's/[,;\.:]//g' | sed 's/[[:space:]]/_/g') <(cut -f1 -d $'\t' $infile | tail -n +2 | sed "s|^|$dir/|" | sed 's/$/.fastq.gz/') >$outfile
@@ -243,9 +255,6 @@ else
 fi
 
 echo -e "END: $(date)\n" 1>&2
-# end_sec=$(date '+%s')
-# if [[ "$end_sec" != "$start_sec" ]]; then
-#     $ROOT_DIR/scripts/get-runtime.sh -T $start_sec $end_sec 1>&2
 #     echo 1>&2
 # fi
 echo "STATUS: DONE." 1>&2
