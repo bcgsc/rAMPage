@@ -195,15 +195,6 @@ echo "Running Exonerate..." 1>&2
 echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false >$outdir/amps.exonerate.out\n" 1>&2
 $RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false >$outdir/amps.exonerate.out
 
-# {
-# 	echo "Query: $query"
-# 	echo "Target: $target2"
-# 	echo
-# } 1>&2
-#
-# echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target2 --querytype protein --targettype protein --ryo \"Summary: %qi %ti %pi\\\n\" --showvulgar false >$outdir/amps.exonerate.mature.out\n" 1>&2
-# $RUN_EXONERATE --query $query --target $target2 --querytype protein --targettype protein --ryo "Summary: %qi %ti %pi\n" --showvulgar false >$outdir/amps.exonerate.mature.out
-#
 exonerate_success=false
 if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	# there are known AMPs!
@@ -212,17 +203,6 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	echo -e "COMMAND: grep '^Summary:' $outdir/amps.exonerate.out | cut -d' ' -f2- >>$outdir/amps.exonerate.summary.out\n" 1>&2
 	echo -e "Query\tTarget\tDescription\tPercent Identity" >$outdir/amps.exonerate.summary.out
 	grep '^Summary:' $outdir/amps.exonerate.out | cut -d' ' -f2- | sort -k4,4gr -t $'\t' >>$outdir/amps.exonerate.summary.out
-
-	# if [[ "$(wc -l $outdir/amps.exonerate.mature.out | awk '{print $1}')" -gt 3 ]]; then
-	# 	echo -e "COMMAND: grep '^Summary:' $outdir/amps.exonerate.mature.out | cut -d' ' -f2- >$outdir/amps.exonerate.summary.mature.out\n" 1>&2
-	# 	grep '^Summary:' $outdir/amps.exonerate.mature.out | cut -d' ' -f2- >$outdir/amps.exonerate.summary.mature.out
-	# else
-	# 	touch $outdir/amps.exonerate.summary.mature.out
-	# fi
-
-	# novel AMPs will be defined as those that have exonerate pid of <100 or no alignment at all, hence take from $query
-
-	# take known list and do an inverse grep
 
 	echo "Filtering for AMPs with 100% alignment..." 1>&2
 	amps_100_list=$outdir/amps.exonerate.100.txt
@@ -237,8 +217,6 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	amps_some_fasta=$outdir/amps.exonerate.some.nr.faa
 	echo "COMMAND: grep -Fxvf $amps_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_some_list || true" 1>&2
 	grep -Fxvf $amps_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_some_list || true
-	# echo "COMMAND: awk -F \"\t\" '{if(\$4!=100) print \$1}' $outdir/amps.exonerate.summary.out | sort -u >$amps_some_list" 1>&2
-	# awk -F "\t" '{if($4!=100) print $1}' $outdir/amps.exonerate.summary.out | sort -u >$amps_some_list
 	echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_some_list >$amps_some_fasta\n" 1>&2
 	$RUN_SEQTK subseq $query $amps_some_list >$amps_some_fasta
 
@@ -255,10 +233,6 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	amps_some_none_fasta=$outdir/amps.exonerate.some_none.nr.faa
 	echo "COMMAND: cat $amps_some_list $amps_none_list | sort -u >$amps_some_none_list" 1>&2
 	cat $amps_some_list $amps_none_list | sort -u >$amps_some_none_list
-	# 	echo "COMMAND: grep -Fxf <(cat $amps_some_list $amps_none_list | sort -u) <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) > $amps_some_none_list || true" 1>&2
-	# 	grep -Fxf <(cat $amps_some_list $amps_none_list | sort -u) <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_some_none_list || true
-	# echo "COMMAND: grep -Fvxf $amps_100_list <(awk '/^>/ {print \$1}' $query | tr -d '>' | sort -u) >$amps_some_none_list || true" 1>&2
-	# grep -Fvxf $amps_100_list <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_some_none_list || true
 	echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_some_none_list > $amps_some_none_fasta\n" 1>&2
 	$RUN_SEQTK subseq $query $amps_some_none_list >$amps_some_none_fasta
 
@@ -293,8 +267,6 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		amps_mature_some_fasta=$outdir/amps.exonerate.mature.some.nr.faa
 		echo "COMMAND: grep -Fxvf $amps_mature_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_mature_some_list || true" 1>&2
 		grep -Fxvf $amps_mature_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_mature_some_list || true
-		# echo "COMMAND: awk -F \"\t\" '{if(\$4!=100) print \$1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list" 1>&2
-		# awk -F "\t" '{if($4!=100) print $1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list
 		echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_mature_some_list >$amps_mature_some_fasta\n" 1>&2
 		$RUN_SEQTK subseq $query $amps_mature_some_list >$amps_mature_some_fasta
 
@@ -311,8 +283,6 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		amps_mature_some_none_fasta=$outdir/amps.exonerate.mature.some_none.nr.faa
 		echo "COMMAND: cat $amps_mature_some_list $amps_mature_none_list > $amps_mature_some_none_list" 1>&2
 		cat $amps_mature_some_list $amps_mature_none_list >$amps_mature_some_none_list
-		# echo "COMMAND: grep -Fvxf $amps_mature_100_list <(awk '/^>/ {print \$1}' $query | tr -d '>' | sort -u) >$amps_mature_some_none_list || true" 1>&2
-		# grep -Fvxf $amps_mature_100_list <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_mature_some_none_list || true
 		echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_mature_some_none_list > $amps_mature_some_none_fasta\n" 1>&2
 		$RUN_SEQTK subseq $query $amps_mature_some_none_list >$amps_mature_some_none_fasta
 
@@ -337,121 +307,8 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		(cd $outdir && ln -fs $(basename $amps_mature_none_list) $(basename $amps_mature_some_none_list) && ln -fs $(basename $amps_mature_none_fasta) $(basename $amps_mature_some_none_fasta))
 	fi
 
-	# 	echo -e "Labelling known AMPs...\n" 1>&2
-	# 	# echo -e "COMMAND: sed -i '/^>/ s/ length=/_known&/' $outdir/known.amps.exonerate.nr.faa" 1>&2
-	# 	while read i; do
-	# 		if [[ "$exonerate_mature_success" == true ]]; then
-	# 			if grep -F -x -m 1 -q "$i" $known_amps_mature_list; then
-	# 				sed -i "s/$i/$i-known_mature/" $outdir/known.amps.exonerate.nr.faa
-	# 			else
-	# 				sed -i "s/$i/$i-known/" $outdir/known.amps.exonerate.nr.faa
-	# 			fi
-	# 		else
-	# 			sed -i "s/$i/$i-known/" $outdir/known.amps.exonerate.nr.faa
-	# 		fi
-	# 	done <$known_amps_list
-	#
-	# 	if [[ "$exonerate_mature_success" == true ]]; then
-	# 		sed -i '/^>/ s/ length=/-known_mature&/' $outdir/known.amps.exonerate.mature.nr.faa
-	# 	else
-	# 		touch $outdir/known.amps.exonerate.mature.nr.faa
-	# 	fi
-
-	# label with known AMP accession
-	# 	while IFS=' ' read novel known; do
-	# 		sed -i "/${novel}/ s/$/ exonerate=$known/" $outdir/known.amps.exonerate.nr.faa
-	# 	done < <(awk -F "\t" '{if($3==100) print $1, $2}' $outdir/amps.exonerate.summary.out | sort -u)
-
-	# while IFS=' ' read novel known; do
-	# 	sed -i "/${novel}-known/ s/$/ exonerate=$known/" $outdir/known.amps.exonerate.nr.faa
-	# done < <(awk -F "\t" '{if($3==100) print $1, $2}' $outdir/amps.exonerate.summary.out | sort -u)
-
-	# label with known AMP accession
-
-	# 	if [[ "$exonerate_mature_success" == true ]]; then
-	# 		while IFS=' ' read novel known; do
-	# 			sed -i "/${novel}-known_mature/ s/$/ exonerate=$known/" $outdir/known.amps.exonerate.mature.nr.faa
-	# 		done < <(awk -F "\t" '{if($4==100) print $1, $2}' $outdir/amps.exonerate.mature.summary.out | sort -u)
-	# 	else
-	# 		touch $outdir/known.amps.exonerate.mature.nr.faa
-	# 	fi
-	#
-	# 	echo "Filtering for novel AMPs..." 1>&2
-	# 	echo -e "COMMAND: $RUN_SEQTK subseq $query $novel_amps_list >$outdir/novel.amps.exonerate.nr.faa\n" 1>&2
-	# 	$RUN_SEQTK subseq $query $novel_amps_list >$outdir/novel.amps.exonerate.nr.faa
-	#
-	# 	echo "Running Exonerate..." 1>&2
-	# 	{
-	# 		echo "Query: $outdir/novel.amps.exonerate.nr.faa"
-	# 		echo "Target: $target2"
-	# 		echo
-	# 	} 1>&2
-	#
-	# 	echo -e "COMMAND: $RUN_EXONERATE --query $outdir/novel.amps.exonerate.nr.faa --target $target2 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false >$outdir/amps.exonerate.mature.out\n" 1>&2
-	# 	$RUN_EXONERATE --query $outdir/novel.amps.exonerate.nr.faa --target $target2 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false >$outdir/amps.exonerate.novel.mature.out
-	#
-	# 	exonerate_novel_mature_success=false
-	# 	if [[ "$(wc -l $outdir/amps.exonerate.novel.mature.out | awk '{print $1}')" -gt 3 ]]; then
-	# 		exonerate_novel_mature_success=true
-	# 		echo "Extracting summary..." 1>&2
-	# 		echo -e "COMMAND: grep '^Summary:' $outdir/amps.exonerate.novel.mature.out | cut -d' ' -f2- >$outdir/amps.exonerate.novel.mature.summary.out\n" 1>&2
-	# 		echo -e "Query\tTarget\tDescription\tPercent Identity" >$outdir/amps.exonerate.novel.mature.summary.out
-	# 		grep '^Summary:' $outdir/amps.exonerate.novel.mature.out | cut -d' ' -f2- | sort -k4,4gr >>$outdir/amps.exonerate.novel.mature.summary.out
-	#
-	# 		novel_amps_mature_list=$outdir/amps.exonerate.novel.mature.txt
-	# 		# get unaligned AMPs from this exonerate run
-	# 		awk -F "\t" '{if($4==100) print $1}' $outdir/amps.exonerate.novel.mature.summary.out | sort -u >$novel_amps_mature_list
-	#
-	# 		echo -e "COMMAND: $RUN_SEQTK subseq $query $novel_amps_mature_list >$outdir/novel.amps.exonerate.mature.nr.faa\n" 1>&2
-	# 		$RUN_SEQTK subseq $query $novel_amps_mature_list >$outdir/novel.amps.exonerate.mature.nr.faa
-	#
-	# 		awk -F "\t" '{print $1}' $outdir/amps.exonerate.novel.mature.summary.out | sort -u >$outdir/amps.exonerate.novel.mature.aligned.txt
-	#
-	# 		$RUN_SEQTK subseq $query $outdir/amps.exonerate.novel.mature.aligned.txt >$outdir/novel.amps.exonerate.mature.aligned.nr.faa
-	# 	else
-	# 		touch $outdir/novel.amps.exonerate.mature.nr.faa
-	# 	fi
-
-	# echo -e "COMMAND: $RUN_SEQTK subseq $query <(grep -vFf <(awk '{print \$1}' $outdir/amps.exonerate.summary.out | sort -u) <(grep '^>' $query | tr -d '>' | sort -u)) >$outdir/novel.amps.exonerate.nr.faa\n" 1>&2
-	# $RUN_SEQTK subseq $query <(grep -vFf <(awk '{print $1}' $outdir/amps.exonerate.summary.out | sort -u) <(grep '^>' $query | tr -d '>')) >$outdir/novel.amps.exonerate.nr.faa
-
-	# echo -e "Labelling novel AMPs...\n" 1>&2
-
-	# while read i; do
-	# 	if [[ "$exonerate_novel_mature_success" == true ]]; then
-	# 		if grep -w -m 1 -q "$i" $outdir/novel.amps.exonerate.mature.nr.faa; then
-	# 			# 				echo "Mature: $i"
-	# 			sed -i "s/$i/$i-novel_mature/" $outdir/novel.amps.exonerate.nr.faa
-	# 		else
-	# 			#			echo "Precursor: $i"
-	# 			sed -i "s/$i/$i-novel/" $outdir/novel.amps.exonerate.nr.faa
-	# 		fi
-	# 	else
-	# 		#		echo "No mature outfile"
-	# 		sed -i "s/$i/$i-novel/" $outdir/novel.amps.exonerate.nr.faa
-	# 	fi
-	# 	# echo -e "COMMAND: sed -i '/^>/ s/ length=/-novel&/' $outdir/novel.amps.exonerate.nr.faa\n" 1>&2
-	# 	# sed -i '/^>/ s/ length=/-novel&/' $outdir/novel.amps.exonerate.nr.faa
-	# done <$novel_amps_list
-
-	# if [[ "$exonerate_novel_mature_success" == true ]]; then
-	# 	sed -i '/^>/ s/ length=/-novel_mature&/' $outdir/novel.amps.exonerate.mature.nr.faa
-	# else
-	# 	touch $outdir/novel.amps.exonerate.mature.nr.faa
-	# fi
-
-	# echo "Combining the two files..." 1>&2
-	# echo -e "COMMAND: cat $outdir/known.amps.exonerate.nr.faa $outdir/novel.amps.exonerate.nr.faa >$outdir/labelled.amps.exonerate.nr.faa\n" 1>&2
-	# cat $outdir/known.amps.exonerate.nr.faa $outdir/novel.amps.exonerate.nr.faa >$outdir/labelled.amps.exonerate.nr.faa
-
-	# #	if [[ "$exonerate_mature_success" == true ]]; then
-	# echo -e "COMMAND: cat $outdir/known.amps.exonerate.mature.nr.faa $outdir/novel.amps.exonerate.mature.nr.faa >$outdir/labelled.amps.exonerate.mature.nr.faa\n" 1>&2
-	# cat $outdir/known.amps.exonerate.mature.nr.faa $outdir/novel.amps.exonerate.mature.nr.faa >$outdir/labelled.amps.exonerate.mature.nr.faa
-	# #	else
-#	touch $outdir/labelled.amps.exonerate.mature.nr.faa
-#	fi
-
 else
+
 	# no known AMPs
 	exonerate_mature_success=false
 	amps_none_list=$outdir/amps.exonerate.none.txt
@@ -473,10 +330,6 @@ else
 	amps_some_none_fasta=$outdir/amps.exonerate.some_none.nr.faa
 	(cd $outdir && ln -fs $(basename $amps_none_list) $(basename $amps_some_none_list) && ln -fs $(basename $amps_none_fasta) $(basename $amps_some_none_fasta))
 
-	# echo "Labelling novel AMPs..." 1>&2
-	# sed -i '/^>/ s/ length=/-novel&/' $outdir/novel.amps.exonerate.nr.faa
-	# cat $outdir/known.amps.exonerate.nr.faa $outdir/novel.amps.exonerate.nr.faa >$outdir/labelled.amps.exonerate.nr.faa
-
 fi
 
 # should still add these to the annotation tSV
@@ -490,34 +343,15 @@ if [[ "$exonerate_success" == true ]]; then
 		sed -i "/$seq / s@\$@ top_precursor=$exonerate_precursor_top@" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta
 		exonerate_results=$(awk -F "\t" -v var="$seq" 'BEGIN{ORS=";"}{if($1==var) print $2 "(" $4 "%)"}' <(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out) | sed 's/;$/\n/')
 		sed -i "/$seq / s/$/ precursor_hits=$exonerate_results/" $amps_none_fasta $amps_100_fasta $amps_some_fasta $amps_some_none_fasta
-		# sed -i "/$query-/ s/$/ precursor_hits=$exonerate_results/" $outdir/labelled.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s/$/ precursor_hits=$exonerate_results/" $outdir/known.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s/$/ precursor_hits=$exonerate_results/" $outdir/novel.amps.exonerate.nr.faa
-
-		# sed -i "/$query-/ s/$/ top_precursor=$exonerate_precursor_top/" $outdir/labelled.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s/$/ top_precursor=$exonerate_precursor_top/" $outdir/known.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s/$/ precursor_hits=$exonerate_results/" $outdir/novel.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s@\$@ top_precursor=$exonerate_precursor_top@" $outdir/labelled.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s@\$@ top_precursor=$exonerate_precursor_top@" $outdir/known.amps.exonerate.nr.faa
-		# sed -i "/$query-/ s@\$@ top_precursor=$exonerate_precursor_top@" $outdir/novel.amps.exonerate.nr.faa
 		if [[ -z "$exonerate_precursor_top" ]]; then
 			exonerate_precursor_top=" "
 		fi
 		# parse through the annotation file and add the tsv file
 		echo -e "$seq\t$exonerate_precursor_top\t$exonerate_results" >>$outdir/annotation.precursor.tsv
 		if [[ "$exonerate_mature_success" == true ]]; then
-			# sed -i "/$query-/ s/$/ mature_hits=$exonerate_results/" $outdir/labelled.amps.exonerate.mature.nr.faa
-			# sed -i "/$query-/ s/$/ mature_hits=$exonerate_results/" $outdir/known.amps.exonerate.mature.nr.faa
-			# sed -i "/$query-/ s/$/ mature_hits=$exonerate_results/" $outdir/novel.amps.exonerate.mature.nr.faa
 			exonerate_mature_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.mature.summary.out | grep -w "$seq" | head -n1 | awk -F "\t" '{print $2 ": " $3}' || true)
 			if [[ -n "$exonerate_mature_top" ]]; then
 				sed -i "/$seq / s@\$@ top_mature=$exonerate_mature_top@" $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta
-				# sed -i "/$query-/ s/$/ top_mature=$exonerate_mature_top/" $outdir/labelled.amps.exonerate.mature.nr.faa
-				# sed -i "/$query-/ s/$/ top_mature=$exonerate_mature_top/" $outdir/known.amps.exonerate.mature.nr.faa
-				# sed -i "/$query-/ s/$/ top_mature=$exonerate_mature_top/" $outdir/novel.amps.exonerate.mature.nr.faa
-				# sed -i "/$query-/ s@\$@ top_mature=$exonerate_mature_top@" $outdir/labelled.amps.exonerate.mature.nr.faa
-				# sed -i "/$query-/ s@\$@ top_mature=$exonerate_mature_top@" $outdir/known.amps.exonerate.mature.nr.faa
-				# sed -i "/$query-/ s@\$@ top_mature=$exonerate_mature_top@" $outdir/novel.amps.exonerate.mature.nr.faa
 			else
 				exonerate_mature_top=" "
 			fi
@@ -528,36 +362,12 @@ if [[ "$exonerate_success" == true ]]; then
 		else
 			echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
 		fi
-	done < <(cat $amps_100_list $amps_some_list | sort -u) # <(tail -n +2 $outdir/amps.exonerate.summary.out | awk '{print $1}' | sort -u)
+	done < <(cat $amps_100_list $amps_some_list | sort -u)
 
 	while read seq; do
 		echo -e "$seq\t \t " >>$outdir/annotation.precursor.tsv
 		echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
 	done <$amps_none_list
-	# add the label to the annotation TSV as well
-	# 	for seq in $(awk '/-novel / {print $1}' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/-novel//'); do
-	# 		sed -i "s/${seq}\t/${seq}-novel\t/" $file
-	# 		sed -i "s/${seq}\t/${seq}-novel\t/" $outdir/annotation.mature.tsv
-	# 		sed -i "s/${seq}\t/${seq}-novel\t/" $outdir/annotation.precursor.tsv
-	# 	done
-
-	# for seq in $(awk '/-known / {print $1}' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/-known//'); do
-	# 	sed -i "s/${seq}\t/${seq}-known\t/" $file
-	# 	sed -i "s/${seq}\t/${seq}-known\t/" $outdir/annotation.mature.tsv
-	# 	sed -i "s/${seq}\t/${seq}-known\t/" $outdir/annotation.precursor.tsv
-	# done
-
-	# 	for seq in $(grep '\-novel_mature' $outdir/labelled.amps.exonerate.mature.nr.faa | tr -d '>' | sed 's/-novel_mature//'); do
-	# 		sed -i "s/${seq}\t/${seq}-novel_mature\t/" $file
-	# 		sed -i "s/${seq}\t/${seq}-novel_mature\t/" $outdir/annotation.mature.tsv
-	# 		sed -i "s/${seq}\t/${seq}-novel_mature\t/" $outdir/annotation.precursor.tsv
-	# 	done
-	#
-	# 	for seq in $(grep '\-known_mature' $outdir/labelled.amps.exonerate.mature.nr.faa | tr -d '>' | sed 's/-known_mature//'); do
-	# 		sed -i "s/${seq}\t/${seq}-known_mature\t/" $file
-	# 		sed -i "s/${seq}\t/${seq}-known_mature\t/" $outdir/annotation.mature.tsv
-	# 		sed -i "s/${seq}\t/${seq}-known_mature\t/" $outdir/annotation.precursor.tsv
-	# 	done
 	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
 	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
 else
@@ -571,21 +381,11 @@ else
 	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
 	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
 fi
-# num_novel=$(grep -c '\-novel' $outdir/labelled.amps.exonerate.nr.faa || true)
-# num_novel_precursor=$(grep -c '\-novel ' $outdir/labelled.amps.exonerate.nr.faa || true)
-# num_novel_mature=$(grep -c '\-novel_mature' $outdir/labelled.amps.exonerate.nr.faa || true)
-
-# FIX THIS PART-- no 'labelled amp file anymore'
 
 echo -e "RESULTS\n$(printf '%.0s-' $(seq 1 63))\n" 1>&2
 
 num_total=$(grep -c '^>' $query || true)
 if [[ "$exonerate_success" = true ]]; then
-	# num_novel=$(wc -l $novel_amps_list | awk '{print $1}')
-	# if [[ "$exonerate_novel_mature_success" = true ]]; then
-	# 		num_novel_mature=$(wc -l $novel_amps_mature_list | awk '{print $1}')
-	# 		num_novel_all=$(cat $novel_amps_list $novel_amps_mature_list | sort -u | wc -l)
-
 	# pid = 100%
 	num_100=$(wc -l $amps_100_list | awk '{print $1}')
 	num_some=$(wc -l $amps_some_list | awk '{print $1}')
@@ -615,15 +415,6 @@ if [[ "$exonerate_success" = true ]]; then
 
 		echo -e "Number of AMPs (no alignment to mature AMPs):\t$(printf "%'d" $num_mature_none)/$(printf "%'d" $num_total)\n"
 	} | table 1>&2
-	# 	echo "Number of novel AMPs (<100% alignment to precursor AMPs): $(printf "%'d" $num_novel)/$(printf "%'d" $num_total)" 1>&2
-	# 	echo "Number of novel mature AMPs (<100% alignment to mature AMPs): $(printf "%'d" $num_novel_mature)/$(printf "%'d" $num_novel)" 1>&2
-	# 	echo -e "Number of Novel AMPs: $(printf "%'d" $num_novel_all)/$(printf "%'d" $num_total)\n" 1>&2
-	# else
-	# 	# num_novel_mature=$(wc -l $novel_amps_mature_list | awk '{print $1}')
-	# 	num_novel_all=$num_novel
-	# 	echo "Number of novel AMPs (<100% alignment to precursor AMPs): $(printf "%'d" $num_novel)/$(printf "%'d" $num_total)" 1>&2
-	# 	echo -e "Number of Novel AMPs: $(printf "%'d" $num_novel_all)/$(printf "%'d" $num_total)\n" 1>&2
-	# fi
 	echo "Novelty defined as < 100% alignment..." 1>&2
 	echo -e "Number of Novel AMPs: $(printf "%'d" $num_none)/$(printf "%'d" $num_total)\n" 1>&2
 else
@@ -645,35 +436,33 @@ else
 	echo -e "Output: $amps_some_none_fasta\n" 1>&2
 fi
 
-# default_name="$(realpath -s $(dirname $outdir)/exonerate)"
-# if [[ "$default_name" != "$outdir" ]]; then
-# 	if [[ -d "$default_name" ]]; then
-# 		count=1
-# 		if [[ ! -L "$default_name" ]]; then
-# 			temp="${default_name}-${count}"
-# 			while [[ -d "$temp" ]]; do
-# 				count=$((count + 1))
-# 				temp="${default_name}-${count}"
-# 			done
-# 			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old trimmed reads.\n" 1>&2
-# 			mv $default_name $temp
-# 		else
-# 			unlink $default_name
-# 		fi
-# 	fi
-# 	if [[ "$default_name" != "$outdir" ]]; then
-# 		echo -e "\n$outdir softlinked to $default_name\n" 1>&2
-# 		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
-# 	fi
-# fi
+default_name="$(realpath -s $(dirname $outdir)/exonerate)"
+if [[ "$default_name" != "$outdir" ]]; then
+	if [[ -d "$default_name" ]]; then
+		count=1
+		if [[ ! -L "$default_name" ]]; then
+			temp="${default_name}-${count}"
+			while [[ -d "$temp" ]]; do
+				count=$((count + 1))
+				temp="${default_name}-${count}"
+			done
+			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old trimmed reads.\n" 1>&2
+			mv $default_name $temp
+		else
+			unlink $default_name
+		fi
+	fi
+	if [[ "$default_name" != "$outdir" ]]; then
+		echo -e "\n$outdir softlinked to $default_name\n" 1>&2
+		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
+	fi
+fi
 echo -e "\nEND: $(date)\n" 1>&2
-# echo 1>&2
 
 echo -e "STATUS: DONE.\n" 1>&2
 touch $outdir/EXONERATE.DONE
 
 if [[ "$email" = true ]]; then
-	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 	species=$(echo "$species" | sed 's/^./\u&. /')
 	echo "$outdir" | mail -s "${species}: STAGE 12: EXONERATE: SUCCESS" "$address"
 	echo -e "\nEmail alert sent to $address." 1>&2
