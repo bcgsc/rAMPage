@@ -143,12 +143,13 @@ elif [[ ! -s $(realpath $1) ]]; then
 	echo "Input file $(realpath $1) is empty. There are no sequences to align."
 	rm -f $outdir/EXONERATE.FAIL
 	touch $outdir/EXONERATE.DONE
-	echo -e "Query\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
-	echo -e "Query\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
 	touch $outdir/amps.exonerate.some_none.nr.faa
 	join -t$'\t' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv >$outdir/annotation.tsv
 	if [[ -s $(realpath $2) && $(wc -l $(realpath $1) | awk '{print $1}') -eq 1 ]]; then
-		join -t $'\t' $outdir/annotation.tsv $file >$outdir/final_annotation.tsv
+		cp $(realpath $2) $outdir
+		join -t $'\t' $outdir/annotation.tsv $(realpath $2) >$outdir/final_annotation.tsv
 	else
 		(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
 	fi
@@ -234,8 +235,8 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	echo "Filtering for AMPs with some alignment..." 1>&2
 	amps_some_list=$outdir/amps.exonerate.some.txt
 	amps_some_fasta=$outdir/amps.exonerate.some.nr.faa
-	echo "COMMAND: grep -Fxvf $amps_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_some_list" 1>&2
-	grep -Fxvf $amps_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_some_list
+	echo "COMMAND: grep -Fxvf $amps_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_some_list || true" 1>&2
+	grep -Fxvf $amps_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_some_list || true
 	# echo "COMMAND: awk -F \"\t\" '{if(\$4!=100) print \$1}' $outdir/amps.exonerate.summary.out | sort -u >$amps_some_list" 1>&2
 	# awk -F "\t" '{if($4!=100) print $1}' $outdir/amps.exonerate.summary.out | sort -u >$amps_some_list
 	echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_some_list >$amps_some_fasta\n" 1>&2
@@ -244,8 +245,8 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	echo "Filtering for AMPs with no alignment..." 1>&2
 	amps_none_list=$outdir/amps.exonerate.none.txt
 	amps_none_fasta=$outdir/amps.exonerate.none.nr.faa
-	echo "COMMAND: grep -Fvxf <(cat $amps_100_list $amps_some_list) <(awk '/^>/ {print \$1}' $query | tr -d '>' | sort -u) > $amps_none_list" 1>&2
-	grep -Fvxf <(cat $amps_100_list $amps_some_list) <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_none_list
+	echo "COMMAND: grep -Fvxf <(cat $amps_100_list $amps_some_list) <(awk '/^>/ {print \$1}' $query | tr -d '>' | sort -u) > $amps_none_list || true" 1>&2
+	grep -Fvxf <(cat $amps_100_list $amps_some_list) <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_none_list || true
 	echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_none_list > $amps_none_fasta\n" 1>&2
 	$RUN_SEQTK subseq $query $amps_none_list >$amps_none_fasta
 
@@ -290,8 +291,8 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		echo "Filtering for AMPs with some alignment..." 1>&2
 		amps_mature_some_list=$outdir/amps.exonerate.mature.some.txt
 		amps_mature_some_fasta=$outdir/amps.exonerate.mature.some.nr.faa
-		echo "COMMAND: grep -Fxvf $amps_mature_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_mature_some_list" 1>&2
-		grep -Fxvf $amps_mature_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_mature_some_list
+		echo "COMMAND: grep -Fxvf $amps_mature_100_list <(awk -F \"\t\" '{print \$1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) > $amps_mature_some_list || true" 1>&2
+		grep -Fxvf $amps_mature_100_list <(awk -F "\t" '{print $1}' <(tail -n +2 $outdir/amps.exonerate.summary.out) | sort -u) >$amps_mature_some_list || true
 		# echo "COMMAND: awk -F \"\t\" '{if(\$4!=100) print \$1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list" 1>&2
 		# awk -F "\t" '{if($4!=100) print $1}' <(tail -n +2 $outdir/amps.exonerate.mature.summary.out) | sort -u >$amps_mature_some_list
 		echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_mature_some_list >$amps_mature_some_fasta\n" 1>&2
@@ -300,8 +301,8 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		echo "Filtering for AMPs with no alignment..." 1>&2
 		amps_mature_none_list=$outdir/amps.exonerate.mature.none.txt
 		amps_mature_none_fasta=$outdir/amps.exonerate.mature.none.nr.faa
-		echo "COMMAND: grep -Fvxf <(cat $amps_mature_100_list $amps_mature_some_list) <(awk '/^>/ {print \$1}' $query | tr -d '>' | sort -u) > $amps_mature_none_list" 1>&2
-		grep -Fvxf <(cat $amps_mature_100_list $amps_mature_some_list) <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_mature_none_list
+		echo "COMMAND: grep -Fvxf <(cat $amps_mature_100_list $amps_mature_some_list) <(awk '/^>/ {print \$1}' $query | tr -d '>' | sort -u) > $amps_mature_none_list || true" 1>&2
+		grep -Fvxf <(cat $amps_mature_100_list $amps_mature_some_list) <(awk '/^>/ {print $1}' $query | tr -d '>' | sort -u) >$amps_mature_none_list || true
 		echo -e "COMMAND: $RUN_SEQTK subseq $query $amps_mature_none_list > $amps_mature_none_fasta\n" 1>&2
 		$RUN_SEQTK subseq $query $amps_mature_none_list >$amps_mature_none_fasta
 
@@ -328,7 +329,7 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 
 		amps_mature_none_list=$outdir/amps.exonerate.mature.none.txt
 		amps_mature_none_fasta=$outdir/amps.exonerate.mature.none.nr.faa
-		(cd $outdir && ln -fs $(basename $query) $(basename $amps_mature_none_fasta))
+		(cd $outdir && ln -fs $query $(basename $amps_mature_none_fasta))
 		awk '{print $1}' $amps_mature_none_fasta | tr -d '>' >$amps_mature_none_list
 
 		amps_mature_some_none_list=$outdir/amps.exonerate.mature.some_none.txt
@@ -455,7 +456,8 @@ else
 	exonerate_mature_success=false
 	amps_none_list=$outdir/amps.exonerate.none.txt
 	amps_none_fasta=$outdir/amps.exonerate.none.nr.faa
-	(cd $outdir && ln -fs $(basename $query) $(basename $amps_none_fasta))
+	awk '/^>/ {print $1}' $query | tr -d '>' | sort -u >$amps_none_list
+	(cd $outdir && ln -fs $query $(basename $amps_none_fasta))
 
 	amps_100_list=$outdir/amps.exonerate.100.txt
 	amps_100_fasta=$outdir/amps.exonerate.100.nr.faa
@@ -480,9 +482,9 @@ fi
 # should still add these to the annotation tSV
 echo -e "Annotating...\n" 1>&2
 if [[ "$exonerate_success" == true ]]; then
-	echo -e "Query\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
-	echo -e "Query\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
-	while IFS=' ' read seq; do
+	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	while read seq; do
 		exonerate_precursor_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out | grep -w "$seq" -m1 | awk -F "\t" '{print $2 ": " $3}' || true)
 
 		sed -i "/$seq / s@\$@ top_precursor=$exonerate_precursor_top@" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta
@@ -526,7 +528,12 @@ if [[ "$exonerate_success" == true ]]; then
 		else
 			echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
 		fi
-	done < <(tail -n +2 $outdir/amps.exonerate.summary.out | awk '{print $1}' | sort -u)
+	done < <(cat $amps_100_list $amps_some_list | sort -u) # <(tail -n +2 $outdir/amps.exonerate.summary.out | awk '{print $1}' | sort -u)
+
+	while read seq; do
+		echo -e "$seq\t \t " >>$outdir/annotation.precursor.tsv
+		echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
+	done <$amps_none_list
 	# add the label to the annotation TSV as well
 	# 	for seq in $(awk '/-novel / {print $1}' $outdir/labelled.amps.exonerate.nr.faa | tr -d '>' | sed 's/-novel//'); do
 	# 		sed -i "s/${seq}\t/${seq}-novel\t/" $file
@@ -551,9 +558,18 @@ if [[ "$exonerate_success" == true ]]; then
 	# 		sed -i "s/${seq}\t/${seq}-known_mature\t/" $outdir/annotation.mature.tsv
 	# 		sed -i "s/${seq}\t/${seq}-known_mature\t/" $outdir/annotation.precursor.tsv
 	# 	done
+	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
+	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+else
+	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	while read seq; do
+		echo -e "$seq\t \t " >>$outdir/annotation.precursor.tsv
+		echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
+	done < <(cat $amps_100_list $amps_some_list $amps_none_list | sort -u)
 
-	join --header -t $'\t' <(sort -k1,1 $outdir/annotation.precursor.tsv) <(sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
-	join --header -t $'\t' <(sort -k1,1 $outdir/annotation.tsv) <(sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
+	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
 fi
 # num_novel=$(grep -c '\-novel' $outdir/labelled.amps.exonerate.nr.faa || true)
 # num_novel_precursor=$(grep -c '\-novel ' $outdir/labelled.amps.exonerate.nr.faa || true)
