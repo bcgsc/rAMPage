@@ -1,5 +1,7 @@
 # Helper Scripts
 
+:warning: These scripts are _experimental_. They may be classified as 'hacky' and have not been thoroughly debugged and tested. :warning:
+
 This directory holds the optional scripts for setup.
 
 ## Downloading Reads
