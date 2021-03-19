@@ -11,7 +11,7 @@ This differential expression analysis pipeline uses RNA-seq reads and assembled 
     2. Quantify using salmon 
     3. Create the metadata file to run DESeq
     - Create a 3-column comma separated file in the format sample,treatment,/path/to/quant.sf
-    4. Perform differential expression analysis using DESeq2 – must have replicates in the dataset
+    4. Perform differential expression analysis using DESeq2
     5. Create volcano plot, ma plot and pheatmap and generate fasta file with upregulated AMPs
     
 
