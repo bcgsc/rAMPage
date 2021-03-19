@@ -161,6 +161,8 @@ upreg <- amp_csv %>% filter(upreg == "upreg")
 downamp <- deseq2ResDF %>% filter(Type == "AMP" & log2FoldChange < -2 & padj < 0.05)
 amp_csv$downreg <- ifelse(pattern %in% downamp$Transcript_ID,"downreg",NA)
 downreg <- amp_csv %>% filter(downreg == "downreg")
+write.table(as.data.frame(upreg), file = paste(outdir,"upregulated_amps.tsv",sep="/"),col.names = TRUE,row.names = FALSE,sep="\t",quote = FALSE)
+write.table(as.data.frame(downreg), file = paste(outdir,"downregulated_amps.tsv",sep="/"),col.names = TRUE,row.names = FALSE,sep="\t",quote = FALSE)
 
 suppressPackageStartupMessages(require("seqRFLP"))
 
