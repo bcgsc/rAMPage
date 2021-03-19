@@ -42,7 +42,7 @@ This differential expression analysis pipeline uses RNA-seq reads and assembled 
 | pheatmap | v1.0.12 |
 | edgeR | v3.28.1 |
 | dplyr | v1.0.4 |
-| seqRFLP | 1.0.1 |   
+| seqRFLP | v1.0.1 |   
 ## Usage
 
 ### Quantify using Salmon
