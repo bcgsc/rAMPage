@@ -172,5 +172,5 @@ df.fasta = dataframe2fas(df,paste(outdir,"upregulated_amps.faa",sep="/"))
 downnames <- upreg$Sequence_ID
 downsequences<-upreg$Sequence
 df2 <- data.frame(downnames,downsequences)
-df2.fasta = dataframe2fas(df2paste(outdir,"downregulated_amps.faa",sep="/"))
+df2.fasta = dataframe2fas(df2,paste(outdir,"downregulated_amps.faa",sep="/"))
 
