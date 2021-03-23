@@ -18,7 +18,6 @@ rAMPage is a _de novo_ anti-microbial peptide (AMP) discovery pipeline that take
 	1. [Tools](#tools)
 	1. [Optional](#optional)
 1. [Input](#input)
-1. [Met]
 1. [Usage](#usage)
 1. [Directory Structure](#directory-structure)
 1. [Citation](#citation)
