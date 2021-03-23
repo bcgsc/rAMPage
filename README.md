@@ -1,22 +1,24 @@
-# r<span style='color:##FF0000'>AMP</span>age: Rapid AMP Annotation and Gene Estimation
-
+# _rAMPage_: Rapid AMP Annotation and Gene Estimation
 Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
+<p align="center">
+	<img src="rAMPage.png" width="30%"> 
+</p>
 
 ## Description
 
-rAMPage is a _de novo_ anti-microbial peptide (AMP) discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs.
-
-![](Flowchart.png)
+rAMPage is a _de novo_ anti-microbial peptide (AMP) discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs. 
 
 ## Quick Links
 
+1. [Overview](Flowchart.png)
 1. [Setup](#setup)
 1. [Dependencies](#dependencies)
 	1. [Basics](#basics)
 	1. [Tools](#tools)
 	1. [Optional](#optional)
 1. [Input](#input)
+1. [Met]
 1. [Usage](#usage)
 1. [Directory Structure](#directory-structure)
 1. [Citation](#citation)
