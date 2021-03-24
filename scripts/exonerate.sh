@@ -484,27 +484,27 @@ else
 	echo -e "Output: $amps_some_none_fasta\n" 1>&2
 fi
 
-# default_name="$(realpath -s $(dirname $outdir)/exonerate)"
-# if [[ "$default_name" != "$outdir" ]]; then
-# 	if [[ -d "$default_name" ]]; then
-# 		count=1
-# 		if [[ ! -L "$default_name" ]]; then
-# 			temp="${default_name}-${count}"
-# 			while [[ -d "$temp" ]]; do
-# 				count=$((count + 1))
-# 				temp="${default_name}-${count}"
-# 			done
-# 			echo -e "\nSince $default_name already exists, $default_name is renamed to $temp as to not overwrite old trimmed reads.\n" 1>&2
-# 			mv $default_name $temp
-# 		else
-# 			unlink $default_name
-# 		fi
-# 	fi
-# 	if [[ "$default_name" != "$outdir" ]]; then
-# 		echo -e "\n$outdir softlinked to $default_name\n" 1>&2
-# 		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
-# 	fi
-# fi
+default_name="$(realpath -s $(dirname $outdir)/exonerate)"
+if [[ "$default_name" != "$outdir" ]]; then
+	if [[ -d "$default_name" ]]; then
+		count=1
+		if [[ ! -L "$default_name" ]]; then
+			temp="${default_name}-${count}"
+			while [[ -d "$temp" ]]; do
+				count=$((count + 1))
+				temp="${default_name}-${count}"
+			done
+			echo -e "\nSince $default_name already exists, $default_name is renamed to $temp as to not overwrite old trimmed reads.\n" 1>&2
+			mv $default_name $temp
+		else
+			unlink $default_name
+		fi
+	fi
+	if [[ "$default_name" != "$outdir" ]]; then
+		echo -e "\n$outdir softlinked to $default_name\n" 1>&2
+		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
+	fi
+fi
 echo -e "\nEND: $(date)\n" 1>&2
 
 echo -e "STATUS: DONE.\n" 1>&2
