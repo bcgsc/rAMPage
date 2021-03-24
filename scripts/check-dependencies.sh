@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
+
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
 args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
@@ -136,15 +142,15 @@ if [[ ! -v TARGET ]]; then
 	target="exonerate"
 fi
 
+if [[ ! -v ROOT_DIR || ! -f $ROOT_DIR/CONFIG.DONE ]]; then
+	echo "The script scripts/config.sh still needs to be sourced." 1>&2
+	exit 1
+fi
+
 if [[ "$target" != "sable" && "$target" != "all" ]]; then
 	total=$(($(grep -c '^export' $ROOT_DIR/scripts/config.sh) - 1 - 3))
 else
 	total=$(($(grep -c '^export' $ROOT_DIR/scripts/config.sh) - 1))
-fi
-
-if [[ ! -v ROOT_DIR || ! -f $ROOT_DIR/CONFIG.DONE ]]; then
-	echo "The script scripts/config.sh still needs to be sourced." 1>&2
-	exit 1
 fi
 
 {

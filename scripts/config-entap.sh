@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -74,12 +79,18 @@ fi
 email=false
 threads=8
 
-if command -v $RUN_ENTAP &>/dev/null; then
-	outdir=$(dirname $RUN_ENTAP)
-else
-	echo "ERROR: EnTAP program not found."
-	exit 2
+if [[ ! -v RUN_ENTAP ]]; then
+	# look in PATH
+	if command -v EnTAP &>/dev/null; then
+		RUN_ENTAP=$(command -v EnTAP)
+	else
+		print_error "RUN_ENTAP is unbound and no 'EnTAP' found in PATH. Please export RUN_ENTAP=/path/to/EnTAP/executable." 1>&2
+	fi
+elif ! command -v $RUN_ENTAP &>/dev/null; then
+	print_error "Unable to execute $RUN_ENTAP." 1>&2
 fi
+
+outdir=$(dirname $RUN_ENTAP)
 custom_threads=false
 while getopts :ha:t: opt; do
 	case $opt in
@@ -189,6 +200,16 @@ else
 	db=""
 fi
 
+if [[ ! -v RUN_DIAMOND ]]; then
+	if command -v diamond &>/dev/null; then
+		RUN_DIAMOND=$(command -v diamond)
+	else
+		print_error "RUN_DIAMOND is unbound and no 'diamond' found in PATH. Please export RUN_DIAMOND=/path/to/diamond/executable."
+	fi
+elif ! command -v $RUN_DIAMOND &>/dev/null; then
+	print_error "Unable to execute $RUN_DIAMOND."
+fi
+
 # set diamond
 # echo "Setting diamond-exe=$RUN_DIAMOND..." 1>&2
 sed -i "s|diamond-exe=.*|diamond-exe=$RUN_DIAMOND|" $outdir/entap_config.ini
@@ -196,6 +217,16 @@ sed -i "s|diamond-exe=.*|diamond-exe=$RUN_DIAMOND|" $outdir/entap_config.ini
 # set graphing
 # echo "Setting entap-graph=$entap_dir/src/entap_graphing.py..." 1>&2
 sed -i "s|^entap-graph=.*$|entap-graph=$entap_dir/src/entap_graphing.py|" $outdir/entap_config.ini
+
+if [[ ! -v RUN_INTERPROSCAN ]]; then
+	if command -v interproscan.sh &>/dev/null; then
+		RUN_INTERPROSCAN=$(command -v interproscan.sh)
+	else
+		print_error "RUN_INTERPROSCAN is unbound and no 'interproscan.sh' found in PATH. Please export RUN_INTERPROSCAN=/path/to/interproscan.sh."
+	fi
+elif ! command -v $RUN_INTERPROSCAN &>/dev/null; then
+	print_error "Unable to execute $RUN_INTERPROSCAN."
+fi
 
 # set interproscan
 # echo "Setting interproscan-exe=$RUN_INTERPROSCAN..." 1>&2

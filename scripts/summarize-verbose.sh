@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # input: logfiles
 # output: tsv
 
@@ -112,6 +117,10 @@ fi
 } 1>&2
 # first line - Step, Time, CPU, Memory
 # first column - step names
+
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/rAMPage/GitHub/directory."
+fi
 
 for i in "$@"; do
 	indir=$(realpath $i)

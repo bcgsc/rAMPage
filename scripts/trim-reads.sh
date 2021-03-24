@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -147,6 +152,10 @@ if ! ls $indir/*.fastq.gz &>/dev/null; then
 	print_error "Input raw reads not found in $indir."
 fi
 
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/rAMPage/GitHub/directory."
+fi
+
 # 7 - remove status files
 rm -f $outdir/TRIM.DONE
 rm -f $outdir/TRIM.FAIL
@@ -214,6 +223,16 @@ if ! command -v mail &>/dev/null; then
 fi
 
 input=$(realpath $1)
+
+if [[ ! -v RUN_FASTP ]]; then
+	if command -v fastp &>/dev/null; then
+		RUN_FASTP=$(command -v fastp)
+	else
+		print_error "RUN_FASTP is unbound and no 'fastp' found in PATH. Please export RUN_FASTP=/path/to/fastp/executable."
+	fi
+elif ! command -v $RUN_FASTP &>/dev/null; then
+	print_error "Unable to execute $RUN_FASTP."
+fi
 
 echo "PROGRAM: $(command -v $RUN_FASTP)" 1>&2
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" 1>&2

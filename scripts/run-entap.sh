@@ -214,10 +214,33 @@ export PATH=$(dirname $JAVA_EXEC):$PATH
 } 1>&2
 
 echo "Checking EnTAP..." 1>&2
+if [[ ! -v RUN_ENTAP ]]; then
+	# look in PATH
+	if command -v EnTAP &>/dev/null; then
+		RUN_ENTAP=$(command -v EnTAP)
+	else
+		print_error "RUN_ENTAP is unbound and no 'EnTAP' found in PATH. Please export RUN_ENTAP=/path/to/EnTAP/executable." 1>&2
+	fi
+elif ! command -v $RUN_ENTAP &>/dev/null; then
+	print_error "Unable to execute $RUN_ENTAP." 1>&2
+fi
+
 echo "PROGRAM: $(command -v $RUN_ENTAP)" 1>&2
 echo -e "VERSION: $($RUN_ENTAP --version | awk '/version:/ {print $3}' || exit 1)\n" 1>&2
 
 echo "Checking Java..." 1>&2
+
+if [[ ! -v JAVA_EXEC ]]; then
+	# look in PATH
+	if command -v JAVA_EXEC &>/dev/null; then
+		JAVA_EXEC=$(command -v java)
+	else
+		print_error "JAVA_EXEC is unbound and no 'java' found in PATH. Please export JAVA_EXEC=/path/to/java/executable." 1>&2
+	fi
+elif ! command -v $JAVA_EXEC &>/dev/null; then
+	print_error "Unable to execute $JAVA_EXEC." 1>&2
+fi
+
 java_version=$($JAVA_EXEC -version 2>&1 | awk '/version/{print $3}' | sed 's/"//g' || exit 1)
 
 if [[ "$java_version" != 1.8* ]]; then
@@ -232,6 +255,17 @@ echo "PROGRAM: $(command -v $JAVA_EXEC || exit 1)" 1>&2
 echo -e "VERSION: $java_version\n" 1>&2
 
 echo "Checking InterProScan..." 1>&2
+
+if [[ ! -v RUN_INTERPROSCAN ]]; then
+	if command -v interproscan.sh &>/dev/null; then
+		RUN_INTERPROSCAN=$(command -v interproscan.sh)
+	else
+		print_error "RUN_INTERPROSCAN is unbound and no 'interproscan.sh' found in PATH. Please export RUN_INTERPROSCAN=/path/to/interproscan.sh."
+	fi
+elif ! command -v $RUN_INTERPROSCAN &>/dev/null; then
+	print_error "Unable to execute $RUN_INTERPROSCAN."
+fi
+
 echo "PROGRAM: $(command -v $RUN_INTERPROSCAN || exit 1)" 1>&2
 echo "VERSION: $($RUN_INTERPROSCAN --version | head -n1 | awk '{print $NF}' || exit 1)"
 # CONFIG THE FILE

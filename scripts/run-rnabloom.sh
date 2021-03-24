@@ -4,8 +4,12 @@ set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
 
-args="$FULL_PROGRAM $*"
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
 
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -190,32 +194,35 @@ if ! command -v mail &>/dev/null; then
 fi
 
 echo "Checking minimap2..." 1>&2
-bin=$(command -v minimap2 || true)
-if [[ -n $bin ]]; then
-	echo "PROGRAM: $bin" 1>&2
+if command -v minimap2 &>/dev/null; then
+	echo "PROGRAM: $(command -v minimap2)" 1>&2
 	echo -e "VERSION: $(minimap2 --version)\n" 1>&2
 else
-	print_error "Cannot find minimap2 in your PATH."
+	print_error "Cannot find 'minimap2' in PATH."
 fi
 
 echo "Checking ntCard..." 1>&2
-bin=$(command -v ntcard || true)
-if [[ -n $bin ]]; then
+if command -v ntcard &>/dev/null; then
 	echo "PROGRAM: $bin" 1>&2
 	echo -e "VERSION: $(ntcard --version 2>&1 | awk '/ntCard/ {print $NF}')\n" 1>&2
 else
-	print_error "Cannot find ntCard in your PATH."
+	print_error "Cannot find 'ntcard' in PATH."
 fi
 
 echo "Checking Java SE Runtime Environment (JRE)..." 1>&2
-bin=$(command -v $JAVA_EXEC || true)
-if [[ -n $bin ]]; then
-	echo "PROGRAM: $bin" 1>&2
-	java_version=$($JAVA_EXEC -version 2>&1 | head -n1 | awk '{print $3}' | sed 's/"//g')
-	echo -e "VERSION: $java_version\n" 1>&2
-else
-	print_error "Cannot find JRE 8 in your PATH."
+
+if [[ ! -v JAVA_EXEC ]]; then
+	# look in PATH
+	if command -v JAVA_EXEC &>/dev/null; then
+		JAVA_EXEC=$(command -v java)
+	else
+		print_error "JAVA_EXEC is unbound and no 'java' found in PATH. Please export JAVA_EXEC=/path/to/java/executable." 1>&2
+	fi
+elif ! command -v $JAVA_EXEC &>/dev/null; then
+	print_error "Unable to execute $JAVA_EXEC." 1>&2
 fi
+
+java_version=$($JAVA_EXEC -version 2>&1 | awk '/version/{print $3}' | sed 's/"//g' || exit 1)
 
 if [[ "$java_version" != 1.8* ]]; then
 	print_error "RNA-Bloom requires Java SE Runtime Environment (JRE) 8. Version detected: $java_version"

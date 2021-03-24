@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -153,10 +158,16 @@ if (($(echo "$similarity == 1" | bc -l))); then
 fi
 
 if [[ ! -v RUN_CDHIT ]]; then
-	RUN_CDHIT=$(command -v cd-hit || exit 1)
+	if command -v cd-hit &>/dev/null; then
+		RUN_CDHIT=$(command -v cd-hit)
+	else
+		print_error "RUN_CDHIT is unbound and no 'cd-hit' found in PATH. Please export RUN_CDHIT=/path/to/cd-hit/executable."
+	fi
+elif ! command -v $RUN_CDHIT &>/dev/null; then
+	print_error "Unable to execute $RUN_CDHIT."
 fi
 
-echo "PROGRAM: $(command -v $RUN_CDHIT || exit 1)" 1>&2
+echo "PROGRAM: $(command -v $RUN_CDHIT)" 1>&2
 cdhit_version=$({ $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}' | tr -d '='; } || true)
 echo -e "VERSION: $cdhit_version\n" 1>&2
 

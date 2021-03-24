@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # input: logfiles
 # output: tsv
 
@@ -110,6 +115,10 @@ fi
 
 	echo -e "CALL: $args (wd: $(pwd))\n"
 } 1>&2
+
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/rAMPage/GitHub/directory."
+fi
 
 for logdir in "$@"; do
 	indir=$(realpath $logdir)

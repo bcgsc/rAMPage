@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -123,6 +128,15 @@ fi
 	echo "CALL: $args (wd: $(pwd))"
 	echo -e "THREADS: $threads\n"
 } >$logfile
+if [[ ! -v RUN_FASTP ]]; then
+	if command -v fastp &>/dev/null; then
+		RUN_FASTP=$(command -v fastp)
+	else
+		print_error "RUN_FASTP is unbound and no 'fastp' found in PATH. Please export RUN_FASTP=/path/to/fastp/executable."
+	fi
+elif ! command -v $RUN_FASTP &>/dev/null; then
+	print_error "Unable to execute $RUN_FASTP."
+fi
 
 echo "PROGRAM: $(command -v $RUN_FASTP)" >>$logfile
 echo -e "VERSION: $($RUN_FASTP --version 2>&1 | awk '{print $NF}')\n" >>$logfile

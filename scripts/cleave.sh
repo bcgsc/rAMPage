@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -32,10 +37,9 @@ function get_help() {
 		\t-----------\n \
 		\t  - 0: successfully completed\n \
 		\t  - 1: general error\n \
-		\t  - 2: SignalP not found\n \
-		\t  - 3: cleavage failed\n \
-		\t  - 4: length filtering failed\n \
-		\t  - 5: redundancy removal failed\n \
+		\t  - 2: cleavage failed\n \
+		\t  - 3: length filtering failed\n \
+		\t  - 4: redundancy removal failed\n \
 		\n \
 		\tFor more information on ProP: https://services.healthtech.dtu.dk/service.php?ProP-1.0\n \
 		" | table
@@ -187,98 +191,36 @@ else
 	species=$SPECIES
 fi
 
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/rAMPage/GitHub/directory."
+fi
+
+if [[ ! -v RUN_PROP ]]; then
+	# if not bound, look for it in PATH
+	if command -v prop &>/dev/null; then
+		RUN_PROP=$(command -v prop)
+	else
+		print_error "RUN_PROP is unbound and no 'prop' found in PATH. Please export RUN_PROP=/path/to/ProP/executable."
+	fi
+elif ! command -v $RUN_PROP &>/dev/null; then
+	print_error "Unable to execute $RUN_PROP."
+fi
+
 echo "PROGRAM: $(command -v $RUN_PROP)" 1>&2
 echo -e "VERSION: 1.0c\n" 1>&2
-# propdir=$(dirname $RUN_PROP)
 
-# check if this needs to be checked
-# if [[ -f "$propdir/CONFIG.DONE" ]]; then
-# 	config=false
-# 	echo -e "ProP and SignalP have been pre-configured. Skipping configuration. If this is not the case, please delete the $propdir/CONFIG.DONE file to trigger a reconfiguration of ProP and SignalP.\n" 1>&2
-# else
-# 	config=true
-# fi
+if [[ ! -v RUN_SIGNALP ]]; then
+	if command -v signalp &>/dev/null; then
+		RUN_SIGNALP=$(command -v signalp)
+	else
+		print_error "RUN_SIGNALP is unbound and no 'signalp' found in PATH. Please export RUN_SIGNALP=/path/to/SignalP/executable."
+	fi
+elif ! command -v $RUN_SIGNALP &>/dev/null; then
+	print_error "Unable to execute $RUN_SIGNALP."
+fi
 
-# if [[ "$config" == true ]]; then
-# 	permissions=$(ls -ld $propdir/tmp | awk '{print $1}')
-# 	owner=$(ls -ld $propdir/tmp | awk '{print $3}')
-# 	if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
-# 		chmod 1777 $propdir/tmp
-# 	fi
-# fi
-# echo -e "VERSION: $(echo $RUN_PROP | grep -o prop\-[0-9]\.[0-9]. | cut -f2 -d-)\n" 1>&2
-# this should have been moved to config-signalp.sh
-# if command -v $RUN_SIGNALP &>/dev/null; then
-# 	signalp=true
-# 	signalp_opt="-s"
-# 	echo -e "SignalP program detected. Proceeding with SignalP.\n" 1>&2
-# 	if [[ "$config" = true ]]; then
-# 		signal_dir=$(dirname $RUN_SIGNALP)
-# 		if [[ ! -f "$signal_dir/CONFIG.DONE" ]]; then
-# 			sed -i "s|^SIGNALP=.*|SIGNALP=$signal_dir|" $RUN_SIGNALP
-# 			sed -i "s|^SH=.*|SH=$SHELL|" $RUN_SIGNALP
-# 			permissions=$(ls -ld $signal_dir/tmp | awk '{print $1}')
-# 			owner=$(ls -ld $signal_dir/tmp | awk '{print $3}')
-# 			if [[ "$permissions" != "drwxrw[sx]rwt" && "$owner" == "$(whoami)" ]]; then
-# 				chmod 1777 $signal_dir/tmp
-# 			fi
-# 			touch $signal_dir/CONFIG.DONE
-# 		else
-# 			echo -e "SignalP has been previously configured.\n" 1>&2
-# 		fi
-#
-# 	fi
-# else
-# 	signalp=false
-# 	signalp_opt=""
-# 	echo "ERROR: SignalP program not found. Please download SignalP into $ROOT_DIR/src, and source $ROOT_DIR/scripts/config.sh from the $ROOT_DIR, so that the RUN_SIGNALP environment variable is re-exported." 1>&2
-# 	if [[ "$email" = true ]]; then
-# 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-# 		# echo "$outdir" | mail -s "Failed cleaving peptides for $org" $address
-# 		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-# 		echo "$outdir" | mail -s "${species^}: STAGE 09: CLEAVAGE: FAILED" $address
-# 		echo "Email alert sent to $address." 1>&2
-# 	fi
-# 	exit 2
-# #	echo -e "SignalP program not found. Proceeding without SignalP.\n" 1>&2
-# fi
-# if [[ "$signalp" = true ]]; then
 echo "PROGRAM: $(command -v $RUN_SIGNALP)" 1>&2
 echo -e "VERSION: $($RUN_SIGNALP -v)\n" 1>&2
-# fi
-
-# if [[ "$config" = true ]]; then
-# 	if [[ ! -f $propdir/CONFIG.DONE ]]; then
-# 		echo -e "Configuring ProP...\n" 1>&2
-# 		sed -i "s|setenv\tPROPHOME.*|setenv\tPROPHOME\t$propdir|" $RUN_PROP
-#
-# 		awkbin=$(command -v awk)
-# 		sed -i "s|setenv AWK.*|setenv AWK $awkbin|" $RUN_PROP
-# 		sed -i 's/^AWK=.*/AWK=awk/' $RUN_SIGNALP
-# 		sed -i "s|AWK=/.*|AWK=$awkbin|" $RUN_SIGNALP
-#
-# 		echobin=$(which echo)
-# 		sed -i "s|setenv ECHO.*|setenv ECHO \"$echobin -e\"|" $RUN_PROP
-#
-# 		gnuplot=$(command -v gnuplot 2>/dev/null || true)
-# 		if [[ ! -z $gnuplot ]]; then
-# 			sed -i "s|setenv GNUPLOT.*|setenv GNUPLOT $gnuplot|" $RUN_PROP
-# 			sed -i "s|PLOTTER=/.*|PLOTTER=$gnuplot|" $RUN_SIGNALP
-# 		fi
-#
-# 		ppmtogifbin=$(command -v ppmtogif 2>/dev/null || true)
-# 		if [[ ! -z $ppmtogifbin ]]; then
-# 			sed -i "s|setenv PPM2GIF.*|setenv PPM2GIF $ppmtogifbin|" $RUN_PROP
-# 			sed -i "s|PPMTOGIF=/.*|PPMTOGIF=$ppmtogifbin|" $RUN_SIGNALP
-# 		fi
-#
-# 		if [[ "$signalp" = true ]]; then
-# 			sed -i "s|setenv SIGNALP.*|setenv SIGNALP $RUN_SIGNALP|" $RUN_PROP
-# 		fi
-# 	else
-# 		echo -e "ProP has been previously configured.\n" 1>&2
-# 	fi
-# fi
 
 if [[ "$(grep -c "|" $infile)" -gt 0 ]]; then
 	echo -e "NOTE: Pipes detected in sequence headers will be converted to underscores for ProP.\n" 1>&2
@@ -302,8 +244,6 @@ echo -e "Output: $tempfile\n" 1>&2
 # Write each sequence and cleavage site to the F*.txt
 echo "Writing ProP results into a separate file for each sequence..." 1>&2
 echo -e "COMAMND: awk -v var=\"$outdir\" 'BEGIN{x=\"/dev/null\"}/^Sequence:/{x=var\"/F\"++i\".txt\";}{print > x;}' $tempfile\n" 1>&2
-# echo -e "COMAMND: awk -v var=\"$outdir\" 'BEGIN{x=\"/dev/null\"}/^\\t[0-9]+/{x=var\"/F\"++i\".txt\";}{print > x;}' $tempfile\n" 1>&2
-# awk -v var="$outdir" 'BEGIN{x="/dev/null"}/^\t[0-9]+/{x=var"/F"++i".txt";}{print > x;}' $tempfile
 if [[ "$debug" = false ]]; then
 	awk -v var="$outdir" 'BEGIN{x="/dev/null"}/^Sequence:/{x=var"/F"++i".txt";}{print > x;}' $tempfile
 fi
@@ -333,6 +273,7 @@ if [[ "$debug" = false ]]; then
 		rm $i
 	done
 fi
+
 # Sambina's cleaving script
 echo "Cleaving peptides..." 1>&2
 # start_cleave=$(date '+%s')
@@ -340,9 +281,6 @@ echo -e "COMMAND: $ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir\n" 1>&2
 if [[ "$debug" = false ]]; then
 	$ROOT_DIR/scripts/cleave-seq.py $infile $tsv $outdir
 fi
-# end_cleave=$(date '+%s')
-# $ROOT_DIR/scripts/get-runtime.sh $start_cleave $end_cleave
-# echo 1>&2
 
 # DESCRIBE OUTPUT FILES HERE
 echo "Output Files:" 1>&2
@@ -374,7 +312,7 @@ if [[ ! -s "$outfile" ]]; then
 		echo "$outdir" | mail -s "${species^}: STAGE 09: CLEAVAGE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
-	exit 3
+	exit 2
 fi
 
 touch $outdir/CLEAVE.DONE
@@ -399,7 +337,7 @@ if [[ ! -s $outfile_len ]]; then
 		# echo "$outdir" | mail -s "Failed filtering out long sequences for $org" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
-	exit 4
+	exit 3
 else
 	touch $outdir/CLEAVE_LEN.DONE
 fi
@@ -416,7 +354,7 @@ if [[ ! -s ${outfile_len_nr} ]]; then
 		echo "$outdir" | mail -s "${species}: STAGE 09: CLEAVAGE: FAILED" $address
 		echo -e "\nEmail alert sent to $address." 1>&2
 	fi
-	exit 5
+	exit 4
 else
 	touch $outdir/CLEAVE_LEN_NR.DONE
 fi

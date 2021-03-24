@@ -4,6 +4,11 @@ FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
 # args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -80,6 +85,10 @@ fi
 #
 # 	echo "CALL: $args (wd: $(pwd))"
 # } 1>&2
+
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
+fi
 
 fasta=$(realpath $1)
 if [[ ! -s $fasta ]]; then

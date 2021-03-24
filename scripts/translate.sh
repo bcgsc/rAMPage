@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -121,6 +126,10 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
 fi
 
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/rAMPage/GitHub/directory."
+fi
+
 # 7 - remove status files
 rm -f $outdir/TRANSLATION.FAIL
 rm -f $outdir/TRANSLATION.DONE
@@ -155,6 +164,46 @@ else
 	species=$SPECIES
 fi
 
+if [[ ! -v RUN_SEQTK ]]; then
+	if command -v seqtk &>/dev/null; then
+		RUN_SEQTK=$(command -v seqtk)
+	else
+		print_error "RUN_SEQTK is unbound and not 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+	fi
+elif ! command -v $RUN_SEQTK &>/dev/null; then
+	print_error "Unable to execute $RUN_SEQTK."
+fi
+
+if [[ ! -v TRANSDECODER_LONGORFS ]]; then
+	if command -v TransDecoder.LongOrfs &>/dev/null; then
+		TRANSDECODER_LONGORFS=$(command -v TransDecoder.LongOrfs)
+	else
+		print_error "TRANDECODER_LONGORFS is unbound and no 'TransDecoder.LongOrfs' found in PATH. Please export TRANSDECODER_LONGORFS=/path/to/TransDecoder.LongOrfs."
+	fi
+elif ! command -v $TRANSDECODER_LONGORFS &>/dev/null; then
+	print_error "Unable to execute $TRANSDECODER_LONGORFS."
+fi
+
+if [[ ! -v TRANSDECODER_PREDICT ]]; then
+	if command -v TransDecoder.Predict &>/dev/null; then
+		TRANSDECODER_PREDICT=$(command -v TransDecoder.Predict)
+	else
+		print_error "TRANDECODER_PREDICT is unbound and no 'TransDecoder.Predict' found in PATH. Please export TRANSDECODER_PREDICT=/path/to/TransDecoder.Predict."
+	fi
+elif ! command -v $TRANSDECODER_PREDICT &>/dev/null; then
+	print_error "Unable to execute $TRANSDECODER_PREDICT."
+fi
+
+if [[ ! -v RUN_SEQTK ]]; then
+	if command -v seqtk &>/dev/null; then
+		RUN_SEQTK=$(command -v seqtk)
+	else
+		print_error "RUN_SEQTK is unbound and not 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+	fi
+elif ! command -v $RUN_SEQTK &>/dev/null; then
+	print_error "Unable to execute $RUN_SEQTK."
+fi
+
 cd $outdir
 
 {
@@ -173,6 +222,7 @@ $TRANSDECODER_LONGORFS -O TransDecoder -m 50 -t $input &>TransDecoder.LongOrfs.l
 } 1>&2
 
 $TRANSDECODER_PREDICT -O TransDecoder -t $input &>TransDecoder.Predict.log
+
 echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')" 1>&2

@@ -3,8 +3,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -156,8 +161,32 @@ fi
 	echo -e "THREADS: $threads\n"
 } 1>&2
 
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
+fi
+
+if [[ -v RUN_SABLE ]]; then
+	if command -v run.sable &>/dev/null; then
+		RUN_SABLE=$(command -v run.sable)
+	else
+		print_error "RUN_SABLE is unbound and no 'run.sable' found in PATH. Please export RUN_SABLE=/path/to/run.sable."
+	fi
+elif ! command -v $RUN_SABLE &>/dev/null; then
+	print_error "Unable to execute $RUN_SABLE."
+fi
+
 echo "PROGRAM: $(command -v $RUN_SABLE)"
 echo -e "VERSION: $(grep "SABLE ver" $RUN_SABLE | awk '{print $NF}')\n"
+
+if [[ ! -v BLAST_DIR ]]; then
+	if command -v psiblast &>/dev/null; then
+		BLAST_DIR=$(dirname $(realpath $(command -v psiblast)))
+	else
+		print_error "BLAST_DIR is unbound. Please export BLAST_DIR=/path/to/blast/bin."
+	fi
+elif ! command -v $BLAST_DIR/psiblast &>/dev/null; then
+	print_error "Unable to execute $BLAST_DIR/psiblast."
+fi
 
 echo "PROGRAM: $(command -v $BLAST_DIR/psiblast)" 1>&2
 echo -e "VERSION: $($BLAST_DIR/psiblast -version | tail -n1 | cut -f4- -d' ')\n" 1>&2

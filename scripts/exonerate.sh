@@ -177,13 +177,48 @@ query=$(realpath $1)
 file=$(realpath $2)
 cp $file $outdir/EnTAP_annotation.tsv
 file=$outdir/EnTAP_annotation.tsv
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/repository."
+fi
+
+if [[ ! -v RUN_EXONERATE ]]; then
+	if command -v exonerate &>/dev/null; then
+		RUN_EXONERATE=$(command -v exonerate)
+	else
+		print_error "RUN_EXONERATE is unbound and no 'exonerate' found in PATH. Please export RUN_EXONERATE=/path/to/exonerate/executable."
+	fi
+elif ! command -v $RUN_EXONERATE &>/dev/null; then
+	print_error "Unable to execute $RUN_EXONERATE."
+fi
 
 echo "PROGRAM: $(command -v $RUN_EXONERATE)" 1>&2
 echo -e "VERSION: $($RUN_EXONERATE --version 2>&1 | head -n1 | awk '{print $NF}')\n" 1>&2
 
+if [[ ! -v RUN_SEQTK ]]; then
+	if command -v seqtk &>/dev/null; then
+		RUN_SEQTK=$(command -v seqtk)
+	else
+		print_error "RUN_SEQTK is unbound and no 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+	fi
+elif ! command -v $RUN_SEQTK &>/dev/null; then
+	print_error "Unable to execute $RUN_SEQTK."
+fi
+
+echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
+seqtk_version=$($RUN_SEQTK 2>&1 || true)
+echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
 # target1=$ROOT_DIR/amp_seqs/amps.${class^}.prot.combined.faa
+
+# process these targets with better naming systems (esepcially prot.mature)
 target1=$ROOT_DIR/amp_seqs/amps.${class^}.prot.precursor.faa
 target2=$ROOT_DIR/amp_seqs/amps.${class^}.prot.mature.faa
+target2_processed=$ROOT_DIR/amp_seqs/amps.${class^}.prot.mature.processed.faa
+
+if [[ ! -s "$target2_processed" ]]; then
+	sed '/>AP[0-9]\+|/ s/|/ /' $target2 >$target2_processed
+fi
+
+target2=$target2_processed
 
 echo "Running Exonerate..." 1>&2
 
@@ -333,30 +368,43 @@ else
 fi
 
 # should still add these to the annotation tSV
-echo -e "Annotating...\n" 1>&2
+echo "Annotating..." 1>&2
+annotated_fasta=$outdir/annotated.nr.faa
+cp $query $outdir/annotated.nr.faa
 if [[ "$exonerate_success" == true ]]; then
 	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
 	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
 	while read seq; do
-		exonerate_precursor_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out | grep -w "$seq" -m1 | awk -F "\t" '{print $2 ": " $3}' || true)
+		exonerate_precursor_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out | grep -w "$seq" -m1 | awk -F "\t" '{print $2 ":" $3}' | sed 's@:$@@' || true)
+		if [[ -n "$exonerate_precursor_top" ]]; then
+			exonerate_precursor_top_processed=$(echo "$exonerate_precursor_top" | sed 's@, \+@,@g' | sed 's@; \+@;@g' | sed 's@: \+@:@g' | sed 's@ \+(@(@g' | sed 's@) \+@)@g' | sed 's@ \+\[@[@g' | sed 's@\] \+@]@g' | sed 's@ \+[0-9]\+@-&@g' | sed 's@- \+@-@g' | sed 's@ @_@g')
 
-		sed -i "/$seq / s@\$@ top_precursor=$exonerate_precursor_top@" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta
+			sed -i "/$seq / s@\$@ top_precursor=$exonerate_precursor_top_processed@" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
+		else
+			exonerate_precursor_top=" "
+		fi
 		exonerate_results=$(awk -F "\t" -v var="$seq" 'BEGIN{ORS=";"}{if($1==var) print $2 "(" $4 "%)"}' <(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out) | sed 's/;$/\n/')
-		sed -i "/$seq / s/$/ precursor_hits=$exonerate_results/" $amps_none_fasta $amps_100_fasta $amps_some_fasta $amps_some_none_fasta
-		if [[ -z "$exonerate_precursor_top" ]]; then
+		if [[ -n "$exonerate_results" ]]; then
+			sed -i "/$seq / s/$/ precursor_hits=$exonerate_results/" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
+		else
 			exonerate_precursor_top=" "
 		fi
 		# parse through the annotation file and add the tsv file
 		echo -e "$seq\t$exonerate_precursor_top\t$exonerate_results" >>$outdir/annotation.precursor.tsv
 		if [[ "$exonerate_mature_success" == true ]]; then
-			exonerate_mature_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.mature.summary.out | grep -w "$seq" | head -n1 | awk -F "\t" '{print $2 ": " $3}' || true)
+			exonerate_mature_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.mature.summary.out | grep -w "$seq" | head -n1 | awk -F "\t" '{print $2 ":" $3}' | sed 's@:$@@' || true)
 			if [[ -n "$exonerate_mature_top" ]]; then
-				sed -i "/$seq / s@\$@ top_mature=$exonerate_mature_top@" $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta
+				exonerate_mature_top_processed=$(echo "$exonerate_mature_top" | sed 's@, \+@,@g' | sed 's@; \+@;@g' | sed 's@: \+@:@g' | sed 's@ \+(@(@g' | sed 's@) \+@)@g' | sed 's@ \+\[@[@g' | sed 's@\] \+@]@g' | sed 's@ \+[0-9]\+@-&@g' | sed 's@- \+@-@g' | sed 's@ @_@g')
+				sed -i "/$seq / s@\$@ top_mature=$exonerate_mature_top_processed@" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
 			else
 				exonerate_mature_top=" "
 			fi
 			exonerate_results=$(awk -F "\t" -v var="$seq" 'BEGIN{ORS=";"}{if($1==var) print $2 "(" $4 "%)"}' <(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.mature.summary.out) | sed 's/;$/\n/')
-			sed -i "/$seq / s/$/ mature_hits=$exonerate_results/" $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta
+			if [[ -n "$exonerate_results" ]]; then
+				sed -i "/$seq / s/$/ mature_hits=$exonerate_results/" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
+			else
+				exonerate_results=" "
+			fi
 			# parse through the annotation file and add the tsv file
 			echo -e "$seq\t$exonerate_mature_top\t$exonerate_results" >>$outdir/annotation.mature.tsv
 		else
@@ -382,7 +430,7 @@ else
 	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
 fi
 
-echo -e "RESULTS\n$(printf '%.0s-' $(seq 1 63))\n" 1>&2
+echo -e "\nRESULTS\n$(printf '%.0s-' $(seq 1 63))\n" 1>&2
 
 num_total=$(grep -c '^>' $query || true)
 if [[ "$exonerate_success" = true ]]; then
@@ -436,27 +484,27 @@ else
 	echo -e "Output: $amps_some_none_fasta\n" 1>&2
 fi
 
-default_name="$(realpath -s $(dirname $outdir)/exonerate)"
-if [[ "$default_name" != "$outdir" ]]; then
-	if [[ -d "$default_name" ]]; then
-		count=1
-		if [[ ! -L "$default_name" ]]; then
-			temp="${default_name}-${count}"
-			while [[ -d "$temp" ]]; do
-				count=$((count + 1))
-				temp="${default_name}-${count}"
-			done
-			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old trimmed reads.\n" 1>&2
-			mv $default_name $temp
-		else
-			unlink $default_name
-		fi
-	fi
-	if [[ "$default_name" != "$outdir" ]]; then
-		echo -e "\n$outdir softlinked to $default_name\n" 1>&2
-		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
-	fi
-fi
+# default_name="$(realpath -s $(dirname $outdir)/exonerate)"
+# if [[ "$default_name" != "$outdir" ]]; then
+# 	if [[ -d "$default_name" ]]; then
+# 		count=1
+# 		if [[ ! -L "$default_name" ]]; then
+# 			temp="${default_name}-${count}"
+# 			while [[ -d "$temp" ]]; do
+# 				count=$((count + 1))
+# 				temp="${default_name}-${count}"
+# 			done
+# 			echo -e "\nSince $default_name already exists, $default_name is renamed to $temp as to not overwrite old trimmed reads.\n" 1>&2
+# 			mv $default_name $temp
+# 		else
+# 			unlink $default_name
+# 		fi
+# 	fi
+# 	if [[ "$default_name" != "$outdir" ]]; then
+# 		echo -e "\n$outdir softlinked to $default_name\n" 1>&2
+# 		(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
+# 	fi
+# fi
 echo -e "\nEND: $(date)\n" 1>&2
 
 echo -e "STATUS: DONE.\n" 1>&2

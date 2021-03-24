@@ -2,8 +2,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -144,23 +149,6 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
 fi
 
-# workdir=$(dirname $outdir)
-# if [[ -f $workdir/STRANDED.LIB ]]; then
-# 	stranded=true
-# elif [[ -f $workdir/NONSTRANDED.LIB || -f $workdir/AGNOSTIC.LIB ]]; then
-# 	stranded=false
-# else
-# 	print_error "*.LIB file not found. Please check that you specified in your TSV file whether or not the library preparation was strand-specific."
-# fi
-
-# if [[ -f $workdir/PAIRED.END ]]; then
-# 	paired=true
-# elif [[ -f $workdir/SINGLE.END ]]; then
-# 	paired=false
-# else
-# 	print_error "*.END file not found."
-# fi
-
 # 7 - remove status files
 rm -f $outdir/FILTERING.DONE
 rm -f $outdir/FILTERING.FAIL
@@ -230,6 +218,16 @@ else
 	stranded=$STRANDED
 fi
 
+if [[ ! -v RUN_SALMON ]]; then
+	if command -v salmon &>/dev/null; then
+		RUN_SALMON=$(command -v salmon)
+	else
+		print_error "RUN_SALMON is unbound and not found in PATH. Please export RUN_SALMON=/path/to/salmon/executable."
+	fi
+elif ! command -v $RUN_SALMON &>/dev/null; then
+	print_error "Unable to execute $RUN_SALMON."
+fi
+
 echo "PROGRAM: $(command -v $RUN_SALMON)" 1>&2
 echo -e "VERSION: $($RUN_SALMON --version 2>&1 | awk '{print $NF}')\n" 1>&2
 
@@ -263,6 +261,17 @@ fi
 if [[ "$cutoff" -ne 0 ]]; then
 	echo "Filtering the transcriptome for transcripts whose TPM >= ${cutoff}..." 1>&2
 fi
+
+if [[ ! -v RUN_SEQTK ]]; then
+	if command -v seqtk &>/dev/null; then
+		RUN_SEQTK=$(command -v seqtk)
+	else
+		print_error "RUN_SEQTK is unbound and not 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+	fi
+elif ! command -v $RUN_SEQTK &>/dev/null; then
+	print_error "Unable to execute $RUN_SEQTK."
+fi
+
 echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
@@ -309,6 +318,7 @@ if [[ "$cutoff" -ne 0 ]]; then
 
 	echo 1>&2
 fi
+
 default_name="$(realpath -s $(dirname $outdir)/filtering)"
 if [[ "$default_name" != "$outdir" ]]; then
 	count=1

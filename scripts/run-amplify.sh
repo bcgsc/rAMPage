@@ -3,8 +3,13 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
-args="$FULL_PROGRAM $*"
 
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
+args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -229,6 +234,17 @@ if [[ "$custom_threads" = true ]]; then
 fi
 
 # Check AMPlify
+if [[ ! -v RUN_AMPLIFY ]]; then
+	# if not bound, look for it in PATH
+	if command -v AMPlify.py &>/dev/null; then
+		RUN_AMPLIFY=$(command -v AMPlify.py)
+	else
+		print_error "RUN_AMPLIFY is unbound and no AMPlify.py found in PATH. Please export RUN_PROP=/path/to/AMPlify.py."
+	fi
+elif ! command -v $RUN_AMPLIFY &>/dev/null; then
+	print_error "Unable to execute $RUN_AMPLIFY."
+fi
+
 echo "PROGRAM: $(command -v $RUN_AMPLIFY)" 1>&2
 echo -e "VERSION: $(command -v $RUN_AMPLIFY | awk -F "/" '{print $(NF-2)}' | cut -f2 -d-)\n" 1>&2
 # echo "VERSION: 1.0.0" 1>&2
@@ -299,6 +315,19 @@ outfile_conf_short_charge_nr_ln=amps.conf_${confidence}.short.charge.nr.faa
 outfile_conf_short_charge_nr_tsv_ln=AMPlify_results.conf_${confidence}.short.charge.nr.tsv
 
 echo "Checking sequence lengths..." 1>&2
+if [[ ! -v RUN_SEQTK ]]; then
+	if command -v seqtk &>/dev/null; then
+		RUN_SEQTK=$(command -v seqtk)
+	else
+		print_error "RUN_SEQTK is unbound and no 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+	fi
+elif ! command -v $RUN_SEQTK &>/dev/null; then
+	print_error "Unable to execute $RUN_SEQTK."
+fi
+
+echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
+seqtk_version=$($RUN_SEQTK 2>&1 || true)
+echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
 len_seq=$($RUN_SEQTK comp $input | awk '{if($2<2 || $2>200) print $1}' | wc -l)
 
 if [[ "$len_seq" -ne 0 ]]; then

@@ -2,6 +2,11 @@
 set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
+if [[ "$PROGRAM" == "slurm_script" ]]; then
+	FULL_PROGRAM=$(scontrol show job $SLURM_JOBID | awk '/Command=/ {print $1}' | awk -F "=" '{print $2}')
+	PROGRAM=$(basename ${FULL_PROGRAM})
+
+fi
 args="$FULL_PROGRAM $*"
 # 0 - table function
 function table() {
@@ -21,7 +26,7 @@ function get_help() {
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tRuns jackhmmer from the HMMER package to find AMPs via homology search of protein sequences.\n \
-		\tRequires $ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa or $ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa file.\n \
+		\tRequires \$ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa or \$ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa file.\n \
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
@@ -161,6 +166,10 @@ else
 	class=$CLASS
 fi
 
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
+fi
+
 if [[ -z "$db" ]]; then
 	db=$ROOT_DIR/amp_seqs/amps.${class^}.prot.combined.faa
 fi
@@ -168,15 +177,6 @@ fi
 if [[ ! -s $db ]]; then
 	print_error "Required FASTA databse $db does not exist."
 fi
-# workdir=$(realpath $(dirname $outdir))
-# if [[ -f "$workdir/AMPHIBIA.CLASS" ]]; then
-# db=$ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa
-# elif [[ -f "$workdir/INSECTA.CLASS" ]]; then
-# db=$ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa
-# else
-# echo "ERROR: No valid class taxon (*.CLASS file) found. This file is generated after running $ROOT_DIR/scripts/setup.sh." 1>&2
-# exit 2
-# fi
 
 # 7 - remove status files
 rm -f $outdir/HOMOLOGY.DONE
@@ -207,6 +207,15 @@ if ! command -v mail &>/dev/null; then
 fi
 
 infile=$(realpath $1)
+if [[ ! -v RUN_JACKHMMER ]]; then
+	if command -v jackhmmer &>/dev/null; then
+		RUN_JACKHMMER=$(command -v jackhmmer)
+	else
+		print_error "RUN_JACKHMMER is unbound and no 'jackhmmer' found in PATH. Please export RUN_JACKHMMER=/path/to/jackhmmer/executable."
+	fi
+elif ! command -v $RUN_JACKHMMER &>/dev/null; then
+	print_error "Unable to execute $RUN_JACKHMMER."
+fi
 
 echo "Running jackhmmer on ${infile}..." | tee -a $logfile 1>&2
 echo "PROGRAM: $(command -v $RUN_JACKHMMER)" | tee -a $logfile 1>&2
@@ -235,6 +244,17 @@ echo -e "Finished running jackhmmer on $infile!\n" 1>&2
 touch $outdir/JACKHMMER.DONE
 
 if [[ -s $outdir/jackhmmer.tbl ]]; then
+
+	if [[ ! -v RUN_SEQTK ]]; then
+		if command -v seqtk &>/dev/null; then
+			RUN_SEQTK=$(command -v seqtk)
+		else
+			print_error "RUN_SEQTK is unbound and not 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+		fi
+	elif ! command -v $RUN_SEQTK &>/dev/null; then
+		print_error "Unable to execute $RUN_SEQTK."
+	fi
+
 	echo "Running seqtk subseq on $outdir/jackhmmer.tbl..." 1>&2
 	echo "PROGRAM: $(command -v $RUN_SEQTK)" | tee -a $logfile 1>&2
 	seqtk_version=$($RUN_SEQTK 2>&1 || true)

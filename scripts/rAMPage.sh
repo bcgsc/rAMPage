@@ -195,6 +195,10 @@ if [[ "$(realpath $1)" != */rAMPage* ]]; then
 	print_error "Input file $(realpath $1) must be located within the rAMPage directory."
 fi
 
+if [[ ! -v ROOT_DIR ]]; then
+	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
+fi
+
 if [[ -z $class ]]; then
 	# get class from outdir
 	class=$(echo "$outdir" | sed "s|$ROOT_DIR||" | awk -F "/" '{print $2}' | sed 's/.\+/\L&/')
