@@ -187,11 +187,32 @@ echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc)% global 
 echo -e "COMMAND: $RUN_CDHIT -d 0 -l 4 -i $input -o $output -c $similarity -n $wordsize -T $threads -M 0 $length_cutoffs &>> $log\n" 1>&2
 $RUN_CDHIT -d 0 -l 4 -i $input -o $output -c $similarity -n $wordsize -T $threads -M 0 $length_cutoffs &>>$log
 
+unique_ids=$(grep '^>' $input | sort -u | wc -l || true)
+total_ids=$(grep -c '^>' $input || true)
+
+not_unique=false
+if [[ "$unique_ids" -lt "$total_ids" ]]; then
+	not_unique=true
+	{
+		echo "NOTE: There are duplicate sequence IDs in your input file."
+		echo "Number of unique sequence IDs: $(printf "%'d" $unique_ids)/$(printf "%'d" $total_ids)"
+		dup_seq_ids=$(grep '^>' $input | tr -d '>' | sort | uniq -c | awk '{if($1>1) print}' | sort -k1,1gr || true)
+		num_dup_seq_ids=$(echo "$dup_seq_ids" | wc -l)
+		echo -e "\nDuplicate sequence IDs:\n$dup_seq_ids\n" 1>&2
+	} 1>&2
+fi
+rm -f ${output}.processed.clstr
 if [[ "$format" = true ]]; then
 	echo -e "Converting cluster file to TSV format...\n" 1>&2
 	echo -e "Cluster\tLength\tSequence Similarity\tSequence ID" >${output}.clstr.tsv
+	if [[ "$not_unique" = true ]]; then
+		echo -e "Cluster\tLength\tSequence Similarity\tSequence ID" >${output}.processed.clstr.tsv
+	fi
 	while read line; do
 		if [[ "$line" =~ ^\> ]]; then
+			if [[ "$not_unique" = true ]]; then
+				echo "$line" >>${output}.processed.clstr
+			fi
 			cluster=$(echo "$line" | sed 's/>Cluster //')
 		elif [[ "$line" =~ ^[0-9] ]]; then
 			seq_id=$(echo "$line" | awk '{print $3}' | sed 's/\.\.\.//' | tr -d '>')
@@ -200,16 +221,56 @@ if [[ "$format" = true ]]; then
 			if [[ -z "$sim" ]]; then
 				sim="rep"
 			fi
+			if [[ "$not_unique" = true ]]; then
+				if ! grep -wm1 -q "$seq_id" ${output}.clstr.tsv &>/dev/null; then
+					echo "$line" >>${output}.processed.clstr
+					echo -e "$cluster\t$len\t$sim\t$seq_id" >>${output}.processed.clstr.tsv
+				fi
+			fi
 			echo -e "$cluster\t$len\t$sim\t$seq_id" >>${output}.clstr.tsv
 		fi
 	done <${output}.clstr
+else
+	if [[ "$not_unique" = true ]]; then
+		while read line; do
+			if [[ "$line" =~ ^\> ]]; then
+				echo "$line" >>${output}.processed.clstr
+				cluster=$(echo "$line" | sed 's/>Cluster //')
+			elif [[ "$line" =~ ^[0-9] ]]; then
+				if ! grep -wm1 -q "$seq_id" ${output}.clstr.tsv &>/dev/null; then
+					echo "$line" >>${output}.processed.clstr
+				fi
+			fi
+		done <${output}.clstr
+	fi
 fi
 
 num_seqs=$(grep -c '^>' $input || true)
 num_seqs_nr=$(grep -c '^>' $output || true)
 
-echo "# sequences: $(printf "%'d" $num_seqs)" 1>&2
-echo "# nr sequences: $(printf "%'d" $num_seqs_nr)" 1>&2
+if [[ "$not_unique" = true ]]; then
+	echo "# sequences: $(printf "%'d" $num_seqs) ($(printf "%'d" $num_dup_seq_ids) duplicate sequence IDs)" 1>&2
+else
+	echo " # sequences: $(printf "%'d" $num_seqs)" 1>&2
+fi
+echo -e "# nr sequences: $(printf "%'d" $num_seqs_nr)\n" 1>&2
+
+{
+	echo "Output(s):"
+	echo "----------"
+
+	echo " - ${output}"
+	echo " - ${output}.clstr"
+	if [[ "$not_unique" = true ]]; then
+		echo " - ${output}.processed.clstr (duplicate sequence IDs removed)"
+	fi
+	if [[ "$format" = true ]]; then
+		echo " - ${output}.clstr.tsv"
+		if [[ "$not_unique" = true ]]; then
+			echo " - ${output}.processed.clstr.tsv (duplicate sequence IDs removed)"
+		fi
+	fi
+} 1>&2
 
 if [[ "$verbose" = true ]]; then
 	echo -e "\nEND: $(date)\n" 1>&2
