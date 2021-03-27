@@ -2,18 +2,6 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
-if [[ ! -v RUN_SEQTK ]]; then
-	RUN_SEQTK=seqtk
-fi
-
-if [[ ! -v RUN_EFETCH ]]; then
-	RUN_EFETCH=efetch
-fi
-
-if [[ ! -v RUN_ESEARCH ]]; then
-	RUN_ESEARCH=esearch
-fi
-
 apd3_url="http://aps.unmc.edu/AP/APD3_update_2020_release.fasta"
 dadp_url="https://github.com/mark0428/Scraping/raw/master/DADP/DADP_mature_AMP_20181206.fa"
 
@@ -108,6 +96,36 @@ echo "HOSTNAME: $(hostname)" 1>&2
 echo -e "START: $(date)\n" 1>&2
 
 echo -e "PATH=$PATH\n" 1>&2
+
+if [[ ! -v RUN_SEQTK ]]; then
+	if command -v seqtk &>/dev/null; then
+		RUN_SEQTK=$(command -v seqtk)
+	else
+		print_error "RUN_SEQTK is unbound and not 'seqtk' found in PATH. Please export RUN_SEQTK=/path/to/seqtk/executable."
+	fi
+elif ! command -v $RUN_SEQTK &>/dev/null; then
+	print_error "Unable to execute $RUN_SEQTK."
+fi
+
+if [[ ! -v RUN_ESEARCH ]]; then
+	if command -v esearch &>/dev/null; then
+		RUN_ESEARCH=$(command -v esearch)
+	else
+		print_error "RUN_ESEARCH is unbound and no 'esearch' found in PATH. Please export RUN_ESEARCH=/path/to/esearch/executable."
+	fi
+elif ! command -v $RUN_ESEARCH &>/dev/null; then
+	print_error "Unable to execute $RUN_ESEARCH."
+fi
+
+if [[ ! -v RUN_EFETCH ]]; then
+	if command -v efetch &>/dev/null; then
+		RUN_EFETCH=$(command -v efetch)
+	else
+		print_error "RUN_EFETCH is unbound and no 'efetch' found in PATH. Please export RUN_EFETCH=/path/to/efetch/executable."
+	fi
+elif ! command -v $RUN_EFETCH &>/dev/null; then
+	print_error "Unable to execute $RUN_EFETCH."
+fi
 
 echo
 echo "Downloading sequences from APD3..." 1>&2

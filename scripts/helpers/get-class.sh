@@ -2,9 +2,6 @@
 set -euo pipefail
 PROGRAM=$(basename $0)
 
-if [[ ! -v RUN_ESEARCH ]]; then
-	RUN_ESEARCH=esearch
-fi
 function table() {
 	if column -L <(echo) &>/dev/null; then
 		cat | column -s $'\t' -t -L
@@ -72,6 +69,25 @@ fi
 
 # 7 - no status files
 
+if [[ ! -v RUN_ESEARCH ]]; then
+	if command -v esearch &>/dev/null; then
+		RUN_ESEARCH=$(command -v esearch)
+	else
+		print_error "RUN_ESEARCH is unbound and no 'esearch' found in PATH. Please export RUN_ESEARCH=/path/to/esearch/executable."
+	fi
+elif ! command -v $RUN_ESEARCH &>/dev/null; then
+	print_error "Unable to execute $RUN_ESEARCH."
+fi
+
+if [[ ! -v RUN_EFETCH ]]; then
+	if command -v efetch &>/dev/null; then
+		RUN_EFETCH=$(command -v efetch)
+	else
+		print_error "RUN_EFETCH is unbound and no 'efetch' found in PATH. Please export RUN_ESEARCH=/path/to/efetch/executable."
+	fi
+elif ! command -v $RUN_EFETCH &>/dev/null; then
+	print_error "Unable to execute $RUN_EFETCH."
+fi
 # 8 - no env print
 taxon=$1
 {

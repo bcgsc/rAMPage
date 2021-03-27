@@ -3,9 +3,6 @@ set -euo pipefail
 FULL_PROGRAM=$0
 PROGRAM=$(basename $FULL_PROGRAM)
 args="$FULL_PROGRAM $*"
-if [[ ! -v FASTERQ_DUMP ]]; then
-	FASTERQ_DUMP=fasterq-dump
-fi
 
 function table() {
 	if column -L <(echo) &>/dev/null; then
@@ -135,6 +132,16 @@ rm -f $outdir/READS_DL.DONE
 rm -f $outdir/READS_DL.FAIL
 
 # 8 - print environment details
+if [[ ! -v FASTERQ_DUMP ]]; then
+	if command -v fasterq-dump &>/dev/null; then
+		FASTERQ_DUMP=$(command -v fasterq-dump)
+	else
+		print_error "FASTERQ_DUMP is unbound and no 'fasterq-dump' found in PATH. Please export FASTERQ_DUMP=/path/to/fasterq-dump/executable."
+	fi
+elif ! command -v $FASTERQ_DUMP &>/dev/null; then
+	print_error "Unable to execute $FASTERQ_DUMP."
+fi
+
 export PATH=$(dirname $(command -v $FASTERQ_DUMP)):$PATH
 {
 	echo "HOSTNAME: $(hostname)"
