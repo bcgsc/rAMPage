@@ -114,6 +114,8 @@ fi
 # 7 - no status files
 
 # 8 - no print env
+logfile=$outdir/${accession}.log
+templog=$outdir/${accession}_temp.log
 {
 	echo "HOSTNAME: $(hostname)"
 	echo -e "START: $(date)\n"
@@ -121,7 +123,7 @@ fi
 	echo -e "PATH=$PATH\n"
 
 	echo "CALL: $args (wd: $(pwd))"
-} 1>&2
+} >$logfile
 
 if [[ ! -v FASTERQ_DUMP ]]; then
 	if command -v fasterq-dump &>/dev/null; then
@@ -133,12 +135,6 @@ elif ! command -v $FASTERQ_DUMP &>/dev/null; then
 	print_error "Unable to execute $FASTERQ_DUMP."
 fi
 
-logfile=$outdir/${accession}.log
-templog=$outdir/${accession}_temp.log
-
-if [[ -e "$logfile" ]]; then
-	rm $logfile
-fi
 temp=/dev/shm
 function set_temp() {
 	if [[ "$(df -h $temp | tail -n1 | awk '{print $5}' | tr -d '%')" -eq 100 ]]; then
@@ -167,7 +163,7 @@ echo "First attempt at ${accession}..." >>$logfile
 echo -e "Temporary disk space: $temp\n" >>$logfile
 
 # get reads
-echo -e "PATH=$PATH\n" >>$logfile
+# echo -e "PATH=$PATH\n" >>$logfile
 
 echo "PROGRAM: $(command -v $FASTERQ_DUMP)" &>>$logfile
 echo -e "VERSION: $($FASTERQ_DUMP --version | awk '/version/ {print $NF}')\n" &>>$logfile
@@ -208,4 +204,7 @@ fi
 
 echo "Compressing ${accession}..." >>$logfile
 ${compress} -f $outdir/$accession*.fastq
-echo "Finished compressing ${accession}." | tee -a $logfile 1>&2
+echo -e "Finished compressing ${accession}.\n" | tee -a $logfile 1>&2
+
+echo -e "END: $(date)\n" >>$logfile
+echo "STATUS: DONE." >>$logfile

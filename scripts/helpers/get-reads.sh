@@ -170,11 +170,11 @@ if [[ "$parallel" = true ]]; then
 		# assume that the FASTQs do not exist due to timestamping of the folders
 		echo "Initiating download of ${accession}..." 1>&2
 		if [[ "$email" = true ]]; then
-			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession &" 1>&2
-			$ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession &
+			echo "COMMAND: $ROOT_DIR/scripts/helpers/get-accession.sh -a $address -t $threads -o $outdir $accession &" 1>&2
+			$ROOT_DIR/scripts/helpers/get-accession.sh -a $address -t $threads -o $outdir $accession &
 		else
-			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession &" 1>&2
-			$ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession &
+			echo "COMMAND: $ROOT_DIR/scripts/helpers/get-accession.sh -t $threads -o $outdir $accession &" 1>&2
+			$ROOT_DIR/scripts/helpers/get-accession.sh -t $threads -o $outdir $accession &
 		fi
 	done <$sra
 
@@ -185,11 +185,11 @@ else
 		# assume that the FASTQs do not exist due to timestamping of the folders
 		echo "Initiating download of ${accession}..." 1>&2
 		if [[ "$email" = true ]]; then
-			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession" 1>&2
-			$ROOT_DIR/scripts/get-accession.sh -a $address -t $threads -o $outdir $accession
+			echo "COMMAND: $ROOT_DIR/scripts/helpers/get-accession.sh -a $address -t $threads -o $outdir $accession" 1>&2
+			$ROOT_DIR/scripts/helpers/get-accession.sh -a $address -t $threads -o $outdir $accession
 		else
-			echo "COMMAND: $ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession" 1>&2
-			$ROOT_DIR/scripts/get-accession.sh -t $threads -o $outdir $accession
+			echo "COMMAND: $ROOT_DIR/scripts/helpers/get-accession.sh -t $threads -o $outdir $accession" 1>&2
+			$ROOT_DIR/scripts/helpers/get-accession.sh -t $threads -o $outdir $accession
 		fi
 	done <$sra
 fi
@@ -214,6 +214,7 @@ if [[ "$outdir" != "$default_name" ]]; then
 	echo -e "\n$outdir softlinked to $default_name\n" 1>&2
 	(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
 fi
+
 fail=false
 failed_accs=()
 
@@ -257,7 +258,7 @@ fi
 # 	touch $workdir/SINGLE.END
 # fi
 
-echo -e "\nEND: $(date)\n" 1>&2
+echo -e "END: $(date)\n" 1>&2
 
 # echo 1>&2
 touch $outdir/READS_DL.DONE

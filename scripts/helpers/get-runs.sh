@@ -19,7 +19,7 @@ function get_help() {
 		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
-		\tGets the SRA RUN (i.e. SRR) accessions using wget.\n \
+		\tGets the SRA RUN (i.e. SRR) accessions using cURL.\n \
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
@@ -50,7 +50,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/sra /path/to/accessions.txt\n \
+		\t$PROGRAM -o /path/to/sra/dir /path/to/accessions.txt\n \
 		" | table
 	} 1>&2
 
@@ -140,7 +140,8 @@ rm -f $outdir/RUNS.DONE
 	echo "CALL: $args (wd: $(pwd))"
 } 1>&2
 
-accessions=$(cat $1)
+# accessions=$(cat $1)
+accessions=$($ROOT_DIR/scripts/helpers/expand-accessions.sh $(cat $1))
 
 echo "Downloading run info..." 1>&2
 echo "PROGRAM: $(command -v curl)" 1>&2
@@ -172,8 +173,8 @@ rm $outdir/*.curl.log
 
 echo "Fetching metadata..." 1>&2
 
-echo -e "COMMAND: $ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions\n" 1>&2
-$ROOT_DIR/scripts/get-metadata.sh -o $outdir $accessions
+echo -e "COMMAND: $ROOT_DIR/scripts/helpers/get-metadata.sh -o $outdir $accessions\n" 1>&2
+$ROOT_DIR/scripts/helpers/get-metadata.sh -o $outdir $accessions
 
 echo -e "END: $(date)\n" 1>&2
 

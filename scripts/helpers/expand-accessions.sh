@@ -31,7 +31,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-h\tshow this help menu\n \
-		\t-s <separator>\toutput separator\t(default = space)\n \
+		\t-s <separator>\toutput separator character\t(default = space)\n \
 		" | table
 
 		# EXAMPLE
