@@ -15,6 +15,58 @@ function table() {
 }
 # 1 - get_help function
 function get_help() {
+	if [[ ! -v RUN_SABLE ]]; then
+		if command -v run.sable; then
+			RUN_SABLE=$(command -v run.sable)
+		else
+			{
+				echo "DESCRIPTION:" 1>&2
+				echo -e "\
+				\tConfigures environment variables for the run.sable script.\n\
+				\tFor more information: \$(dirname \$RUN_SABLE)/README\n \
+				" | table
+				echo 1>&2
+
+				echo "USAGE(S):" 1>&2
+				echo -e "\
+				\t$PROGRAM [OPTIONS]\n \
+				" | table
+				echo 1>&2
+
+				echo "OPTION(S):" 1>&2
+				echo -e "\
+				\t-h\tshow this help menu\n\
+				\t-t\tnumber of threads\t(default = 8)\n\
+				" | table
+			} 1>&2
+			echo "ERROR: RUN_SABLE is unbound and no 'run.sable' found in PATH. Please export RUN_SABLE=/path/to/run.sable/executable." 1>&2
+			exit 1
+		fi
+	elif ! command -v $RUN_SABLE; then
+		{
+			echo "DESCRIPTION:" 1>&2
+			echo -e "\
+			\tConfigures environment variables for the run.sable script.\n\
+			\tFor more information: \$(dirname $RUN_SABLE)/README\n \
+			" | table
+			echo 1>&2
+
+			echo "USAGE(S):" 1>&2
+			echo -e "\
+			\t$PROGRAM [OPTIONS]\n \
+			" | table
+			echo 1>&2
+
+			echo "OPTION(S):" 1>&2
+			echo -e "\
+			\t-h\tshow this help menu\n\
+			\t-t\tnumber of threads\t(default = 8)\n\
+			" | table
+		} 1>&2
+		echo "ERROR: Unable to execute $RUN_SABLE."
+		exit 1
+	fi
+
 	{
 		echo "DESCRIPTION:" 1>&2
 		echo -e "\
@@ -99,6 +151,16 @@ fi
 	echo "CALL: $args (wd: $(pwd))"
 	echo -e "THREADS: $threads\n"
 } 1>&2
+
+if [[ ! -v RUN_SABLE ]]; then
+	if command -v run.sable &>/dev/null; then
+		RUN_SABLE=$(command -v run.sable)
+	else
+		get_help
+	fi
+elif ! command -v $RUN_SABLE &>/dev/null; then
+	get_help
+fi
 
 if command -v pigz &>/dev/null; then
 	if [[ "$custom_threads" = true ]]; then
