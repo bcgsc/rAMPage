@@ -1,6 +1,8 @@
 # Scripts
 
-This directory holds all the scripts used in the rAMPage pipeline. Each of the scripts below are used in the Makefile. Optional helper scripts can be found in the `helpers`[helpers/] directory. Differential expression analysis can also be conducted using the scripts located in [`helpers/differential_expression/`](helpers/differential_expression/).
+This directory holds all the scripts used in the rAMPage pipeline. Each of the scripts below are used in the Makefile. Optional helper scripts can be found in the `helpers`[helpers/] directory, such as a script to help download reads from the SRA. Differential expression analysis can also be conducted using the scripts located in [`helpers/differential_expression/`](helpers/differential_expression/).
+
+**Note**: The scripts in this directory are used by the `Makefile`. Under most circumstances, these scripts will not need to be run outside of the `Makefile`.
 
 ### Quick Links
 
