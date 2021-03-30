@@ -158,6 +158,9 @@ fi
 	echo -e "PATH=$PATH\n"
 
 	echo "CALL: $args (wd: $(pwd))"
+	if [[ -L $tsv_file ]]; then
+		echo -e "TSV: $(ls -l $tsv_file | awk '{print $(NF-2), $(NF-1), $NF}')\n"
+	fi
 	echo -e "THREADS: $threads\n"
 } 1>&2
 

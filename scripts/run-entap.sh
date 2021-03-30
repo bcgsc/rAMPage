@@ -210,6 +210,9 @@ export PATH=$(dirname $JAVA_EXEC):$PATH
 	echo -e "PATH=$PATH\n"
 
 	echo "CALL: $args (wd: $(pwd))"
+	if [[ -L $input ]]; then
+		echo -e "INPUT: $(ls -l $input | awk '{print $(NF-2), $(NF-1), $NF}')\n"
+	fi
 	echo -e "THREADS: $threads\n"
 } 1>&2
 

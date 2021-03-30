@@ -163,6 +163,9 @@ elif [[ ! -s $(realpath $2) ]]; then
 	print_error "Input file $(realpath $2) is empty."
 fi
 
+query=$(realpath $1)
+file=$(realpath $2)
+
 # 8 - print env details
 {
 	echo "HOSTNAME: $(hostname)"
@@ -170,7 +173,14 @@ fi
 
 	echo -e "PATH=$PATH\n"
 
-	echo -e "CALL: $args (wd: $(pwd))\n"
+	echo "CALL: $args (wd: $(pwd))"
+	if [[ -L $query ]]; then
+		echo "QUERY: $(ls -l $query | awk '{print $(NF-2), $(NF-1), $NF}')"
+	fi
+	if [[ -L $file ]]; then
+		echo "ANNOTATION: $(ls -l $file | awk '{print $(NF-2), $(NF-1), $NF}')"
+	fi
+	echo
 } 1>&2
 
 query=$(realpath $1)
@@ -212,10 +222,14 @@ echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&
 # process these targets with better naming systems (esepcially prot.mature)
 target1=$ROOT_DIR/amp_seqs/amps.${class^}.prot.precursor.faa
 target2=$ROOT_DIR/amp_seqs/amps.${class^}.prot.mature.faa
-target2_processed=$ROOT_DIR/amp_seqs/amps.${class^}.prot.mature.processed.faa
+target2_processed=$(realpath $target2 | sed 's/\.faa/.processed.faa/')
 
 if [[ ! -s "$target2_processed" ]]; then
 	sed '/>AP[0-9]\+|/ s/|/ /' $target2 >$target2_processed
+	if [[ -L $target2 ]]; then
+		(cd $outdir && ln -fs $(basename $target2) amps.${class^}.prot.mature.processed.faa)
+		target2_processed=$ROOT_DIR/amp_seqs/amps.${class^}.prot.mature.processed.faa
+	fi
 fi
 
 target2=$target2_processed
@@ -224,9 +238,14 @@ echo "Running Exonerate..." 1>&2
 
 {
 	echo "Query: $query"
-	echo "Target: $target1"
+	if [[ -L $target1 ]]; then
+		echo "Target: $(ls -l $target1 | awk '{print $(NF-2), $(NF-1), $NF}')"
+	else
+		echo "Target: $target1"
+	fi
 	echo
 } 1>&2
+
 echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false >$outdir/amps.exonerate.out\n" 1>&2
 $RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false >$outdir/amps.exonerate.out
 
@@ -274,7 +293,11 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 	echo "Running Exonerate..." 1>&2
 	{
 		echo "Query: $query"
-		echo "Target: $target2"
+		if [[ -L $target2 ]]; then
+			echo "Target: $(ls -l $target2 | awk '{print $(NF-2), $(NF-1), $NF}')"
+		else
+			echo "Target: $target2"
+		fi
 		echo
 	} 1>&2
 

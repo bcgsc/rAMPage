@@ -198,6 +198,9 @@ logfile="$outdir/jackhmmer.log"
 	echo -e "PATH=$PATH\n" | tee $logfile
 
 	echo "CALL: $args (wd: $(pwd))"
+	if [[ -L $db ]]; then
+		echo -e "DATABASE: $(ls -l $db | awk '{print $(NF-2), $(NF-1), $NF}')\n"
+	fi
 	echo -e "THREADS: $threads\n"
 } 1>&2
 
