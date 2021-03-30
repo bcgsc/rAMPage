@@ -21,7 +21,7 @@ This directory holds the AMP sequences collated on July 20, 2020, using the scri
 
 ### APD3: Antimicrobial Peptide Database 3
 
-* Website: http://aps.unmc.edu/AP/main.php
+* Website: ~~http://aps.unmc.edu/AP/main.php~~ https://wangapd3.com/main.php
 * Source: http://aps.unmc.edu/AP/APD3_update_2020_release.fasta
 
 ### DADP: Database of Anuran Defense Peptides
