@@ -99,7 +99,7 @@ filename=$(echo "$path" | awk -F "/" '{print $NF}')
 
 echo "Checking URL..." 1>&2
 # if wget -q --method=HEAD $url; then
-if curl --head --silent --fail $url &>/dev/null; then
+if curl --head --silent --fail --connect-timeout 10 "$url" &>/dev/null; then
 	echo -e "\t\t...exists!\n" 1>&2
 else
 	print_error "The URL $url does not exist."
@@ -120,7 +120,7 @@ fi
 
 echo "Downloading the reference transcriptome..." 1>&2
 echo -e "COMMAND: (cd $outdir && curl -O $url &> $outdir/logs/00-reference.log)\n" 1>&2
-(cd $outdir && curl -O $url &>>$outdir/logs/00-reference.log)
+(cd $outdir && curl -L -O $url &>>$outdir/logs/00-reference.log)
 
 # echo -e "COMMAND: wget --tries=inf -P $outdir $url\n" 1>&2
 # wget --tries=inf -P $outdir $url
