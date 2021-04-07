@@ -149,7 +149,6 @@ else
 		touch $outdir/amps.final.annotated.faa
 
 		echo -e "Query Sequence\tSubject Sequence\tPercent Identical\tAlignment Length\tMismatches\tGap Openings\tQuery Start\tQuery End\tSubject Start\tSubject End\tE Value\tCoverage\tDescription\tSpecies\tTaxonomic Lineage\tOrigin Database\tContaminant\tInformative\tUniProt Database Cross Reference\tUniProt Additional Information\tUniProt KEGG Terms\tUniProt GO Biological\tUniProt GO Cellular\tUniProt GO Molecular\tEggNOG Seed Ortholog\tEggNOG Seed E-Value\tEggNOG Seed Score\tEggNOG Predicted Gene\tEggNOG Tax Scope\tEggNOG Tax Scope Max\tEggNOG Member OGs\tEggNOG Description\tEggNOG KEGG Terms\tEggNOG GO Biological\tEggNOG GO Cellular\tEggNOG GO Molecular\tEggNOG Protein Domains\tIPScan GO Biological\tIPScan GO Cellular\tIPScan GO Molecular\tIPScan Pathways\tIPScan InterPro ID\tIPScan Protein Database\tIPScan Protein Description\tIPScan E-Value" >$outdir/final_results/final_annotations.final.tsv
-
 		(cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
 
 		if [[ "$email" = true ]]; then
@@ -211,7 +210,7 @@ export PATH=$(dirname $JAVA_EXEC):$PATH
 
 	echo "CALL: $args (wd: $(pwd))"
 	if [[ -L $input ]]; then
-		echo -e "INPUT: $(ls -l $input | awk '{print $(NF-2), $(NF-1), $NF}')\n"
+		echo -e "INPUT: $(ls -l $input | awk '{print $(NF-2), $(NF-1), $NF}' || exit 1)\n"
 	fi
 	echo -e "THREADS: $threads\n"
 } 1>&2
@@ -292,14 +291,18 @@ if [[ "$dbcustom" = true ]]; then
 else
 	db=""
 fi
-
 echo -e "COMMAND: $RUN_ENTAP --runP -i $input -t $threads --ini $config_custom  --out-dir $outdir $db &> $outdir/entap.log\n" 1>&2
 $RUN_ENTAP --overwrite --runP -i $input -t $threads --ini $config_custom --out-dir $outdir $db &>$outdir/entap.log
 
 code="$?"
 
 if [[ "$code" -eq 140 ]]; then
-	echo -e "\nWARNING: No alignments found using DIAMOND.\n" 1>&2
+	echo -e "WARNING: No alignments found using DIAMOND.\n" 1>&2
+	mkdir -p $outdir/ontology/InterProScan
+	## Do InterProScan individually here
+	echo "Running InterProScan separately from EnTAP..." 1>&2
+	echo -e "COMMAND: $RUN_INTERPROSCAN -i $input -b $outdir/ontology/InterProScan/interpro_results --seqtype p --tempdir $outdir/ontology/InterProScan/temp/ --goterms --iprlookup --pathways &>$outdir/ontology/InterProScan.log\n" 1>&2
+	$RUN_INTERPROSCAN -i $input -b $outdir/ontology/InterProScan/interpro_results --seqtype p --tempdir $outdir/ontology/InterProScan/temp/ --goterms --iprlookup --pathways &>$outdir/ontology/InterProScan.log
 elif [[ "$code" -eq 0 ]]; then
 	: # do nothing, continue with script
 else
@@ -320,14 +323,17 @@ else
 	exit $code
 fi
 
-debugfile=$(ls -t $outdir/debug_*.txt | head -n1)
-logfile=$(ls -t $outdir/log_file_*.txt | head -n1)
-
+debugfile=$(ls -t $outdir/debug_*.txt | head -n1 || exit 1)
+logfile=$(ls -t $outdir/log_file_*.txt | head -n1 || exit 1)
+interproscan_logfile=$(ls -t $outdir/ontology/InterProScan.log | head -n1 || exit 1)
 {
 	echo "Log file: $logfile"
 	echo -e "Debug file: $debugfile\n"
 } 1>&2
 
+if [[ "$code" -eq 140 ]]; then
+	echo -e "InterProScan logfile: $interproscan_logfile\n" 1>&2
+fi
 # choose the tsv that is not empty to symlink
 
 # use no contaminant for level 0 for no contaminants if found
@@ -374,12 +380,88 @@ else
 	echo -e "Query Sequence\tSubject Sequence\tPercent Identical\tAlignment Length\tMismatches\tGap Openings\tQuery Start\tQuery End\tSubject Start\tSubject End\tE Value\tCoverage\tDescription\tSpecies\tTaxonomic Lineage\tOrigin Database\tContaminant\tInformative\tUniProt Database Cross Reference\tUniProt Additional Information\tUniProt KEGG Terms\tUniProt GO Biological\tUniProt GO Cellular\tUniProt GO Molecular\tEggNOG Seed Ortholog\tEggNOG Seed E-Value\tEggNOG Seed Score\tEggNOG Predicted Gene\tEggNOG Tax Scope\tEggNOG Tax Scope Max\tEggNOG Member OGs\tEggNOG Description\tEggNOG KEGG Terms\tEggNOG GO Biological\tEggNOG GO Cellular\tEggNOG GO Molecular\tEggNOG Protein Domains\tIPScan GO Biological\tIPScan GO Cellular\tIPScan GO Molecular\tIPScan Pathways\tIPScan InterPro ID\tIPScan Protein Database\tIPScan Protein Description\tIPScan E-Value" >$final_tsv
 
 	# simulate an "empty" annotation
-	for i in $(awk '/^>/ {print $1}' $processed | tr -d '>'); do
-		echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t" >>$final_tsv
-	done
+	if [[ "$code" -eq 140 ]]; then
+		# read the InterProScan tsv file
+		for i in $(awk '/^>/ {print $1}' $processed | tr -d '>'); do
+			interproscan_results=$outdir/ontology/InterProScan/interpro_results.tsv
+			line=$(grep -w "$i" $interproscan_results)
+
+			if [[ $(echo "$line" | wc -l) -gt 1 ]]; then
+				ipscan_go1=$(echo "$line" | awk -F "\t" '{print $14}' | awk -F "|" '{print $1}' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_go1" ]]; then
+					ipscan_go1=$(echo "$ipscan_go1" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_go2=$(echo "$line" | awk -F "\t" '{print $14}' | awk -F "|" '{print $2}' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_go2" ]]; then
+					ipscan_go2=$(echo "$ipscan_go2" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_go3=$(echo "$line" | awk -F "\t" '{print $14}' | awk -F "|" '{print $3}' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_go3" ]]; then
+					ipscan_go3=$(echo "$ipscan_go3" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_pathways=$(echo "$line" | awk -F "\t" '{print $15}')
+				if [[ -n "$ipscan_pathways" ]]; then
+					ipscan_pathways=$(echo "$ipscan_pathways" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_id=$(echo "$line" | awk -F "\t" '{print $12 "(" $13 ")"}' | sed 's/()//' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_id" ]]; then
+					ipscan_id=$(echo "$ipscan_id" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_db=$(echo "$line" | awk -F "\t" '{print $4}' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_db" ]]; then
+					ipscan_db=$(echo "$ipscan_db" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_pfam=$(echo "$line" | awk -F "\t" '{print $5 "(" $6 ")"}' | sed 's/()//' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_pfam" ]]; then
+					ipscan_pfam=$(echo "$ipscan_pfam" | tr "\n" "," | sed 's/,\+$//g' | sed 's/^ *,/NA,/g')
+				fi
+				ipscan_eval=$(echo "$line" | awk -F "\t" '{print $9}' | sed 's/^ *,/NA,/g')
+				if [[ -n "$ipscan_eval" ]]; then
+					ipscan_eval=$(echo "$ipscan_eval" | tr "\n" "," | sed 's/,\+$//g' | sed 's/,-/,NA/g' | sed 's/-,/NA,/g' | sed 's/^-$/NA/g' | sed 's/^ *,/NA,/g')
+				fi
+			else
+				ipscan_go1=$(echo "$line" | awk -F "\t" '{print $14}' | awk -F "|" '{print $1}')
+				ipscan_go2=$(echo "$line" | awk -F "\t" '{print $14}' | awk -F "|" '{print $2}')
+				ipscan_go3=$(echo "$line" | awk -F "\t" '{print $14}' | awk -F "|" '{print $3}')
+				ipscan_pathways=$(echo "$line" | awk -F "\t" '{print $15}')
+				ipscan_id=$(echo "$line" | awk -F "\t" '{print $12 "(" $13 ")"}' | sed 's/()//')
+				ipscan_db=$(echo "$line" | awk -F "\t" '{print $4}')
+				ipscan_pfam=$(echo "$line" | awk -F "\t" '{print $5 "(" $6 ")"}' | sed 's/()//')
+				ipscan_eval=$(echo "$line" | awk -F "\t" '{print $9}')
+				if [[ "$ipscan_eval" = "-" ]]; then
+					ipscan_eval="NA"
+				fi
+			fi
+			# echo "ipscan_go1: $ipscan_go1"
+			# echo "ipscan_go2: $ipscan_go2"
+			# echo "ipscan_go3: $ipscan_go3"
+			# echo "ipscan_pathways: $ipscan_pathways"
+			# echo "ipscan_id: $ipscan_id"
+			# echo "ipscan_db: $ipscan_db"
+			# echo "ipscan_pfam: $ipscan_pfam"
+			# echo "ipscan_eval: $ipscan_eval"
+			echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t$ipscan_go1\t$ipscan_go2\t$ipscan_go3\t$ipscan_pathways\t$ipscan_id\t$ipscan_db\t$ipscan_pfam\t$ipscan_eval" >>$final_tsv
+			ipscan=$(echo "$ipscan_id" | awk -F "(" '{print $1}' | tr $'\n' ',' | sed 's/,\+$//g' | sed 's/^,\+//g')
+			# echo "$ipscan"
+			if [[ -n $ipscan ]]; then
+				# echo "$ipscan"
+				sed -i "/${i} / s/$/ InterProScan=$ipscan/" $processed
+			fi
+		done
+	else
+		for i in $(awk '/^>/ {print $1}' $processed | tr -d '>'); do
+
+			echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t" >>$final_tsv
+		done
+	fi
 fi
 
-num_annotated=$(grep -c '^>' $outdir/final_results/final_annotated.faa)
+if [[ -f $outdir/final_results/final_annotated.faa ]]; then
+	num_annotated=$(grep -c '^>' $outdir/final_results/final_annotated.faa)
+else
+	num_annotated=$(cut -f1 -d$'\t' $outdir/ontology/InterProScan/interpro_results.tsv | sort -u | wc -l)
+fi
+
 num_total=$(grep -c '^>' $processed)
 
 echo -e "Number of annotated AMPs: $(printf "%'d" $num_annotated)/$(printf "%'d" $num_total)\n" 1>&2
