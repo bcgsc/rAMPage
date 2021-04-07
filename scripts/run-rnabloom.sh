@@ -379,7 +379,7 @@ fi
 
 logfile=$outdir/rnabloom.out
 
-label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $NF); print $(NF-1), $NF}')
+label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $(NF-1)); gsub(/-/, "_", $NF); print $(NF-1), $NF}')
 
 if [[ -z "$ref_opt" ]]; then
 	echo "Conducting a de-novo transcriptome assembly." 1>&2
