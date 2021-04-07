@@ -251,7 +251,7 @@ num_seqs_nr=$(grep -c '^>' $output || true)
 if [[ "$not_unique" = true ]]; then
 	echo "# sequences: $(printf "%'d" $num_seqs) ($(printf "%'d" $num_dup_seq_ids) duplicate sequence IDs)" 1>&2
 else
-	echo " # sequences: $(printf "%'d" $num_seqs)" 1>&2
+	echo "# sequences: $(printf "%'d" $num_seqs)" 1>&2
 fi
 echo -e "# nr sequences: $(printf "%'d" $num_seqs_nr)\n" 1>&2
 
