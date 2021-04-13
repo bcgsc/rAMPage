@@ -7,7 +7,7 @@ Written by [Diana Lin](mailto:dlin@bcgsc.ca).
 
 ## Description
 
-rAMPage is a _de novo_ anti-microbial peptide (AMP) discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs. 
+rAMPage is an _in silico_ anti-microbial peptide (AMP) discovery pipeline that takes in bulk RNA-seq reads and outputs a FASTA file of annotated, confident, short, and charged putative AMPs. 
 
 ## Quick Links
 
