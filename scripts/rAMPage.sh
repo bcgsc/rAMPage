@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+major_version=1
+minor_version=0
+
 start_sec=$(date '+%s')
 
 FULL_PROGRAM=$0
@@ -39,12 +42,13 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <taxonomic class>] [-d] [-f] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>\n \
+		\t$PROGRAM [-a <address>] [-b] [-c <taxonomic class>] [-d] [-f] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>\n \
 		" | table
 
 		echo "OPTIONS:"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
+		\t-b\tbenchmark (uses /usr/bin/time -pv)\n \
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
 		\t-d\tdebug mode of Makefile\n \
 		\t-f\tforce characterization even if no AMPs found\n \
@@ -56,7 +60,7 @@ function get_help() {
 		\t-r <FASTA.gz>\treference transcriptome\t(accepted multiple times, *.fna.gz *.fsa_nt.gz)\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
 		\t-t <int>\tnumber of threads\t(default = 48)\n \
-		\t-v\tverbose (uses /usr/bin/time -pv)\n \
+		\t-v\tprint version number\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -129,11 +133,11 @@ email=false
 email_opt=""
 class=""
 species=""
-verbose=false
+benchmark=false
 target="exonerate"
 debug=""
 forced_characterization=false
-while getopts :ha:c:dfr:m:n:o:pst:v opt; do
+while getopts :hba:c:dfr:m:n:o:pst:v opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -165,7 +169,11 @@ while getopts :ha:c:dfr:m:n:o:pst:v opt; do
 		num_threads="$OPTARG"
 		threads="THREADS=$num_threads"
 		;;
-	v) verbose=true ;;
+	b) benchmark=true ;;
+	v)
+		echo -e "rAMPage v${major_version}.${minor_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
+		exit 0
+		;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -317,35 +325,35 @@ if [[ ! -s $db ]]; then
 	print_error "Reference AMP sequences not found in $db."
 fi
 if ! /usr/bin/time -pv echo &>/dev/null; then
-	verbose=false
-	echo -e "Verbose option selected but /usr/bin/time -pv not available.\n" 1>&2
+	benchmark=false
+	echo -e "Benchmark option selected but /usr/bin/time -pv not available.\n" 1>&2
 fi
 
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
-if [[ "$verbose" = true ]]; then
-	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+if [[ "$benchmark" = true ]]; then
+	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 else
-	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	make INPUT=$input $threads PARALLEL=$parallel VERBOSE=$verbose $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 fi
 
 # PERFORM SUMMARY
 
 if [[ "$email" = true ]]; then
-	if [[ "$verbose" == true ]]; then
+	if [[ "$benchmark" == true ]]; then
 		echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
-		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
+		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
 	else
-		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
 	fi
 else
-	if [[ "$verbose" == true ]]; then
+	if [[ "$benchmark" == true ]]; then
 		echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
-		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-verbose.sh $outdir/logs &>$outdir/logs/00-summary.log
+		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh $outdir/logs &>$outdir/logs/00-summary.log
 	else
-		echo -e "\nVerbose option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
 	fi
 fi
 

@@ -316,10 +316,11 @@ DESCRIPTION:
       Runs the rAMPage pipeline, using the Makefile.
       
 USAGE(S):
-      rAMPage.sh [-a <address>] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>
+      rAMPage.sh [-a <address>] [-b] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>
       
 OPTIONS:
-       -a <address>    email address for alerts                      
+       -a <address>    email address for alerts     
+	   -b              benchmark (uses /usr/bin/time -pv)                 
        -c <class>      taxonomic class of the dataset                (default = top-level directory in $outdir)
        -d              debug mode of Makefile                        
        -f              force characterization even if no AMPs found  
@@ -331,7 +332,7 @@ OPTIONS:
        -r <FASTA.gz>   reference transcriptome                       (accepted multiple times, *.fna.gz *.fsa_nt.gz)
        -s              strand-specific library construction          (default = false)
        -t <int>        number of threads                             (default = 48)
-       -v              verbose (uses /usr/bin/time -pv)              
+       -v              print version number
                                                                 
 EXAMPLE(S):
       rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
