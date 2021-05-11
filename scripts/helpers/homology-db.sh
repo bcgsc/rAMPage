@@ -173,7 +173,7 @@ today=$(date '+%Y%b%d')
 class="Amphibia"
 outfile=$outdir/amps.${class}.prot.${today}.faa
 echo "Searching the NCBI protein database: antimicrobial[All Fields] and ${class}[organism]..." 1>&2
-echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
+echo -e "COMMAND: $RUN_ESEARCH -db protein -query \"antimicrobial[All Fields] AND ${class}[organism]\" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
 $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
 
 (cd $outdir && ln -fs $(basename $outfile) amps.${class}.prot.precursor.faa)
@@ -216,7 +216,7 @@ fi
 class="Insecta"
 outfile=$outdir/amps.${class}.prot.${today}.faa
 echo "Searching the NCBI protein database: antimicrobial[All Fields] and ${class}[organism]..." 1>&2
-echo -e "COMMAND: $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
+echo -e "COMMAND: $RUN_ESEARCH -db protein -query \"antimicrobial[All Fields] AND ${class}[organism]\" < /dev/null | $RUN_EFETCH -format fasta > $outfile\n" 1>&2
 $RUN_ESEARCH -db protein -query "antimicrobial[All Fields] AND ${class}[organism]" </dev/null | $RUN_EFETCH -format fasta >$outfile
 (cd $outdir && ln -fs $(basename $outfile) amps.${class}.prot.precursor.faa)
 echo "Filtering for insect AMPs..." 1>&2
