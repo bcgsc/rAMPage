@@ -29,14 +29,15 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-d] [-h] [-o <output FASTA file>] [-s <0 to 1>] [-t <int>] [-v] <input protein FASTA file>\n \
+		\t$PROGRAM [-d] [-h] [-l] [-o <output FASTA file>] [-s <0 to 1>] [-t <int>] [-v] <input protein FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
 		echo -e "\
-		\t-d\tremove absolute duplicates (same length, 100% sequence similarity; overrides -s)\n \
+		\t-d\tremove exact duplicates (same as -s 1.0 -l; overrides -s)\n \
 		\t-f\tformat clusters as a TSV file\n \
 		\t-h\tshow help menu\n \
+		\t-l\tcluster sequences only of the same length\n \
 		\t-o <FILE>\toutput FASTA file\t(default = *.nr.faa)\n \
 		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 0.90)\n\
 		\t-t <INT>\tnumber of threads\t(default = 2)\n\
@@ -82,12 +83,14 @@ output=""
 verbose=false
 remove_duplicates=false
 format=false
+length=false
 # 4 - getopts
-while getopts :dfho:s:t:v opt; do
+while getopts :dfhlo:s:t:v opt; do
 	case $opt in
 	d) remove_duplicates=true ;;
 	f) format=true ;;
 	h) get_help ;;
+	l) length=true ;;
 	o) output="$(realpath $OPTARG)" ;;
 	s) similarity="$OPTARG" ;;
 	t) threads="$OPTARG" ;;
@@ -110,11 +113,6 @@ if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi
-
-if [[ -z "$output" ]]; then
-	output=${input/.faa/.nr.faa}
-fi
-outdir=$(dirname $output)
 
 # if [[ ! -v WORKDIR ]]; then
 # 	workdir=$(dirname $outdir)
@@ -140,22 +138,28 @@ if [[ "$verbose" = true ]]; then
 		echo -e "THREADS: $threads\n"
 	} 1>&2
 fi
+
 if [[ "$remove_duplicates" == true ]]; then
 	similarity=1.0
 	length_cutoffs="-S 0 -s 1"
 else
-	length_cutoffs=""
+	if [[ "$length" = true ]]; then
+		length_cutoffs="-S 0 -s 1"
+	else
+		length_cutoffs=""
+	fi
 fi
 
 if (($(echo "$similarity < 0" | bc -l) || $(echo "$similarity > 1" | bc -l))); then
 	print_error "Sequence similarity cut-off must be between 0 and 1."
 fi
 
-if (($(echo "$similarity == 1" | bc -l))); then
-	# if [[ "$similarity" == "1.0" || "$similarity" == "1" ]]; then
-	remove_duplicates=true
-	length_cutoffs="-S 0 -s 1"
-fi
+# not always want the same length for 100% similarity
+# if (($(echo "$similarity == 1" | bc -l))); then
+# if [[ "$similarity" == "1.0" || "$similarity" == "1" ]]; then
+# 	remove_duplicates=true
+# 	length_cutoffs="-S 0 -s 1"
+# fi
 
 if [[ ! -v RUN_CDHIT ]]; then
 	if command -v cd-hit &>/dev/null; then
@@ -171,8 +175,6 @@ echo "PROGRAM: $(command -v $RUN_CDHIT)" 1>&2
 cdhit_version=$({ $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}' | tr -d '='; } || true)
 echo -e "VERSION: $cdhit_version\n" 1>&2
 
-log=$outdir/cdhit.log
-
 if (($(echo "$similarity >= 0.7" | bc -l) && $(echo "$similarity <= 1.0" | bc -l))); then
 	wordsize=5
 elif (($(echo "$similarity >= 0.6" | bc -l))); then
@@ -183,7 +185,37 @@ else
 	wordsize=2
 fi
 
-echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc)% global sequence similarity with word size $wordsize..." 1>&2
+if [[ -z "$output" ]]; then
+	if [[ "$remove_duplicates" = true ]]; then
+		# output=${input/.faa/.rmdup.nr.faa}
+		# output=${input/.faa/.nr.faa}
+		output=$(echo "$input" | sed 's/\.faa\?/.nr&/' | sed 's/\(\.nr\)\+\(\.faa\?\)/.rmdup.nr\2/')
+	else
+		percent=$(echo "$similarity * 100" | bc | sed 's/\.00//')
+		# output=${input/.faa/.nr.faa}
+		output=$(echo "$input" | sed 's/\.faa\?/.nr&/' | sed "s/\(\.nr\)\+\(\.faa\?\)/.${percent}.nr\2/")
+	fi
+fi
+
+if [[ "$input" == "$output" ]]; then
+	echo "BUG: Input filename is the same as output filename."
+	exit 1
+fi
+
+if [[ ! -s "$input" ]]; then
+	print_error "Input file $input is empty!"
+fi
+
+outdir=$(dirname $output)
+log=$outdir/cdhit.log
+if [[ "$remove_duplicates" = true ]]; then
+	echo "Conducting exact duplicate removal..." 1>&2
+elif [[ "$length" = true ]]; then
+	echo "Conducting redundancy removal of same length sequences at $(echo "$similarity * 100" | bc)% global sequence similarity with word size $wordsize..." 1>&2
+else
+	echo "Conducting redundancy removal at $(echo "$similarity * 100" | bc)% global sequence similarity with word size $wordsize..." 1>&2
+fi
+
 echo -e "COMMAND: $RUN_CDHIT -d 0 -l 4 -i $input -o $output -c $similarity -n $wordsize -T $threads -M 0 $length_cutoffs &>> $log\n" 1>&2
 $RUN_CDHIT -d 0 -l 4 -i $input -o $output -c $similarity -n $wordsize -T $threads -M 0 $length_cutoffs &>>$log
 

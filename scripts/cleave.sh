@@ -46,7 +46,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c] [-d] [-h] [-s <0 to 1>] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c] [-d] [-h] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -56,7 +56,6 @@ function get_help() {
 		\t-d\tdebug mode (skips running ProP)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\tredundancy removal cut-off\t(default = 1.0)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -103,10 +102,10 @@ email=false
 # similarity=0.90
 consecutive=false
 outdir=""
-similarity=1.0
+# similarity=1.0
 debug=false
 # 4 - read options
-while getopts :a:cho:s:d opt; do
+while getopts :a:cho:d opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -122,7 +121,6 @@ while getopts :a:cho:s:d opt; do
 	o)
 		outdir="$(realpath $OPTARG)"
 		;;
-	s) similarity="$OPTARG" ;;
 	\?)
 		print_error "Invalid option: -$OPTARG" 1>&2
 		;;
@@ -148,9 +146,9 @@ elif [[ ! -s $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) is empty."
 fi
 
-if (($(echo "$similarity <= 0" | bc -l) || $(echo "$similarity > 1" | bc -l))); then
-	print_error "Invalid argument for -r <0 to 1>: $similarity"
-fi
+# if (($(echo "$similarity <= 0" | bc -l) || $(echo "$similarity > 1" | bc -l))); then
+# print_error "Invalid argument for -r <0 to 1>: $similarity"
+# fi
 
 # 7 - remove existing status files
 rm -f $outdir/CLEAVE.DONE
@@ -344,7 +342,7 @@ fi
 
 echo "Removing duplicate sequences..." 1>&2
 outfile_len_nr=$outdir/cleaved.mature.len.nr.faa
-$ROOT_DIR/scripts/run-cdhit.sh -s $similarity -o ${outfile_len_nr} ${outfile_len}
+$ROOT_DIR/scripts/run-cdhit.sh -d -o ${outfile_len_nr} ${outfile_len}
 
 if [[ ! -s ${outfile_len_nr} ]]; then
 	touch $outdir/CLEAVE_LEN_NR.FAIL
