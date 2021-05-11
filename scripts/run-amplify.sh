@@ -44,7 +44,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-r <0 to 1>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
+		\t$PROGRAM [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -55,7 +55,6 @@ function get_help() {
 		\t-f\tforce final AMPs to be the lowest number of non-zero AMPs\n \
 		\t-h\tshow this help menu\n \
 		\t-l <int>\tlength cut-off [i.e. keep len(sequences) <= int]\t(default = 30)\n \
-		\t-r <0 to 1>\tredundancy removal cut-off\t(default = 1.0)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tAMPlify score cut-off [i.e. keep score(sequences) >= dbl]\t(default = 0.90)\n \
 		\t-t <int>\tnumber of threads\t(default = all)\n \
