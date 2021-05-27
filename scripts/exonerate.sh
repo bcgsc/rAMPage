@@ -135,21 +135,39 @@ if [[ ! -v CLASS ]]; then
 else
 	class=$CLASS
 fi
+
+if command -v mlr &>/dev/null; then
+	mlr_bool=true
+else
+	mlr_bool=false
+fi
+
 if [[ ! -f $(realpath $1) ]]; then
 	print_error "Input file $(realpath $1) does not exist."
 elif [[ ! -s $(realpath $1) ]]; then
 	#	print_error "Input file $(realpath $1) is empty."
 	# elif [[ $(wc -l $(realpath $1) | awk '{print $1}') -eq 1 ]]; then
-	echo "Input file $(realpath $1) is empty. There are no sequences to align."
+	echo "Input file $(realpath $1) is empty. There are no sequences to align." 1>&2
+	echo -e "\nNumber of Novel AMPs: 0/0" 1>&2
 	rm -f $outdir/EXONERATE.FAIL
 	touch $outdir/EXONERATE.DONE
-	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
-	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	echo -e "Sequence_ID\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Sequence_ID\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
 	touch $outdir/amps.exonerate.some_none.nr.faa
-	join -t$'\t' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv >$outdir/annotation.tsv
+
+	# if [[ "$mlr_bool" = true ]]; then
+	# mlr --tsv join -f $outdir/annotation.precursor.tsv -j "Sequence_ID" $outdir/annotation.mature.tsv >$outdir/annotation.tsv
+	# else
+	join --header -t$'\t' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv >$outdir/annotation.tsv
+	# fi
 	if [[ -s $(realpath $2) && $(wc -l $(realpath $1) | awk '{print $1}') -eq 1 ]]; then
 		cp $(realpath $2) $outdir
-		join -t $'\t' $outdir/annotation.tsv $(realpath $2) >$outdir/final_annotation.tsv
+
+		# if [[ "$mlr_bool" = true ]]; then
+		# mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $(realpath $2) >$outdir/final_annotation.tsv
+		# else
+		join --header -t $'\t' $outdir/annotation.tsv $(realpath $2) >$outdir/final_annotation.tsv
+		# fi
 	else
 		(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
 	fi
@@ -246,8 +264,8 @@ echo "Running Exonerate..." 1>&2
 	echo
 } 1>&2
 
-echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false >$outdir/amps.exonerate.out\n" 1>&2
-$RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false >$outdir/amps.exonerate.out
+echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false --score 0 --bestn 1 >$outdir/amps.exonerate.out\n" 1>&2
+$RUN_EXONERATE --query $query --target $target1 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false --score 0 --bestn 1 >$outdir/amps.exonerate.out
 
 exonerate_success=false
 if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
@@ -301,8 +319,8 @@ if [[ "$(wc -l $outdir/amps.exonerate.out | awk '{print $1}')" -gt 3 ]]; then
 		echo
 	} 1>&2
 
-	echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target2 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false >$outdir/amps.exonerate.mature.out\n" 1>&2
-	$RUN_EXONERATE --query $query --target $target2 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false >$outdir/amps.exonerate.mature.out
+	echo -e "COMMAND: $RUN_EXONERATE --query $query --target $target2 --querytype protein --targettype protein --ryo \"Summary: %qi\\\t%ti\\\t%td\\\t%pi\\\n\" --showvulgar false --score 0 --bestn 1 >$outdir/amps.exonerate.mature.out\n" 1>&2
+	$RUN_EXONERATE --query $query --target $target2 --querytype protein --targettype protein --ryo "Summary: %qi\t%ti\t%td\t%pi\n" --showvulgar false --score 0 --bestn 1 >$outdir/amps.exonerate.mature.out
 
 	exonerate_mature_success=false
 	if [[ "$(wc -l $outdir/amps.exonerate.mature.out | awk '{print $1}')" -gt 3 ]]; then
@@ -395,8 +413,8 @@ echo "Annotating..." 1>&2
 annotated_fasta=$outdir/annotated.nr.faa
 cp $query $outdir/annotated.nr.faa
 if [[ "$exonerate_success" == true ]]; then
-	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
-	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	echo -e "Sequence_ID\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Sequence_ID\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
 	while read seq; do
 		exonerate_precursor_top=$(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out | grep -w "$seq" -m1 | awk -F "\t" '{print $2 ":" $3}' | sed 's@:$@@' || true)
 		if [[ -n "$exonerate_precursor_top" ]]; then
@@ -408,7 +426,8 @@ if [[ "$exonerate_success" == true ]]; then
 		fi
 		exonerate_results=$(awk -F "\t" -v var="$seq" 'BEGIN{ORS=";"}{if($1==var) print $2 "(" $4 "%)"}' <(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.summary.out) | sed 's/;$/\n/')
 		if [[ -n "$exonerate_results" ]]; then
-			sed -i "/$seq / s/$/ precursor_hits=$exonerate_results/" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
+			:
+			# sed -i "/>$seq / s/$/ precursor_hits=$exonerate_results/" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
 		else
 			exonerate_precursor_top=" "
 		fi
@@ -424,7 +443,8 @@ if [[ "$exonerate_success" == true ]]; then
 			fi
 			exonerate_results=$(awk -F "\t" -v var="$seq" 'BEGIN{ORS=";"}{if($1==var) print $2 "(" $4 "%)"}' <(sort -k4,4gr -t $'\t' $outdir/amps.exonerate.mature.summary.out) | sed 's/;$/\n/')
 			if [[ -n "$exonerate_results" ]]; then
-				sed -i "/$seq / s/$/ mature_hits=$exonerate_results/" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
+				:
+				# sed -i "/>$seq / s/$/ mature_hits=$exonerate_results/" $amps_100_fasta $amps_some_fasta $amps_some_none_fasta $amps_none_fasta $amps_mature_100_fasta $amps_mature_some_fasta $amps_mature_some_none_fasta $amps_mature_none_fasta $annotated_fasta
 			else
 				exonerate_results=" "
 			fi
@@ -439,18 +459,29 @@ if [[ "$exonerate_success" == true ]]; then
 		echo -e "$seq\t \t " >>$outdir/annotation.precursor.tsv
 		echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
 	done <$amps_none_list
-	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
-	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+	if [[ "$mlr_bool" = true ]]; then
+		sed -i 's/"//g' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv
+		mlr --tsv join -f $outdir/annotation.precursor.tsv -j "Sequence_ID" $outdir/annotation.mature.tsv >$outdir/annotation.tsv
+		mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $outdir/EnTAP_annotation.tsv >$outdir/final_annotation.tsv
+	else
+		join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
+		join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+	fi
 else
-	echo -e "Query Sequence\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
-	echo -e "Query Sequence\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
+	echo -e "Sequence_ID\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
+	echo -e "Sequence_ID\tTop Mature\tMature Hits" >$outdir/annotation.mature.tsv
 	while read seq; do
 		echo -e "$seq\t \t " >>$outdir/annotation.precursor.tsv
 		echo -e "$seq\t \t " >>$outdir/annotation.mature.tsv
 	done < <(cat $amps_100_list $amps_some_list $amps_none_list | sort -u)
-
-	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
-	join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+	if [[ "$mlr_bool" = true ]]; then
+		sed -i 's/"//g' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv
+		mlr --tsv join -f $outdir/annotation.precursor.tsv -j "Sequence_ID" $outdir/annotation.mature.tsv >$outdir/annotation.tsv
+		mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $outdir/EnTAP_annotation.tsv >$outdir/final_annotation.tsv
+	else
+		join --header -t $'\t' <(LC_COLLATE=C sort -t $'\t' -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
+		join --header -t $'\t' <(LC_COLLATE=C sort -t $'\t' -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+	fi
 fi
 
 echo -e "\nRESULTS\n$(printf '%.0s-' $(seq 1 63))\n" 1>&2

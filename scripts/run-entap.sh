@@ -31,12 +31,13 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-a <address>] [-h] [-t <int>] -i <input FASTA file> -o <output directory> <database DMND file(s)>\n \
+		\t$PROGRAM [-a <address>] [-h] [-t <int>] -i <input FASTA file> -f <input TSV file> -o <output directory> <database DMND file(s)>\n \
 		" | table
 
 		echo -e "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
+		\t-f <file>\tinput TSV file\t(required)\n \
 		\t-h\tshow this help menu\n \
 		\t-i <file>\tinput FASTA file\t(required)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
@@ -45,7 +46,7 @@ function get_help() {
 
 		echo -e "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -t 8 -o /path/to/annotation/outdir -i /path/to/amplify/amps.final.faa nr.dmnd uniprot.dmnd\n \
+		\t$PROGRAM -a user@example.com -t 8 -o /path/to/annotation/outdir -i /path/to/amplify/amps.final.faa -f /path/to/amplify/AMPlify_results.final.tsv nr.dmnd uniprot.dmnd\n \
 		" | table
 
 	} 1>&2
@@ -87,12 +88,13 @@ email=false
 outdir=""
 threads=8
 input=""
-while getopts :a:hi:o:t: opt; do
+while getopts :a:f:hi:o:t: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
+	f) amplify_tsv=$(realpath -s $OPTARG) ;;
 	h) get_help ;;
 	i) input=$(realpath -s $OPTARG) ;;
 	o) outdir=$(realpath $OPTARG) ;;
@@ -134,13 +136,23 @@ else
 	class=$CLASS
 fi
 
+if command -v mlr &>/dev/null; then
+	mlr_bool=true
+else
+	mlr_bool=false
+fi
+
 if [[ -z $input ]]; then
 	print_error "Required argument -i <input FASTA file> missing."
 else
 	if [[ ! -f $input ]]; then
 		print_error "Given input FASTA file $input does not exist."
 	elif [[ ! -s $input ]]; then
-		echo "Given input FASTA file $input is empty. There are no sequences to annotate."
+		if [[ -z $amplify_tsv ]]; then
+			print_error "Required argument -f <input TSV file> missing."
+		fi
+		echo "Given input FASTA file $input is empty. There are no sequences to annotate." 1>&2
+		echo -e "\nNumber of annotated AMPs: 0" 1>&2
 		rm -f $outdir/ANNOTATION.FAIL
 		touch $outdir/ANNOTATION.DONE
 		mkdir -p $outdir/final_results
@@ -149,7 +161,16 @@ else
 		touch $outdir/amps.final.annotated.faa
 
 		echo -e "Query Sequence\tSubject Sequence\tPercent Identical\tAlignment Length\tMismatches\tGap Openings\tQuery Start\tQuery End\tSubject Start\tSubject End\tE Value\tCoverage\tDescription\tSpecies\tTaxonomic Lineage\tOrigin Database\tContaminant\tInformative\tUniProt Database Cross Reference\tUniProt Additional Information\tUniProt KEGG Terms\tUniProt GO Biological\tUniProt GO Cellular\tUniProt GO Molecular\tEggNOG Seed Ortholog\tEggNOG Seed E-Value\tEggNOG Seed Score\tEggNOG Predicted Gene\tEggNOG Tax Scope\tEggNOG Tax Scope Max\tEggNOG Member OGs\tEggNOG Description\tEggNOG KEGG Terms\tEggNOG GO Biological\tEggNOG GO Cellular\tEggNOG GO Molecular\tEggNOG Protein Domains\tIPScan GO Biological\tIPScan GO Cellular\tIPScan GO Molecular\tIPScan Pathways\tIPScan InterPro ID\tIPScan Protein Database\tIPScan Protein Description\tIPScan E-Value" >$outdir/final_results/final_annotations.final.tsv
-		(cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
+
+		# if [[ "$mlr_bool" = true ]]; then
+		# join previous tsv
+		# mlr --tsv join -f $amplify_tsv -l "Sequence_ID" -r "Query Sequence" -j "Sequence_ID" $outdir/final_results/final_annotations.final.tsv >$outdir/final_annotations.final.tsv
+		# else
+		# since these files are only one line long, no need to sort
+		join -t$'\t' --header $amplify_tsv $outdir/final_results/final_annotations.final.tsv >$outdir/final_annotations.final.tsv
+		# fi
+		# join with AMPlify TSV instead of soft linking
+		# (cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
 
 		if [[ "$email" = true ]]; then
 			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
@@ -160,6 +181,10 @@ else
 		exit 0
 		# print_error "Given input FASTA file $input is empty."
 	fi
+fi
+
+if [[ -z $amplify_tsv ]]; then
+	print_error "Required argument -i <input FASTA file> missing."
 fi
 
 if [[ "$#" -eq 0 ]]; then
@@ -196,7 +221,7 @@ fi
 rm -f $outdir/ANNOTATION.DONE
 rm -f $outdir/ANNOTATION.FAIL
 
-if ! command -v $JAVA_EXEC; then
+if ! command -v $JAVA_EXEC &>/dev/null; then
 	print_error "JAVA_EXEC has not been set in scripts/config.sh."
 fi
 
@@ -210,7 +235,11 @@ export PATH=$(dirname $JAVA_EXEC):$PATH
 
 	echo "CALL: $args (wd: $(pwd))"
 	if [[ -L $input ]]; then
-		echo -e "INPUT: $(ls -l $input | awk '{print $(NF-2), $(NF-1), $NF}' || exit 1)\n"
+		echo "INPUT:"
+		echo -e "\t$(ls -l $input | awk '{print $(NF-2), $(NF-1), $NF}' || exit 1)"
+	fi
+	if [[ -L $amplify_tsv ]]; then
+		echo -e "\t$(ls -l $amplify_tsv | awk '{print $(NF-2), $(NF-1), $NF}' || exit 1)\n"
 	fi
 	echo -e "THREADS: $threads\n"
 } 1>&2
@@ -285,7 +314,7 @@ echo 1>&2
 # set taxon
 sed -i "s|^taxon=.*$|taxon=$class|" $config_custom
 
-# CONFIGURE THE NECESSARY DATABASES
+## CONFIGURE THE NECESSARY DATABASES
 if [[ "$dbcustom" = true ]]; then
 	db=$(echo "$databases" | sed 's/ / -d /g' | sed 's/^/-d /')
 else
@@ -350,7 +379,15 @@ if [[ "$code" -eq 0 ]]; then
 	elif [[ -s "$outdir/final_results/final_anntations_lvl1.tsv" && "$(wc -l $outdir/final_results/final_annotations_lvl1.tsv | awk '{print $1}')" -gt 1 ]]; then
 		(cd $outdir/final_results && ln -fs final_annotations_lvl1.tsv final_annotations.final.tsv)
 	fi
-	(cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
+
+	if [[ "$mlr_bool" = true ]]; then
+		mlr --tsv join -f $amplify_tsv -l "Sequence_ID" -r "Query Sequence" -j "Sequence_ID" $outdir/final_results/final_annotations.final.tsv >$outdir/final_annotations.final.tsv
+	else
+		# manual join
+		join --header -t $'\t' <(LC_COLLATE=C sort -t$'\t' -k1,1 $amplify_tsv) <(LC_COLLATE=C sort -t$'\t' -k1,1 $outdir/final_results/final_annotations.final.tsv) >$outdir/final_annotations.final.tsv
+	fi
+	# join with AMPlify TSV instead of soft linking
+	# (cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
 
 	final_tsv=$outdir/final_annotations.final.tsv
 
@@ -360,26 +397,28 @@ if [[ "$code" -eq 0 ]]; then
 		# sed -i "/${seq} / s/ length=/-annotated&/" $processed
 		subject=$(awk -F "\t" -v var=$seq '{if($1==var) print $2}' $final_tsv)
 		if [[ -n $subject ]]; then
-			sed -i "/${seq} / s/$/ diamond=$subject/" $processed
+			sed -i "/>${seq} / s/$/ diamond=$subject/" $processed
 		fi
 		taxonomy=$(awk -F "\t" -v var=$seq '{if($1==var) print $14}' $final_tsv | tr ' ' '_')
 		if [[ -n $taxonomy ]]; then
-			sed -i "/${seq} / s/$/ taxonomy=$taxonomy/" $processed
+			sed -i "/>${seq} / s/$/ taxonomy=$taxonomy/" $processed
 		fi
 		ipscan=$(awk -F "\t" -v var=$seq '{if ($1==var) print $44}' $final_tsv | cut -d \( -f1)
 		if [[ -n $ipscan ]]; then
-			sed -i "/${seq} / s/$/ InterProScan=$ipscan/" $processed
+			ipscan=$(echo "$ipscan" | sed '/^>/ s/,*NA,*//g')
+			sed -i "/>${seq} / s/$/ InterProScan=$ipscan/" $processed
 		fi
 		# sed -i "s/${seq}\t/${seq}-annotated\t/" $final_tsv
 	done
 else
 	processed=$outdir/$(basename $input | sed 's/.faa$/.annotated.faa/')
 	cp $input $processed # identical
+	entap_tsv=$outdir/final_results/final_annotations.final.tsv
+	# final_tsv=$outdir/final_annotations.final.tsv
+	echo -e "Query Sequence\tSubject Sequence\tPercent Identical\tAlignment Length\tMismatches\tGap Openings\tQuery Start\tQuery End\tSubject Start\tSubject End\tE Value\tCoverage\tDescription\tSpecies\tTaxonomic Lineage\tOrigin Database\tContaminant\tInformative\tUniProt Database Cross Reference\tUniProt Additional Information\tUniProt KEGG Terms\tUniProt GO Biological\tUniProt GO Cellular\tUniProt GO Molecular\tEggNOG Seed Ortholog\tEggNOG Seed E-Value\tEggNOG Seed Score\tEggNOG Predicted Gene\tEggNOG Tax Scope\tEggNOG Tax Scope Max\tEggNOG Member OGs\tEggNOG Description\tEggNOG KEGG Terms\tEggNOG GO Biological\tEggNOG GO Cellular\tEggNOG GO Molecular\tEggNOG Protein Domains\tIPScan GO Biological\tIPScan GO Cellular\tIPScan GO Molecular\tIPScan Pathways\tIPScan InterPro ID\tIPScan Protein Database\tIPScan Protein Description\tIPScan E-Value" >$entap_tsv
+	# >$final_tsv
 
-	final_tsv=$outdir/final_annotations.final.tsv
-	echo -e "Query Sequence\tSubject Sequence\tPercent Identical\tAlignment Length\tMismatches\tGap Openings\tQuery Start\tQuery End\tSubject Start\tSubject End\tE Value\tCoverage\tDescription\tSpecies\tTaxonomic Lineage\tOrigin Database\tContaminant\tInformative\tUniProt Database Cross Reference\tUniProt Additional Information\tUniProt KEGG Terms\tUniProt GO Biological\tUniProt GO Cellular\tUniProt GO Molecular\tEggNOG Seed Ortholog\tEggNOG Seed E-Value\tEggNOG Seed Score\tEggNOG Predicted Gene\tEggNOG Tax Scope\tEggNOG Tax Scope Max\tEggNOG Member OGs\tEggNOG Description\tEggNOG KEGG Terms\tEggNOG GO Biological\tEggNOG GO Cellular\tEggNOG GO Molecular\tEggNOG Protein Domains\tIPScan GO Biological\tIPScan GO Cellular\tIPScan GO Molecular\tIPScan Pathways\tIPScan InterPro ID\tIPScan Protein Database\tIPScan Protein Description\tIPScan E-Value" >$final_tsv
-
-	# simulate an "empty" annotation
+	# read custom IPscan
 	if [[ "$code" -eq 140 ]]; then
 		# read the InterProScan tsv file
 		for i in $(awk '/^>/ {print $1}' $processed | tr -d '>'); do
@@ -440,19 +479,27 @@ else
 			# echo "ipscan_db: $ipscan_db"
 			# echo "ipscan_pfam: $ipscan_pfam"
 			# echo "ipscan_eval: $ipscan_eval"
-			echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t$ipscan_go1\t$ipscan_go2\t$ipscan_go3\t$ipscan_pathways\t$ipscan_id\t$ipscan_db\t$ipscan_pfam\t$ipscan_eval" >>$final_tsv
+			echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t$ipscan_go1\t$ipscan_go2\t$ipscan_go3\t$ipscan_pathways\t$ipscan_id\t$ipscan_db\t$ipscan_pfam\t$ipscan_eval" >>$entap_tsv # >>$final_tsv
 			ipscan=$(echo "$ipscan_id" | awk -F "(" '{print $1}' | tr $'\n' ',' | sed 's/,\+$//g' | sed 's/^,\+//g')
 			# echo "$ipscan"
 			if [[ -n $ipscan ]]; then
 				# echo "$ipscan"
-				sed -i "/${i} / s/$/ InterProScan=$ipscan/" $processed
+				ipscan=$(echo "$ipscan" | sed '/^>/ s/,*NA,*//g')
+				sed -i "/>${i} / s/$/ InterProScan=$ipscan/" $processed
 			fi
 		done
 	else
 		for i in $(awk '/^>/ {print $1}' $processed | tr -d '>'); do
 
-			echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t" >>$final_tsv
+			echo -e "${i}\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t" >>$entap_tsv # >>$final_tsv
 		done
+	fi
+	# join here
+	if [[ "$mlr_bool" = true ]]; then
+		mlr --tsv join -f $amplify_tsv -l "Sequence_ID" -r "Query Sequence" -j "Sequence_ID" $entap_tsv >$final_tsv
+	else
+		# manual join
+		join --header -t $'\t' <(LC_COLLATE=C sort -t$'\t' -k1,1 $amplify_tsv) <(LC_COLLATE=C sort -t$'\t' -k1,1 $entap_tsv) >$final_tsv
 	fi
 fi
 
