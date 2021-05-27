@@ -197,6 +197,9 @@ for logdir in "$@"; do
 			annotation)
 				# header+=("Number of Annotated AMPs")
 				num=$(awk '/Number of annotated AMPs:/ {print $NF}' $file)
+				# if [[ -z "$num" ]]; then
+				# 	num="0"
+				# fi
 				values["Number of Annotated AMPs"]=$num
 				# echo "Annotation: $num"
 				;;
@@ -204,6 +207,9 @@ for logdir in "$@"; do
 				# header+=("Number of Novel AMPs")
 				num=$(awk '/Number of Novel AMPs:/ {print $NF}' $file)
 				# num=$(awk '/Number of high-confidence \(score >= [0-9]\.?[0-9]*\), short \(length <= [0-9]+\), and positive \(charge >= -?[0-9]+\) unique AMPs:/ {print $NF}' $file)
+				# if [[ -z "$num" ]]; then
+				# 	num="0/0"
+				# fi
 				values["Number of Novel AMPs"]=$num
 				# echo "Novel: $num"
 				;;
