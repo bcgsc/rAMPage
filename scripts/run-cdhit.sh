@@ -175,15 +175,16 @@ echo "PROGRAM: $(command -v $RUN_CDHIT)" 1>&2
 cdhit_version=$({ $RUN_CDHIT -h 2>&1 | head -n1 | awk -F "version " '{print $2}' | tr -d '='; } || true)
 echo -e "VERSION: $cdhit_version\n" 1>&2
 
-if (($(echo "$similarity >= 0.7" | bc -l) && $(echo "$similarity <= 1.0" | bc -l))); then
-	wordsize=5
-elif (($(echo "$similarity >= 0.6" | bc -l))); then
-	wordsize=4
-elif (($(echo "$similarity >= 0.5" | bc -l))); then
-	wordsize=3
-else
-	wordsize=2
-fi
+wordsize=4
+# if (($(echo "$similarity >= 0.7" | bc -l) && $(echo "$similarity <= 1.0" | bc -l))); then
+# 	wordsize=5
+# elif (($(echo "$similarity >= 0.6" | bc -l))); then
+# 	wordsize=4
+# elif (($(echo "$similarity >= 0.5" | bc -l))); then
+# 	wordsize=3
+# else
+# 	wordsize=2
+# fi
 
 if [[ -z "$output" ]]; then
 	if [[ "$remove_duplicates" = true ]]; then

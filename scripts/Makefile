@@ -79,22 +79,22 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
+			$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -o amplify cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
+			$< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	fi
 
 # 9. cleavage
-cleavage: cleavage/cleaved.mature.len.nr.faa
+cleavage: cleavage/cleaved.mature.len.rmdup.nr.faa
 
-cleavage/cleaved.mature.len.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh $(ROOT_DIR)/scripts/run-cdhit.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
+cleavage/cleaved.mature.len.rmdup.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh $(ROOT_DIR)/scripts/run-cdhit.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs)/09-cleavage.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
