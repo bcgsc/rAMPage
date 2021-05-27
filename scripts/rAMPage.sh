@@ -359,7 +359,7 @@ fi
 
 # summarize the log files here
 if [[ "$email" = true ]]; then
-	if [[ "$verbose" == true ]]; then
+	if [[ "$benchmark" == true ]]; then
 		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
 		/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
 	else
@@ -367,7 +367,7 @@ if [[ "$email" = true ]]; then
 		$ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
 	fi
 else
-	if [[ "$verbose" == true ]]; then
+	if [[ "$benchmark" == true ]]; then
 		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
 		/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
 	else
