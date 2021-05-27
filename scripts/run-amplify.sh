@@ -50,20 +50,22 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-c <int>\tcharge cut-off [i.e. keep charge(sequences >= int]\t(default = 2)\n \
+		\t-c <int>\tcharge cut-off (multiple accepted) [i.e. keep charge(sequences >= int]\t(default = 2)\n \
 		\t-d\tdebug mode\t(skips running AMPlify)\n \
-		\t-f\tforce final AMPs to be the lowest number of non-zero AMPs\n \
+		\t-f\tforce final AMPs to be the lowest number of non-zero AMPs*\n \
 		\t-h\tshow this help menu\n \
-		\t-l <int>\tlength cut-off [i.e. keep len(sequences) <= int]\t(default = 30)\n \
+		\t-l <int>\tlength cut-off (multiple accepted) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\tAMPlify score cut-off [i.e. keep score(sequences) >= dbl]\t(default = 0.90)\n \
+		\t-s <0 to 1>\tAMPlify score cut-off (multiple accepted) [i.e. keep score(sequences) >= dbl]\t(default = 0.90)\n \
 		\t-t <int>\tnumber of threads\t(default = all)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -c 2 -l 30 -s 0.90 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 0.90 -s 0.80 -s 0.70 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
 		" | table
+
+		echo "*i.e. if filtering by score >= 0.90, length <= 30, and charge >= 2 yields zero AMPs, then score >= 0.90, length <= 50, and charge >=2 will be used for the next step of the pipeline, etc."
 	} 1>&2
 	exit 1
 }
@@ -98,12 +100,12 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 # default parameters
-confidence=0.90
-length=30
+confidence=()
+length=()
 email=false
 # threads=8
 custom_threads=false
-charge=2
+charge=()
 outdir=""
 debug=false
 forced_characterization=false
@@ -114,12 +116,12 @@ while getopts :a:c:dfhl:o:s:t: opt; do
 		address="$OPTARG"
 		email=true
 		;;
-	c) charge="$OPTARG" ;;
+	c) charge+=("$OPTARG") ;;
 	d) debug=true ;;
 	f) forced_characterization=true ;;
-	s) confidence="$OPTARG" ;;
+	s) confidence+=("$OPTARG") ;;
 	h) get_help ;;
-	l) length="$OPTARG" ;;
+	l) length+=("$OPTARG") ;;
 	o)
 		outdir=$(realpath $OPTARG)
 		;;
@@ -159,6 +161,12 @@ else
 	workdir=$(realpath $WORKDIR)
 fi
 
+if [[ ! -v CLASS ]]; then
+	class=$(echo "$workdir" | awk -F "/" '{print $(NF-2)}')
+else
+	class=$CLASS
+fi
+
 if [[ ! -v SPECIES ]]; then
 	# get species from workdir
 	# species=$(echo "$workdir" | awk -F "/" '{print $(NF-1)}' | sed 's/^./&./')
@@ -172,13 +180,33 @@ if [[ -v FORCE_CHAR ]]; then
 	forced_characterization=$FORCE_CHAR
 fi
 
-if (($(echo "$confidence < 0.5" | bc -l) || $(echo "$confidence > 1" | bc -l))); then
-	print_error "Invalid argument for -c <0.5 to 1>: $confidence"
+# set default confidence
+if [[ "${#confidence[@]}" -eq 0 ]]; then
+	if [[ "$class" == [Aa]mphibia ]]; then
+		confidence=(0.90 0.80 0.70)
+	else
+		confidence=(0.80 0.70 0.60)
+	fi
 fi
 
-# if [[ "$confidence" -lt 0 || "$confidence" -gt 1 ]]; then
-# 	print_error "Invalid argument for -c <0 to 1>: $confidence"
-# fi
+# sort / unique
+
+sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
+for i in "${confidence[@]}"; do
+	if (($(echo "$i < 0.5" | bc -l) || $(echo "$i > 1" | bc -l))); then
+		print_error "Invalid argument for -c <0.5 to 1>: $i"
+	fi
+done
+
+if [[ "${#length[@]}" -eq 0 ]]; then
+	length=(50 30)
+fi
+sorted_length=($(echo "${length[@]}" | tr ' ' '\n' | sort -nru | tr '\n' ' '))
+
+if [[ "${#charge[@]}" -eq 0 ]]; then
+	charge=(2)
+fi
+sorted_charge=($(echo "${charge[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
 
 # 7 - remove status files
 rm -f $outdir/AMPLIFY.DONE
@@ -200,21 +228,6 @@ if ! command -v mail &>/dev/null; then
 	email=false
 	echo -e "System does not have email set up.\n" 1>&2
 fi
-
-function lower() {
-	conf=$1
-	decimal_places=$(echo "$conf" | awk -F "." '{print length($2)}')
-	last_digit=${conf: -1}
-	if [[ "$last_digit" == "0" ]]; then
-		factor="0.$(printf "%0${decimal_places}d" 10)"
-	else
-		factor="0.$(printf "%0${decimal_places}d" $last_digit)"
-	fi
-	printf "%.${decimal_places}f" "$(echo "${conf}-${factor}" | bc)"
-}
-
-confidence_lower=$(lower $confidence)
-confidence_lower_lower=$(lower $confidence_lower)
 
 input=$(realpath $1)
 
@@ -247,71 +260,6 @@ fi
 echo "PROGRAM: $(command -v $RUN_AMPLIFY)" 1>&2
 echo -e "VERSION: $(command -v $RUN_AMPLIFY | awk -F "/" '{print $(NF-2)}' | cut -f2 -d-)\n" 1>&2
 # echo "VERSION: 1.0.0" 1>&2
-
-# 1 - FILTER BY NOTHING
-# outfile=$outdir/amps.faa
-outfile_nr=$outdir/amps.nr.faa
-
-# 2 - FILTER BY SCORE
-# outfile_conf=$outdir/amps.conf.faa
-outfile_conf_nr=$outdir/amps.conf_${confidence}.nr.faa
-outfile_conf_nr_tsv=$outdir/AMPlify_results.conf_${confidence}.nr.tsv
-outfile_conf_nr_ln=amps.conf.nr.faa
-outfile_conf_nr_tsv_ln=AMPlify_results.conf.nr.tsv
-
-# 3 - FILTER BY LENGTH
-# outfile_short=$outdir/amps.short.faa
-outfile_short_nr=$outdir/amps.short_${length}.nr.faa
-outfile_short_nr_tsv=$outdir/AMPlify_results.short_${length}.nr.tsv
-outfile_short_nr_ln=amps.short.nr.faa
-outfile_short_nr_tsv_ln=AMPlify_results.short.nr.tsv
-
-# 4 - FILTER BY CHARGE
-# outfile_charge=$outdir/amps.charge.faa
-outfile_charge_nr=$outdir/amps.charge_${charge}.nr.faa
-outfile_charge_nr_tsv=$outdir/AMPlify_results.charge_${charge}.nr.tsv
-outfile_charge_nr_ln=amps.charge.nr.faa
-outfile_charge_nr_tsv_ln=AMPlify_results.charge.nr.tsv
-
-# 5 - FILTER BY SCORE, CHARGE - NEW
-# outfile_conf_charge=$outdir/amps.conf.charge.faa
-outfile_conf_charge_nr=$outdir/amps.conf_${confidence}.charge_${charge}.nr.faa
-outfile_conf_charge_nr_tsv=$outdir/AMPlify_results.conf_${confidence}.charge_${charge}.nr.tsv
-outfile_conf_charge_nr_ln=amps.conf.charge.nr.faa
-outfile_conf_charge_nr_tsv_ln=AMPlify_results.conf.charge.nr.tsv
-
-# 6 - FILTER BY SCORE, LENGTH
-# outfile_conf_short=$outdir/amps.conf.short.faa
-outfile_conf_short_nr=$outdir/amps.conf_${confidence}.short_${length}.nr.faa
-outfile_conf_short_nr_tsv=$outdir/AMPlify_results.conf_${confidence}.short_${length}.nr.tsv
-outfile_conf_short_nr_ln=amps.conf.short.nr.faa
-outfile_conf_short_nr_tsv_ln=AMPlify_results.conf.short.nr.tsv
-
-# 7 - FILTER BY LENGTH, CHARGE - NEW
-# outfile_short_charge=$outdir/amps.short.charge.faa
-outfile_short_charge_nr=$outdir/amps.short_${length}.charge_${charge}.nr.faa
-outfile_short_charge_nr_tsv=$outdir/AMPlify_results.short_${length}.charge_${charge}.nr.tsv
-outfile_short_charge_nr_ln=amps.short.charge.nr.faa
-outfile_short_charge_nr_tsv_ln=AMPlify_results.short.charge.nr.tsv
-
-# outfile_short_charge_lower_lower=$outdir/amps.conf_${confidence_lower_lower}.short.charge.faa
-outfile_short_charge_lower_lower_nr=$outdir/amps.conf_${confidence_lower_lower}.short_${length}.charge_${charge}.nr.faa
-outfile_short_charge_lower_lower_nr_tsv=$outdir/AMPlify_results.conf_${confidence_lower_lower}.short_${length}.charge_${charge}.nr.tsv
-outfile_short_charge_lower_lower_nr_ln=amps.conf_${confidence_lower_lower}.short.charge.nr.faa
-outfile_short_charge_lower_lower_nr_tsv_ln=AMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv
-
-# 7.5 - FILTER BY LENGTH, CHARGE - NEW,  + by lenient score
-# outfile_short_charge_lower=$outdir/amps.conf_${confidence_lower}.short.charge.faa
-outfile_short_charge_lower_nr=$outdir/amps.conf_${confidence_lower}.short_${length}.charge_${charge}.nr.faa
-outfile_short_charge_lower_nr_tsv=$outdir/AMPlify_results.conf_${confidence_lower}.short_${length}.charge_${charge}.nr.tsv
-outfile_short_charge_lower_nr_ln=amps.conf_${confidence_lower}.short.charge.nr.faa
-outfile_short_charge_lower_nr_tsv_ln=AMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv
-# 8 - FILTER BY ALL
-# outfile_conf_short_charge=$outdir/amps.conf.short.charge.faa
-outfile_conf_short_charge_nr=$outdir/amps.conf_${confidence}.short_${length}.charge_${charge}.nr.faa
-outfile_conf_short_charge_nr_tsv=$outdir/AMPlify_results.conf_${confidence}.short_${length}.charge_${charge}.nr.tsv
-outfile_conf_short_charge_nr_ln=amps.conf_${confidence}.short.charge.nr.faa
-outfile_conf_short_charge_nr_tsv_ln=AMPlify_results.conf_${confidence}.short.charge.nr.tsv
 
 echo "Checking sequence lengths..." 1>&2
 if [[ ! -v RUN_SEQTK ]]; then
@@ -470,436 +418,472 @@ echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&
 #----------------------------------------------------------
 filter_counter=1
 echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50)..." 1>&2
-echo "$header" >$outdir/AMPlify_results.amps.nr.tsv
+
+amps_fasta=$outdir/amps.nr.faa
+amps_tsv=$outdir/AMPlify_results.amps.nr.tsv
+
+all_fastas=($amps_fasta)
+all_tsv=($amps_tsv)
+echo "$header" >$amps_tsv
 echo -e "COMMAND: awk -F \"\\\t\" '{if(\$5==\"AMP\") print}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv) >> $outdir/AMPlify_results.amps.nr.tsv\n" 1>&2
-awk -F "\t" '{if($5=="AMP") print}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv) >>$outdir/AMPlify_results.amps.nr.tsv
+awk -F "\t" '{if($5=="AMP") print}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv) >>$amps_tsv
 
 echo "Converting those sequences to FASTA format..." 1>&2
 # 4th field is prediction, and 1st field is sequence ID:
-echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F \"\\\t\" '{if(\$5==\"AMP\") print \$1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) > ${outfile_nr} || true\n" 1>&2
-$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F "\t" '{if($5=="AMP") print $1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) >${outfile_nr} || true
+echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F \"\\\t\" '{if(\$5==\"AMP\") print \$1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) > $amps_fasta || true\n" 1>&2
+$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <(awk -F "\t" '{if($5=="AMP") print $1}' <(tail -n +2 $outdir/AMPlify_results.nr.tsv)) >$amps_fasta || true
 
 echo "SUMMARY" 1>&2
 print_line
 
-count=$(grep -c '^>' ${outfile_nr} || true)
+count=$(grep -c '^>' $amps_fasta || true)
 
 {
-	echo "Output: ${outfile_nr}"
+	echo "Output: $amps_fasta"
 	echo "Number of unique AMPs: $(printf "%'d" $count)"
 } | sed 's/^/\t/' 1>&2
 
 print_line
 echo 1>&2
+
 #----------------------------------------------------------
 ((filter_counter += 1))
-### 2 - Filter all sequences for those with AMPlify score >= $confidence
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with an AMPlify score >= $confidence..." 1>&2
-echo "$header" >$outfile_conf_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v var=$confidence '{if(\$4>=var) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_conf_nr_tsv\n" 1>&2
-awk -F "\t" -v var=$confidence '{if($4>=var) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_conf_nr_tsv
 
-echo "Converting those sequences to FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v var=$confidence '{if(\$4>=var) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > ${outfile_conf_nr}\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v var=$confidence '{if($4>=var) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_conf_nr}
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_conf_nr) $outfile_conf_nr_ln &&
-		ln -fs $(basename $outfile_conf_nr_tsv) $outfile_conf_nr_tsv_ln
-)
-
-echo "SUMMARY" 1>&2
-print_line
-
-count_conf=$(grep -c '^>' ${outfile_conf_nr} || true)
-
-{
-	echo "Output: ${outfile_conf_nr}"
-	echo "Number of high-confidence (score >= $confidence) unique AMPs: $(printf "%'d" ${count_conf})"
-} | sed 's/^/\t/' 1>&2
-
-print_line
-echo 1>&2
-#--------------------------------------------------------------------
-
-((filter_counter += 1))
-### 3 - Filter all sequences for those labelled 'AMP' and length <= $length
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) and with length <= $length..." 1>&2
-echo "$header" >$outfile_short_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v var=$length '{if(\$3<=var) print }' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_short_nr_tsv\n" 1>&2
-awk -F "\t" -v var=$length '{if($3<=var) print }' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_short_nr_tsv
-
-echo "Converting those sequences into FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v var=$length '{if(\$3<=var) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > ${outfile_short_nr}\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v var=$length '{if($3<=var) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_short_nr}
-
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_short_nr) $outfile_short_nr_ln &&
-		ln -fs $(basename $outfile_short_nr_tsv) $outfile_short_nr_tsv_ln
-)
-
-echo "SUMMARY" 1>&2
-print_line
-
-count_short=$(grep -c '^>' ${outfile_short_nr} || true)
-
-{
-	echo "Output: ${outfile_short_nr}"
-	echo "Number of short (length <= $length) unique AMPs: $(printf "%'d" ${count_short})"
-} | sed 's/^/\t/' 1>&2
-
-print_line
-echo 1>&2
-
-((filter_counter += 1))
-### 4 - Filter all sequences labelled 'AMP' and have charge >= $charge
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) and with charge >= ${charge}..." 1>&2
-echo "$header" >$outfile_charge_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v var=$charge '{if(\$6>=var) print }' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_charge_nr_tsv\n" 1>&2
-awk -F "\t" -v var=$charge '{if($6>=var) print }' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_charge_nr_tsv
-
-echo "Converting those sequences into FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v var=$charge '{if(\$6>=var) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > $outfile_charge_nr\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v var=$charge '{if($6>=var) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_charge_nr}
-
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_charge_nr) $outfile_charge_nr_ln &&
-		ln -fs $(basename $outfile_charge_nr_tsv) $outfile_charge_nr_tsv_ln
-)
-
-echo "SUMMARY" 1>&2
-print_line
-
-count_charge=$(grep -c '^>' ${outfile_charge_nr} || true)
-
-{
-	echo "Output: ${outfile_charge_nr}"
-	echo "Number of positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_charge})"
-} | sed 's/^/\t/' 1>&2
-
-print_line
-echo 1>&2
-#--------------------------------------------------------------------
-
-((filter_counter += 1))
-### 5 - Filter all sequences for those AMPlify score >= $confidence and have charge >= $charge
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= $confidence and with charge >= ${charge}..." 1>&2
-echo "$header" >$outfile_conf_charge_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v var=$charge -v c=$confidence'{if(\$6>=var && \$4>=c) print }' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_conf_charge_nr_tsv\n" 1>&2
-awk -F "\t" -v var=$charge -v c=$confidence '{if($6>=var && $4>=c) print }' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_conf_charge_nr_tsv
-
-echo "Converting those sequences into FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v var=$charge -v c=$confidence '{if(\$6>=var && \$4>=c) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > $outfile_conf_charge_nr\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v var=$charge -v c=$confidence '{if($6>=var && $4>=c) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_conf_charge_nr}
-
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_conf_charge_nr) $outfile_conf_charge_nr_ln &&
-		ln -fs $(basename $outfile_conf_charge_nr_tsv) $outfile_conf_charge_nr_tsv_ln
-)
-
-echo "SUMMARY" 1>&2
-print_line
-
-count_conf_charge=$(grep -c '^>' ${outfile_conf_charge_nr} || true)
-
-{
-	echo "Output: ${outfile_conf_charge_nr}"
-	echo "Number of high confidence (score >= $confidence) and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_conf_charge})"
-} | sed 's/^/\t/' 1>&2
-
-print_line
-echo 1>&2
-#--------------------------------------------------------------------
-
-((filter_counter += 1))
-#--------------------------------------------------------------------
-### 6 - Filter all sequences for those with AMPlify score >= $confidence and length <= $length
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with length <= $length and AMPlify score >= ${confidence}..." 1>&2
-echo "$header" >$outfile_conf_short_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v l=$length -v c=$confidence '{if(\$3<=l && \$4>=c) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_conf_short_nr_tsv\n" 1>&2
-awk -F "\t" -v l=$length -v c=$confidence '{if($3<=l && $4>=c) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_conf_short_nr_tsv
-
-echo "Converting those sequences to FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v l=$length -v c=$confidence '{if(\$3<=l && \$4>=c) print \$1}' <(tail -n +2 $outdir/AMPlify_results..amps.nr.tsv)) > ${outfile_conf_short_nr}\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v l=$length -v c=$confidence '{if($3<=l && $4>=c) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_conf_short_nr}
-
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_conf_short_nr) $outfile_conf_short_nr_ln &&
-		ln -fs $(basename $outfile_conf_short_nr_tsv) $outfile_conf_short_nr_tsv_ln
-)
-
-echo "SUMMARY" 1>&2
-print_line
-
-count_conf_short=$(grep -c '^>' ${outfile_conf_short_nr} || true)
-
-{
-	echo "Output: ${outfile_conf_short_nr}"
-	echo "Number of high-confidence (score >= $confidence) and short (length <= $length) unique AMPs: $(printf "%'d" ${count_conf_short})"
-} | sed 's/^/\t/' 1>&2
-
-print_line
-echo 1>&2
-#--------------------------------------------------------------------
-
-((filter_counter += 1))
-#--------------------------------------------------------------------
-### 7 - Filter all sequences for those with charge >= $charge and length <= $length
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.5) with length <= $length and charge >= ${charge}..." 1>&2
-echo "$header" >$outfile_short_charge_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v l=$length -v c=$charge '{if(\$3<=l && \$6>=c) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_short_charge_nr_tsv\n" 1>&2
-awk -F "\t" -v l=$length -v c=$charge '{if($3<=l && $6>=c) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_short_charge_nr_tsv
-
-echo "Converting those sequences to FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v l=$length -v c=$charge '{if(\$3<=l && \$6>=c) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > ${outfile_short_charge_nr}\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v l=$length -v c=$charge '{if($3<=l && $6>=c) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_short_charge_nr}
-
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_short_charge_nr) $outfile_short_charge_nr_ln &&
-		ln -fs $(basename $outfile_short_charge_nr_tsv) $outfile_short_charge_nr_tsv_ln
-)
-
-echo "SUMMARY" 1>&2
-print_line
-
-count_short_charge=$(grep -c '^>' ${outfile_short_charge_nr} || true)
-
-{
-	echo "Output: ${outfile_short_charge_nr}"
-	echo "Number of short (length <= $length) and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_short_charge})"
-} | sed 's/^/\t/' 1>&2
-
-print_line
-echo 1>&2
-#--------------------------------------------------------------------
-# ONLY DO THE MORE LENIENT SCORE IF the lenient score is still > 0.50
-if [[ $(echo "${confidence_lower_lower} > 0.50" | bc -l) ]]; then
-	((filter_counter += 1))
+# Go through sorted confidence loop
+for score in "${sorted_confidence[@]}"; do
+	loop_tsv=$outdir/AMPlify_results.amps.score_${score}.nr.tsv
+	loop_fasta=$outdir/amps.score_${score}.nr.faa
+	all_fastas+=($loop_fasta)
+	all_tsv+=($loop_tsv)
+	### 2 - Filter all sequences for those with AMPlify score >= $confidence
 	#--------------------------------------------------------------------
-	### 8 - Filter all sequences for those with charge >= $charge and length <= $length, and more leninet score
-	#--------------------------------------------------------------------
-	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.5) with length <= $length, charge >= ${charge}, and AMPlify score >= ${confidence_lower_lower}..." 1>&2
-	echo "$header" >$outfile_short_charge_lower_lower_nr_tsv
-	echo -e "COMMAND: awk -F \"\\\t\" -v l=$length -v c=$charge -v s=${confidence_lower_lower}'{if(\$3<=l && \$6>=c && \$4>=s) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_short_charge_lower_lower_nr_tsv\n" 1>&2
-	awk -F "\t" -v l=$length -v c=$charge -v s=${confidence_lower_lower} '{if($3<=l && $6>=c && $4>=s) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_short_charge_lower_lower_nr_tsv
+	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with an AMPlify score >= $score..." 1>&2
+	echo "$header" >$loop_tsv
+	echo -e "COMMAND: awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+	awk -F "\t" -v var=$score '{if($4>=var) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
 	echo "Converting those sequences to FASTA format..." 1>&2
-	echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v l=$length -v c=$charge -v s=${confidence_lower_lower} '{if(\$3<=l && \$6>=c && \$4>=s) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > ${outfile_short_charge_lower_lower_nr}\n" 1>&2
-	$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v l=$length -v c=$charge -v s=${confidence_lower_lower} '{if($3<=l && $6>=c && $4>=s) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_short_charge_lower_lower_nr}
-
-	(
-		cd $outdir &&
-			ln -fs $(basename $outfile_short_charge_lower_lower_nr) $outfile_short_charge_lower_lower_nr_ln &&
-			ln -fs $(basename $outfile_short_charge_lower_lower_nr_tsv) $outfile_short_charge_lower_lower_nr_tsv_ln
-	)
+	echo -e "COMMAND: $RUN_SEQTK subseq $amps_fasta <(awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+	$RUN_SEQTK subseq $amps_fasta <(awk -F "\t" -v var=$score '{if($4>=var) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+	# 	(
+	# 		cd $outdir &&
+	# 			ln -fs $(basename $outfile_conf_nr) $outfile_conf_nr_ln &&
+	# 			ln -fs $(basename $outfile_conf_nr_tsv) $outfile_conf_nr_tsv_ln
+	# 	)
 
 	echo "SUMMARY" 1>&2
 	print_line
 
-	count_short_charge_lower_lower=$(grep -c '^>' ${outfile_short_charge_lower_lower_nr} || true)
+	count_conf=$(grep -c '^>' ${loop_fasta} || true)
 
 	{
-		echo "Output: ${outfile_short_charge_lower_lower_nr}"
-		echo "Number of lower-confidence (score >= ${confidence_lower_lower}), short (length <= $length), and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_short_charge_lower_lower})"
+		echo "Output: ${loop_fasta}"
+		echo "Number of unique predicted AMPs (score >= $score): $(printf "%'d" ${count_conf})"
 	} | sed 's/^/\t/' 1>&2
 
 	print_line
 	echo 1>&2
-else
-	count_short_charge_lower_lower="NA"
-fi
-#--------------------------------------------------------------------
-# ONLY DO THE MORE LENIENT SCORE IF the lenient score is still > 0.50
-if [[ $(echo "${confidence_lower} > 0.50" | bc -l) ]]; then
+	#--------------------------------------------------------------------
+done
+
+for len in "${sorted_length[@]}"; do
 	((filter_counter += 1))
+	loop_fasta=$outdir/amps.length_${len}.nr.faa
+	loop_tsv=$outdir/AMPlify_results.amps.length_${len}.nr.tsv
+	all_fastas+=($loop_fasta)
+	all_tsv+=($loop_tsv)
+	### 3 - Filter all sequences for those labelled 'AMP' and length <= $length
 	#--------------------------------------------------------------------
-	### 8 - Filter all sequences for those with charge >= $charge and length <= $length, and more leninet score
-	#--------------------------------------------------------------------
-	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.5) with length <= $length, charge >= ${charge}, and AMPlify score >= ${confidence_lower}..." 1>&2
-	echo "$header" >$outfile_short_charge_lower_nr_tsv
-	echo -e "COMMAND: awk -F \"\\\t\" -v l=$length -v c=$charge -v s=${confidence_lower}'{if(\$3<=l && \$6>=c && \$4>=s) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_short_charge_lower_nr_tsv\n" 1>&2
-	awk -F "\t" -v l=$length -v c=$charge -v s=${confidence_lower} '{if($3<=l && $6>=c && $4>=s) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_short_charge_lower_nr_tsv
+	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) and with length <= $len..." 1>&2
+	echo "$header" >$loop_tsv
+	echo -e "COMMAND: awk -F \"\\\t\" -v var=$len '{if(\$3<=var) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+	awk -F "\t" -v var=$len '{if($3<=var) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
-	echo "Converting those sequences to FASTA format..." 1>&2
-	echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v l=$length -v c=$charge -v s=${confidence_lower} '{if(\$3<=l && \$6>=c && \$4>=s) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > ${outfile_short_charge_lower_nr}\n" 1>&2
-	$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v l=$length -v c=$charge -v s=${confidence_lower} '{if($3<=l && $6>=c && $4>=s) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_short_charge_lower_nr}
+	echo "Converting those sequences into FASTA format..." 1>&2
+	echo -e "COMMAND: $RUN_SEQTK subseq $amps_fasta <(awk -F \"\\\t\" -v var=$len '{if(\$3<=var) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+	$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v var=$len '{if($3<=var) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
 
-	(
-		cd $outdir &&
-			ln -fs $(basename $outfile_short_charge_lower_nr) $outfile_short_charge_lower_nr_ln &&
-			ln -fs $(basename $outfile_short_charge_lower_nr_tsv) $outfile_short_charge_lower_nr_tsv_ln
-	)
+	# 	(
+	# 		cd $outdir &&
+	# 			ln -fs $(basename $outfile_short_nr) $outfile_short_nr_ln &&
+	# 			ln -fs $(basename $outfile_short_nr_tsv) $outfile_short_nr_tsv_ln
+	# 	)
 
 	echo "SUMMARY" 1>&2
 	print_line
 
-	count_short_charge_lower=$(grep -c '^>' ${outfile_short_charge_lower_nr} || true)
+	count_short=$(grep -c '^>' ${loop_fasta} || true)
 
 	{
-		echo "Output: ${outfile_short_charge_lower_nr}"
-		echo "Number of medium-confidence (score >= ${confidence_lower}), short (length <= $length), and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_short_charge_lower})"
+		echo "Output: ${loop_fasta}"
+		echo "Number of unique predicted AMPs (length <= $len): $(printf "%'d" ${count_short})"
 	} | sed 's/^/\t/' 1>&2
 
 	print_line
 	echo 1>&2
-else
-	count_short_charge_lower="NA"
-fi
+done
 
-#--------------------------------------------------------------------
-((filter_counter += 1))
-### 9 - Filter short and confident sequences for those with AMPlify score >= $confidence and length <= $length, and charge >= $charge
-#--------------------------------------------------------------------
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with charge >= $charge, length <= $length and AMPlify score >= ${confidence}..." 1>&2
-echo "$header" >$outfile_conf_short_charge_nr_tsv
-echo -e "COMMAND: awk -F \"\\\t\" -v l=$length -v c=$confidence -v p=$charge '{if(\$3<=l && \$4>=c && \$6>=p) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >> $outfile_conf_short_charge_nr_tsv\n" 1>&2
-awk -F "\t" -v l=$length -v c=$confidence -v p=$charge '{if($3<=l && $4>=c && $6>=p) print}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv) >>$outfile_conf_short_charge_nr_tsv
+for net in "${sorted_charge[@]}"; do
+	((filter_counter += 1))
+	loop_fasta=$outdir/amps.charge_${net}.nr.faa
+	loop_tsv=$outdir/AMPlify_results.amps.charge_${net}.nr.tsv
+	all_fastas+=($loop_fasta)
+	all_tsv+=($loop_tsv)
+	### 4 - Filter all sequences labelled 'AMP' and have charge >= $charge
+	#--------------------------------------------------------------------
+	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) and with charge >= ${net}..." 1>&2
+	echo "$header" >$loop_tsv
+	echo -e "COMMAND: awk -F \"\\\t\" -v var=$net '{if(\$6>=var) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+	awk -F "\t" -v var=$net '{if($6>=var) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
-echo "Converting those sequences to FASTA format..." 1>&2
-echo -e "COMMAND: $RUN_SEQTK subseq ${outfile_nr} <(awk -F \"\\\t\" -v l=$length -v c=$confidence -v p=$charge '{if(\$3<=l && \$4>=c && \$6>=p) print \$1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) > ${outfile_conf_short_charge_nr}\n" 1>&2
-$RUN_SEQTK subseq ${outfile_nr} <(awk -F "\t" -v l=$length -v c=$confidence -v p=$charge '{if($3<=l && $4>=c && $6>=p) print $1}' <(tail -n +2 $outdir/AMPlify_results.amps.nr.tsv)) >${outfile_conf_short_charge_nr}
+	echo "Converting those sequences into FASTA format..." 1>&2
+	echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v var=$net '{if(\$6>=var) print \$1}' <(tail -n +2 $amps_tsv)) > $loop_fasta\n" 1>&2
+	$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v var=$net '{if($6>=var) print $1}' <(tail -n +2 $amps_tsv)) >$loop_fasta
 
-(
-	cd $outdir &&
-		ln -fs $(basename $outfile_conf_short_charge_nr) $outfile_conf_short_charge_nr_ln &&
-		ln -fs $(basename $outfile_conf_short_charge_nr_tsv) $outfile_conf_short_charge_nr_tsv_ln &&
-		ln -fs $outfile_conf_short_charge_nr_ln amps.conf.short.charge.nr.faa &&
-		ln -fs $outfile_conf_short_charge_nr_tsv_ln AMPlify_results.conf.short.charge.nr.tsv
-)
+	# (
+	# 	cd $outdir &&
+	# 		ln -fs $(basename $outfile_charge_nr) $outfile_charge_nr_ln &&
+	# 		ln -fs $(basename $outfile_charge_nr_tsv) $outfile_charge_nr_tsv_ln
+	# )
 
-echo "SUMMARY" 1>&2
-print_line
+	echo "SUMMARY" 1>&2
+	print_line
 
-count_conf_short_charge=$(grep -c '^>' ${outfile_conf_short_charge_nr} || true)
+	count_charge=$(grep -c '^>' ${loop_fasta} || true)
 
-{
-	echo "Output: ${outfile_conf_short_charge_nr}"
-	echo "Number of high-confidence (score >= $confidence), short (length <= $length), and positive (charge >= $charge) unique AMPs: $(printf "%'d" ${count_conf_short_charge})"
-} | sed 's/^/\t/' 1>&2
+	{
+		echo "Output: ${loop_fasta}"
+		echo "Number of unique predicted AMPs (charge >= $net): $(printf "%'d" ${count_charge})"
+	} | sed 's/^/\t/' 1>&2
 
-print_line
-echo 1>&2
-#--------------------------------------------------------------------
+	print_line
+	echo 1>&2
+	#--------------------------------------------------------------------
+done
+
+for score in "${sorted_confidence[@]}"; do
+	for net in "${sorted_charge[@]}"; do
+		loop_fasta=$outdir/amps.score_${score}-charge_${net}.nr.faa
+		loop_tsv=$outdir/AMPlify_results.amps.score_${score}-charge_${net}.nr.tsv
+		all_fastas+=($loop_fasta)
+		all_tsv+=($loop_tsv)
+		((filter_counter += 1))
+		### 5 - Filter all sequences for those AMPlify score >= $confidence and have charge >= $charge
+		#--------------------------------------------------------------------
+		echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= ${score} and with charge >= ${net}..." 1>&2
+		echo "$header" >$loop_tsv
+		echo -e "COMMAND: awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+		awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
+
+		echo "Converting those sequences into FASTA format..." 1>&2
+		echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print \$1}' <(tail -n +2 $amps_tsv)) > $loop_fasta\n" 1>&2
+		$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+
+		# (
+		# 	cd $outdir &&
+		# 		ln -fs $(basename $outfile_conf_charge_nr) $outfile_conf_charge_nr_ln &&
+		# 		ln -fs $(basename $outfile_conf_charge_nr_tsv) $outfile_conf_charge_nr_tsv_ln
+		# )
+
+		echo "SUMMARY" 1>&2
+		print_line
+
+		count_conf_charge=$(grep -c '^>' ${loop_fasta} || true)
+
+		{
+			echo "Output: ${loop_fasta}"
+			echo "Number of unique predicted AMPs (score >= $score, charge >= ${net}): $(printf "%'d" ${count_conf_charge})"
+		} | sed 's/^/\t/' 1>&2
+
+		print_line
+		echo 1>&2
+		#--------------------------------------------------------------------
+	done
+done
+
+for score in "${sorted_confidence[@]}"; do
+	for len in "${sorted_length[@]}"; do
+		((filter_counter += 1))
+		loop_fasta=$outdir/amps.score_${score}-length_${len}.nr.faa
+		loop_tsv=$outdir/AMPlify_results.amps.score_${score}-length_${len}.nr.tsv
+		all_fastas+=($loop_fasta)
+		all_tsv+=($loop_tsv)
+		#--------------------------------------------------------------------
+		### 6 - Filter all sequences for those with AMPlify score >= $confidence and length <= $length
+		#--------------------------------------------------------------------
+		echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= ${score} and length <= $len..." 1>&2
+		echo "$header" >$loop_tsv
+		echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+		awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
+
+		echo "Converting those sequences to FASTA format..." 1>&2
+		echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+		$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+
+		# (
+		# 	cd $outdir &&
+		# 		ln -fs $(basename $outfile_conf_short_nr) $outfile_conf_short_nr_ln &&
+		# 		ln -fs $(basename $outfile_conf_short_nr_tsv) $outfile_conf_short_nr_tsv_ln
+		# )
+
+		echo "SUMMARY" 1>&2
+		print_line
+
+		count_conf_short=$(grep -c '^>' ${loop_fasta} || true)
+
+		{
+			echo "Output: ${loop_fasta}"
+			echo "Number of unique predicted AMPs (score >= $score, length <= $len): $(printf "%'d" ${count_conf_short})"
+		} | sed 's/^/\t/' 1>&2
+
+		print_line
+		echo 1>&2
+		#--------------------------------------------------------------------
+	done
+done
+
+for len in "${sorted_length[@]}"; do
+	for net in "${sorted_charge[@]}"; do
+		loop_fasta=$outdir/amps.length_${len}-charge_${net}.nr.faa
+		loop_tsv=$outdir/AMPlify_results.amps.length_${len}-charge_${net}.nr.tsv
+		all_fastas+=($loop_fasta)
+		all_tsv+=($loop_tsv)
+		((filter_counter += 1))
+		#--------------------------------------------------------------------
+		### 7 - Filter all sequences for those with charge >= $charge and length <= $length
+		#--------------------------------------------------------------------
+		echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with length <= $len and charge >= ${net}..." 1>&2
+		echo "$header" >$loop_tsv
+		echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$net '{if(\$3<=l && \$6>=c) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+		awk -F "\t" -v l=$len -v c=$net '{if($3<=l && $6>=c) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
+
+		echo "Converting those sequences to FASTA format..." 1>&2
+		echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$net '{if(\$3<=l && \$6>=c) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+		$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$net '{if($3<=l && $6>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+
+		# (
+		# 	cd $outdir &&
+		# 		ln -fs $(basename $outfile_short_charge_nr) $outfile_short_charge_nr_ln &&
+		# 		ln -fs $(basename $outfile_short_charge_nr_tsv) $outfile_short_charge_nr_tsv_ln
+		# )
+
+		echo "SUMMARY" 1>&2
+		print_line
+
+		count_short_charge=$(grep -c '^>' ${loop_fasta} || true)
+
+		{
+			echo "Output: ${loop_fasta}"
+			echo "Number of unique predicted AMPs (length <= $len, charge >= $net): $(printf "%'d" ${count_short_charge})"
+		} | sed 's/^/\t/' 1>&2
+
+		print_line
+		echo 1>&2
+		#--------------------------------------------------------------------
+	done
+done
+
+for score in "${sorted_confidence[@]}"; do
+	for len in "${sorted_length[@]}"; do
+		for net in "${sorted_charge[@]}"; do
+			loop_fasta=$outdir/amps.score_${score}-length_${len}-charge_${net}.nr.faa
+			loop_tsv=$outdir/AMPlify_results.amps.score_${score}-length_${len}-charge_${net}.nr.tsv
+			all_fastas+=($loop_fasta)
+			all_tsv+=($loop_tsv)
+			((filter_counter += 1))
+			### 9 - Filter short and confident sequences for those with AMPlify score >= $confidence and length <= $length, and charge >= $charge
+			#--------------------------------------------------------------------
+			echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= ${score}, length <= $len, and charge >= $net..." 1>&2
+
+			echo "$header" >$loop_tsv
+			echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+			awk -F "\t" -v l=$len -v c=$score -v p=$net '{if($3<=l && $4>=c && $6>=p) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
+
+			echo "Converting those sequences to FASTA format..." 1>&2
+			echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+			$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$score -v p=$net '{if($3<=l && $4>=c && $6>=p) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+
+			# (
+			# cd $outdir &&
+			# ln -fs $(basename $outfile_conf_short_charge_nr) $outfile_conf_short_charge_nr_ln &&
+			# ln -fs $(basename $outfile_conf_short_charge_nr_tsv) $outfile_conf_short_charge_nr_tsv_ln &&
+			# ln -fs $outfile_conf_short_charge_nr_ln amps.conf.short.charge.nr.faa &&
+			# ln -fs $outfile_conf_short_charge_nr_tsv_ln AMPlify_results.conf.short.charge.nr.tsv
+			# )
+
+			echo "SUMMARY" 1>&2
+			print_line
+
+			count_conf_short_charge=$(grep -c '^>' ${loop_fasta} || true)
+
+			{
+				echo "Output: ${loop_fasta}"
+				echo "Number of unique AMPs (score >= $score, length <= $len, charge >= $net): $(printf "%'d" ${count_conf_short_charge})"
+			} | sed 's/^/\t/' 1>&2
+
+			print_line
+			echo 1>&2
+			#--------------------------------------------------------------------
+
+		done
+	done
+done
+
+most_filtered_fasta=$loop_fasta
+most_filtered_tsv=$loop_tsv
+
 # echo $outdir/*.faa
 sed --follow-symlinks -i '/^$/d' $outdir/*.faa
 
+# rewrite final summary using all_tsv and all_fastas and their counts!! trying in ptoftae amplify-new
 echo "FINAL SUMMARY" 1>&2
 print_line
 
-echo 1>&2
-echo -e "$(basename $outfile_nr)\t$count\n \
-	$outfile_conf_nr_ln\t$count_conf\n \
-	$outfile_charge_nr_ln\t$count_charge\n \
-	$outfile_short_nr_ln\t$count_short\n \
-	$outfile_conf_charge_nr_ln\t$count_conf_charge\n \
-	$outfile_conf_short_nr_ln\t$count_conf_short\n \
-	$outfile_short_charge_nr_ln\t$count_short_charge\n \
-	$outfile_short_charge_lower_lower_nr_ln\t$count_short_charge_lower_lower\n \
-	$outfile_short_charge_lower_nr_ln\t$count_short_charge_lower\n \
-	$outfile_conf_short_charge_nr_ln\t$count_conf_short_charge\n \
-	" | sed 's/^\s\+//g' | sed '/^$/d' | grep -v "NA" >$outdir/amps.summary.tsv
 {
-	echo -e "\
-	File (nr = non-redundant)\tDescription\n \
-	-------------------------\t-----------\n \
-	AMPlify_results.nr.txt\traw AMPlify results\n \
-	AMPlify_results.nr.tsv\traw AMPlify results parsed into a TSV\n \
-	AMPlify_results.nr.faa\tsequences of raw AMPlify results with new headers\n \
-	$(basename $outfile_nr)\tnr sequences in AMPlify results labelled 'AMP'\n \
-	$outfile_conf_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence\n \
-	$outfile_charge_nr_ln\tnr sequences labelled 'AMP' with charge >= $charge\n \
-	$outfile_short_nr_ln\tnr sequences labelled 'AMP' with length <= $length\n \
-	$outfile_conf_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and charge >= $charge\n \
-	$outfile_conf_short_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and length <= $length\n \
-	$outfile_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with length <= $length and charge >= $charge\n \
-	$outfile_short_charge_lower_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower_lower}, length <= $length, and charge >= $charge\n \
-	$outfile_short_charge_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower}, length <= $length, and charge >= $charge\n \
-	$outfile_conf_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence, length <= $length, and charge >= $charge\n \
-	"
+	echo -e "TSV File\tDescription"
+	echo -e "--------\t-----------"
+	echo -e "AMPlify_results.nr.txt\traw AMPlify results"
+	echo -e "AMPlify_results.nr.tsv\traw AMPlify results in TSV format"
+	echo -e "AMPlify_results.nr.faa\traw AMPlify results in FASTA format"
 
-	echo -e "\
-		FASTA\tTSV\n \
-		-----\t---\n \
-		AMPlify_results.nr.faa\tAMPlify_results.nr.tsv\n \
-		$outfile_nr\tAMPlify_results.amps.nr.tsv\n \
-		$outfile_conf_nr_ln\tAMPlify_results.conf.nr.tsv\n \
-		$outfile_charge_nr_ln\tAMPlify_results.charge.nr.tsv\n \
-		$outfile_short_nr_ln\tAMPlify_results.short.nr.tsv\n \
-		$outfile_conf_charge_nr_ln\tAMPlify_results.conf.charge.nr.tsv\n \
-		$outfile_conf_short_nr_ln\tAMPlify_results.conf.short.nr.tsv\n \
-		$outfile_short_charge_nr_ln\tAMPlify_results.short.charge.nr.tsv\n \
-		$outfile_short_charge_lower_lower_nr_ln\tAMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv\n \
-		$outfile_short_charge_lower_nr_ln\tAMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv\n \
-		$outfile_conf_short_charge_nr_ln\tAMPlify_results.conf.short.charge.nr.tsv\n \
-	"
-} | sed 's/^\s\+//g' | sed '/^$/d' | table >$outdir/README
+	for i in "${!all_tsv[@]}"; do
+		tsv=${all_tsv[$i]}
+		score=$(echo "$tsv" | grep -o 'score_[0-9]\.[0-9]\+' | cut -f2 -d_ || true)
+		length=$(echo "$tsv" | grep -o 'length_[0-9]\+' | cut -f2 -d_ || true)
+		charge=$(echo "$tsv" | grep -o 'charge_[0-9]\+' | cut -f2 -d_ || true)
 
-{
-	echo -e "\
-		File (nr = non-redundant)\tDescription\n \
-		-------------------------\t-----------\n \
-		AMPlify_results.nr.txt\traw AMPlify results\n \
-		AMPlify_results.nr.tsv\traw AMPlify results parsed into a TSV\n \
-		AMPlify_results.nr.faa\tsequences of raw AMPlify results with new headers\n \
-		$(basename $outfile_nr)\tnr sequences in AMPlify results labelled 'AMP'\n \
-		$outfile_conf_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence\n \
-		$outfile_charge_nr_ln\tnr sequences labelled 'AMP' with charge >= $charge\n \
-		$outfile_short_nr_ln\tnr sequences labelled 'AMP' with length <= $length\n \
-		$outfile_conf_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and charge >= $charge\n \
-		$outfile_conf_short_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and length <= $length\n \
-		$outfile_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with length <= $length and charge >= $charge\n \
-		$outfile_short_charge_lower_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower_lower}, length <= $length, and charge >= $charge\n \
-		$outfile_short_charge_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower}, length <= $length, and charge >= $charge\n \
-		$outfile_conf_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence, length <= $length, and charge >= $charge\n \
-		"
-	echo -e "\
-		FASTA\tTSV\n \
-		-----\t---\n \
-		AMPlify_results.nr.faa\tAMPlify_results.nr.tsv\n \
-		$outfile_nr\tAMPlify_results.amps.nr.tsv\n \
-		$outfile_conf_nr_ln\tAMPlify_results.conf.nr.tsv\n \
-		$outfile_charge_nr_ln\tAMPlify_results.charge.nr.tsv\n \
-		$outfile_short_nr_ln\tAMPlify_results.short.nr.tsv\n \
-		$outfile_conf_charge_nr_ln\tAMPlify_results.conf.charge.nr.tsv\n \
-		$outfile_conf_short_nr_ln\tAMPlify_results.conf.short.nr.tsv\n \
-		$outfile_short_charge_nr_ln\tAMPlify_results.short.charge.nr.tsv\n \
-		$outfile_short_charge_lower_lower_nr_ln\tAMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv\n \
-		$outfile_short_charge_lower_nr_ln\tAMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv\n \
-		$outfile_conf_short_charge_nr_ln\tAMPlify_results.conf.short.charge.nr.tsv\n \
-	"
-	echo -e "\
-	File (nr = non-redundant)\tAMP Count\n \
-	-------------------------\t-----------"
-	cat $outdir/amps.summary.tsv
+		if [[ -n "$score" && -n "$length" && -n "$charge" ]]; then
+			desc="AMPlify results with score >= ${score}, length <= ${length}, and charge >= ${charge}"
+		elif [[ -n "$score" && -n "$length" ]]; then
+			desc="AMPlify results with score >= ${score} and length <= ${length}"
+		elif [[ -n "$score" && -n "$charge" ]]; then
+			desc="AMPlify results with score >= ${score} and charge >= ${charge}"
+		elif [[ -n "$length" && -n "$charge" ]]; then
+			desc="AMPlify results with length <= ${length} and charge >= ${charge}"
+		elif [[ -n "$score" ]]; then
+			desc="AMPlify results with score >= ${score}"
+		elif [[ -n "$length" ]]; then
+			desc="AMPlify results with length <= ${length}"
+		elif [[ -n "$charge" ]]; then
+			desc="AMPlify results with charge >= ${charge}"
+		else
+			desc="AMPlify results with labelled AMPs (score >= 0.50)"
+		fi
 
-} | sed 's/^\s\+//g' | table | sed 's/^/\t/' 1>&2
-
+		echo -e "$(basename $tsv)\t$desc"
+	done
+} | table | tee $outdir/README
+# table <$outdir/README 1>&2
+echo >>$outdir/README
 echo 1>&2
+{
+	echo -e "TSV File\tFASTA File\tAMP Count"
+	echo -e "--------\t----------\t---------"
+
+	for i in "${!all_fastas[@]}"; do
+		tsv=${all_tsv[$i]}
+		fasta=${all_fastas[$i]}
+		echo -e "$(basename $tsv)\t$(basename $fasta)\t$(grep -c '^>' $fasta || true)"
+	done | sed 's/^\s\+//g' | sed '/^$/d' | grep -v "NA" >>$outdir/amps.summary.tsv
+} >$outdir/amps.summary.tsv
+
+table <$outdir/amps.summary.tsv | tee -a $outdir/README 1>&2
+sed -i '/^-\+\t-\+/d' $outdir/amps.summary.tsv
+
+# exit 0
+# {
+# 	echo -e "\
+# 	File (nr = non-redundant)\tDescription\n \
+# 	-------------------------\t-----------\n \
+# 	AMPlify_results.nr.txt\traw AMPlify results\n \
+# 	AMPlify_results.nr.tsv\traw AMPlify results parsed into a TSV\n \
+# 	AMPlify_results.nr.faa\tsequences of raw AMPlify results with new headers\n \
+# 	$(basename $outfile_nr)\tnr sequences in AMPlify results labelled 'AMP'\n \
+# 	$outfile_conf_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence\n \
+# 	$outfile_charge_nr_ln\tnr sequences labelled 'AMP' with charge >= $charge\n \
+# 	$outfile_short_nr_ln\tnr sequences labelled 'AMP' with length <= $length\n \
+# 	$outfile_conf_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and charge >= $charge\n \
+# 	$outfile_conf_short_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and length <= $length\n \
+# 	$outfile_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with length <= $length and charge >= $charge\n \
+# 	$outfile_short_charge_lower_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower_lower}, length <= $length, and charge >= $charge\n \
+# 	$outfile_short_charge_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower}, length <= $length, and charge >= $charge\n \
+# 	$outfile_conf_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence, length <= $length, and charge >= $charge\n \
+# 	"
+#
+# 	echo -e "\
+# 		FASTA\tTSV\n \
+# 		-----\t---\n \
+# 		AMPlify_results.nr.faa\tAMPlify_results.nr.tsv\n \
+# 		$outfile_nr\tAMPlify_results.amps.nr.tsv\n \
+# 		$outfile_conf_nr_ln\tAMPlify_results.conf.nr.tsv\n \
+# 		$outfile_charge_nr_ln\tAMPlify_results.charge.nr.tsv\n \
+# 		$outfile_short_nr_ln\tAMPlify_results.short.nr.tsv\n \
+# 		$outfile_conf_charge_nr_ln\tAMPlify_results.conf.charge.nr.tsv\n \
+# 		$outfile_conf_short_nr_ln\tAMPlify_results.conf.short.nr.tsv\n \
+# 		$outfile_short_charge_nr_ln\tAMPlify_results.short.charge.nr.tsv\n \
+# 		$outfile_short_charge_lower_lower_nr_ln\tAMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv\n \
+# 		$outfile_short_charge_lower_nr_ln\tAMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv\n \
+# 		$outfile_conf_short_charge_nr_ln\tAMPlify_results.conf.short.charge.nr.tsv\n \
+# 	"
+# } | sed 's/^\s\+//g' | sed '/^$/d' | table >$outdir/README
+
+# {
+# 	echo -e "\
+# 		File (nr = non-redundant)\tDescription\n \
+# 		-------------------------\t-----------\n \
+# 		AMPlify_results.nr.txt\traw AMPlify results\n \
+# 		AMPlify_results.nr.tsv\traw AMPlify results parsed into a TSV\n \
+# 		AMPlify_results.nr.faa\tsequences of raw AMPlify results with new headers\n \
+# 		$(basename $outfile_nr)\tnr sequences in AMPlify results labelled 'AMP'\n \
+# 		$outfile_conf_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence\n \
+# 		$outfile_charge_nr_ln\tnr sequences labelled 'AMP' with charge >= $charge\n \
+# 		$outfile_short_nr_ln\tnr sequences labelled 'AMP' with length <= $length\n \
+# 		$outfile_conf_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and charge >= $charge\n \
+# 		$outfile_conf_short_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence and length <= $length\n \
+# 		$outfile_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with length <= $length and charge >= $charge\n \
+# 		$outfile_short_charge_lower_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower_lower}, length <= $length, and charge >= $charge\n \
+# 		$outfile_short_charge_lower_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= ${confidence_lower}, length <= $length, and charge >= $charge\n \
+# 		$outfile_conf_short_charge_nr_ln\tnr sequences labelled 'AMP' in AMPlify results with score >= $confidence, length <= $length, and charge >= $charge\n \
+# 		"
+# 	echo -e "\
+# 		FASTA\tTSV\n \
+# 		-----\t---\n \
+# 		AMPlify_results.nr.faa\tAMPlify_results.nr.tsv\n \
+# 		$outfile_nr\tAMPlify_results.amps.nr.tsv\n \
+# 		$outfile_conf_nr_ln\tAMPlify_results.conf.nr.tsv\n \
+# 		$outfile_charge_nr_ln\tAMPlify_results.charge.nr.tsv\n \
+# 		$outfile_short_nr_ln\tAMPlify_results.short.nr.tsv\n \
+# 		$outfile_conf_charge_nr_ln\tAMPlify_results.conf.charge.nr.tsv\n \
+# 		$outfile_conf_short_nr_ln\tAMPlify_results.conf.short.nr.tsv\n \
+# 		$outfile_short_charge_nr_ln\tAMPlify_results.short.charge.nr.tsv\n \
+# 		$outfile_short_charge_lower_lower_nr_ln\tAMPlify_results.conf_${confidence_lower_lower}.short.charge.nr.tsv\n \
+# 		$outfile_short_charge_lower_nr_ln\tAMPlify_results.conf_${confidence_lower}.short.charge.nr.tsv\n \
+# 		$outfile_conf_short_charge_nr_ln\tAMPlify_results.conf.short.charge.nr.tsv\n \
+# 	"
+# 	echo -e "\
+# 	File (nr = non-redundant)\tAMP Count\n \
+# 	-------------------------\t-----------"
+# 	cat $outdir/amps.summary.tsv
+#
+# } | sed 's/^\s\+//g' | table | sed 's/^/\t/' 1>&2
+#
+# echo 1>&2
 
 # sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
 # soft link the file that has the least number of AMPs but isn't 0
-final_amps=$(awk -F "\t" '{if($2!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
-filename=$(echo "$final_amps" | sed 's/amps/AMPlify_results/' | sed 's/\.faa/.tsv/')
+# final_amps=$most_filtered_fasta
+final_amps=$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
+filename=$(echo "$final_amps" | sed 's/^/AMPlify_results./' | sed 's/\.faa/.tsv/')
+# filename=$most_filtered_tsv
 
 if [[ $forced_characterization = true ]]; then
 	(cd $outdir && ln -fs ${final_amps} amps.final.faa && ln -fs ${filename} AMPlify_results.final.tsv)
 else
-	(cd $outdir && ln -fs $(basename $outfile_conf_short_charge_nr_ln) amps.final.faa && ln -fs $(basename $outfile_conf_short_charge_nr_tsv_ln) AMPlify_results.final.tsv)
+	(cd $outdir && ln -fs $(basename $most_filtered_fasta) amps.final.faa && ln -fs $(basename $most_filtered_tsv) AMPlify_results.final.tsv)
 fi
 
 final_count=$(grep -c '^>' $outdir/amps.final.faa || true)
-echo "SYMLINKS:" 1>&2
+echo -e "\nSYMLINKS:" 1>&2
 cd $outdir && ls -l amps.final.faa AMPlify_results.final.tsv | awk '{print $(NF-2), $(NF-1), $NF}' | column -s $' ' -t 1>&2
 
 echo 1>&2
@@ -917,25 +901,25 @@ echo 1>&2
 print_line
 echo 1>&2
 
-default_name="$(realpath -s $(dirname $outdir)/amplify)"
-if [[ "$default_name" != "$outdir" ]]; then
-	if [[ -d "$default_name" ]]; then
-		count=1
-		if [[ ! -L "$default_name" ]]; then
-			temp="${default_name}-${count}"
-			while [[ -d "$temp" ]]; do
-				count=$((count + 1))
-				temp="${default_name}-${count}"
-			done
-			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old files.\n" 1>&2
-			mv $default_name $temp
-		else
-			unlink $default_name
-		fi
-	fi
-	echo -e "$outdir softlinked to $default_name\n" 1>&2
-	(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
-fi
+# default_name="$(realpath -s $(dirname $outdir)/amplify)"
+# if [[ "$default_name" != "$outdir" ]]; then
+# 	if [[ -d "$default_name" ]]; then
+# 		count=1
+# 		if [[ ! -L "$default_name" ]]; then
+# 			temp="${default_name}-${count}"
+# 			while [[ -d "$temp" ]]; do
+# 				count=$((count + 1))
+# 				temp="${default_name}-${count}"
+# 			done
+# 			echo -e "Since $default_name already exists, $default_name is renamed to $temp as to not overwrite old files.\n" 1>&2
+# 			mv $default_name $temp
+# 		else
+# 			unlink $default_name
+# 		fi
+# 	fi
+# 	echo -e "$outdir softlinked to $default_name\n" 1>&2
+# 	(cd $(dirname $outdir) && ln -fs $(basename $outdir) $(basename $default_name))
+# fi
 
 echo -e "END: $(date)\n" 1>&2
 echo -e "STATUS: DONE.\n" 1>&2
