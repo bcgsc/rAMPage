@@ -54,7 +54,7 @@ function get_help() {
 		\t-f\tforce characterization even if no AMPs found\n \
 		\t-h\tshow help menu\n \
 		\t-m <target>\tMakefile target\t(default = exonerate)\n \
-		\t-n <species>\ttaxnomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
+		\t-n <species>\ttaxonomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
 		\t-o <directory>\toutput directory\t(default = directory of input reads TXT file)\n \
 		\t-p\trun processes in parallel\n \
 		\t-r <FASTA.gz>\treference transcriptome\t(accepted multiple times, *.fna.gz *.fsa_nt.gz)\n \
@@ -137,7 +137,13 @@ benchmark=false
 target="exonerate"
 debug=""
 forced_characterization=false
-while getopts :hba:c:dfr:m:n:o:pst:v opt; do
+
+custom_evalue=1e-5
+custom_score=0.90
+custom_length=30
+custom_charge=2
+
+while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -174,6 +180,10 @@ while getopts :hba:c:dfr:m:n:o:pst:v opt; do
 		echo -e "rAMPage v${major_version}.${minor_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
 		exit 0
 		;;
+	E) custom_evalue=$OPTARG;;
+	S) custom_score=$OPTARG;;
+	L) custom_length=$OPTARG;;
+	C) custom_charge=$OPTARG;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -329,14 +339,44 @@ if ! /usr/bin/time -pv echo &>/dev/null; then
 	echo -e "Benchmark option selected but /usr/bin/time -pv not available.\n" 1>&2
 fi
 
+if [[ $CLASS == [Aa]mphibia ]]; then
+	if (($(echo "$custom_score <= 0.5")); then
+		custom_score=0.70
+		# want 0.50 to be the lowest option
+	fi
+	custom_score2=$(echo "${custom_score}-0.1" | bc -l)
+	custom_score3=$(echo "${custom_score2}-0.1" | bc -l)
+	scores="-s $custom_score -s $custom_score2 -s $custom_score3"
+else
+	if (($(echo "$custom_score <= 0.5")); then
+		custom_score=0.80
+		# want 0.50 to be the lowest option
+	fi
+	custom_score1=$(echo "${custom_score}-0.1" | bc -l)
+	custom_score2=$(echo "${custom_score1}-0.1" | bc -l)
+	custom_score3=$(echo "${custom_score2}-0.1" | bc -l)
+	scores="-s $custom_score1 -s $custom_score2 -s $custom_score3"
+fi
+
+custom_length2=$(echo "${custom_length}+20" | bc -l)
+custom_length3=$(echo "${custom_length}+20" | bc -l)
+lengths="-l $custom_length -l $custom_length2 -l $custom_length3"
+
+custom_charge2=$(echo "${custom_charge}+2" | bc -l)
+custom_charge3=$(echo "${custom_charge2}+2" | bc -l)
+custom_charge4 = $(echo "${custom_charge3}+2" | bc -l)
+
+charges="-c $custom_charge -c $custom_charge2 -c $custom_charge3 -c $custom_charge4"
+
+
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
 if [[ "$benchmark" = true ]]; then
-	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 else
-	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+	make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 fi
 
 # PERFORM SUMMARY

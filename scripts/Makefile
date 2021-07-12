@@ -7,6 +7,10 @@ EMAIL := ""
 BENCHMARK := true
 ENTAPDIR := $(shell dirname $(RUN_ENTAP))
 DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
+EVALUE := 1e-5
+SCORE := "-s 0.90 -s 0.80 -s 0.70"
+LENGTH := "-l 30 -l 50 -l 70"
+CHARGE := "-c 2 -c 4 -c 6 -c 8"
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 REF_AMP_PRECURSOR := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.precursor.faa)
@@ -15,29 +19,29 @@ REF_AMP_MATURE := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.mature.faa)
 .PHONY: all amplify cleavage homology translation filtering assembly readslist trim reads accessions clean exonerate annotation
 
 # final
-all: sable/SABLE_results.tsv
+all: sable/final_annotation.tsv
 
-sable: sable/SABLE_results.tsv
+sable: sable/final_annotation.tsv
 
-sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv DEPENDENCIES.CHECK exonerate/EXONERATE.DONE amplify/AMPLIFY.DONE
+sable/final_annotation.tsv sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/annotated.nr.faa exonerate/final_annotation.tsv DEPENDENCIES.CHECK exonerate/EXONERATE.DONE
 	@echo "STAGE 13: SABLE: $$(realpath logs)/13-sable.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
 		else \
-			$< -a $(EMAIL) -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			$< -a $(EMAIL) -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
 		else \
-			$< -t $(THREADS) -o sable exonerate/amps.exonerate.some_none.nr.faa amplify/AMPlify_results.final.tsv &> logs/13-sable.log; \
+			$< -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
 		fi; \
 	fi
 
 # 12. exonerate
-exonerate: exonerate/amps.exonerate.some_none.nr.faa
-exonerate/EXONERATE.DONE exonerate/final_annotation.tsv exonerate/amps.exonerate.some_none.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP_PRECURSOR) $(REF_AMP_MATURE) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
+exonerate: exonerate/annotated.nr.faa
+exonerate/EXONERATE.DONE exonerate/final_annotation.tsv exonerate/annotated.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP_PRECURSOR) $(REF_AMP_MATURE) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
 	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -79,15 +83,15 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			$< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	fi
 
@@ -117,15 +121,15 @@ homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE logs/08-homology.log &: $(ROOT_
 	@echo "STAGE 08: HOMOLOGY SEARCH: $$(realpath logs)/08-homology.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 		else \
-			$< -a $(EMAIL) -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
+			$< -a $(EMAIL) -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
+			/usr/bin/time -pv $< -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 		else \
-			$< -o homology -t $(THREADS) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
+			$< -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 		fi; \
 	fi
 
