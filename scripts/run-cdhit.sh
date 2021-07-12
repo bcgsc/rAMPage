@@ -237,9 +237,9 @@ fi
 rm -f ${output}.processed.clstr
 if [[ "$format" = true ]]; then
 	echo -e "Converting cluster file to TSV format...\n" 1>&2
-	echo -e "Cluster\tLength\tSequence Similarity\tSequence ID" >${output}.clstr.tsv
+	echo -e "Cluster\tLength\tSequence Similarity\tSequence_ID" >${output}.clstr.tsv
 	if [[ "$not_unique" = true ]]; then
-		echo -e "Cluster\tLength\tSequence Similarity\tSequence ID" >${output}.processed.clstr.tsv
+		echo -e "Cluster\tLength\tSequence Similarity\tSequence_ID" >${output}.processed.clstr.tsv
 	fi
 	while read line; do
 		if [[ "$line" =~ ^\> ]]; then

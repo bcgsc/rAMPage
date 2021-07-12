@@ -26,7 +26,7 @@ function get_help() {
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tRuns jackhmmer from the HMMER package to find AMPs via homology search of protein sequences.\n \
-		\tRequires \$ROOT_DIR/amp_seqs/amps.Amphibia.prot.combined.faa or \$ROOT_DIR/amp_seqs/amps.Insecta.prot.combined.faa file.\n \
+		\tRequires \$ROOT_DIR/amp_seqs/amps.\$CLASS.prot.combined.faa file.\n \
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
@@ -57,7 +57,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-e <E-value>\tE-value threshold\t(default = 1e-3)\n \
+		\t-e <E-value>\tE-value threshold\t(default = 1e-5)\n \
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tCD-HIT global sequence similarity cut-off\t(default = 1.00)\n \
@@ -262,7 +262,7 @@ if [[ -s $outdir/jackhmmer.tbl ]]; then
 	echo "PROGRAM: $(command -v $RUN_SEQTK)" | tee -a $logfile 1>&2
 	seqtk_version=$($RUN_SEQTK 2>&1 || true)
 	echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" | tee -a $logfile 1>&2
-	echo -e "COMMAND: $RUN_SEQTK subseq $infile <(awk '/^#/ {print \$1}' $outdir/jackhmmer.tbl | sort -u) > $outdir/jackhmmer.faa\n" | tee -a $logfile 1>&2
+	echo -e "COMMAND: $RUN_SEQTK subseq $infile <(awk '!/^#/ {print \$1}' $outdir/jackhmmer.tbl | sort -u) > $outdir/jackhmmer.faa\n" | tee -a $logfile 1>&2
 	$RUN_SEQTK subseq $infile <(awk '!/^#/ {print $1}' $outdir/jackhmmer.tbl | sort -u) >$outdir/jackhmmer.faa
 	if [[ ! -s $outdir/jackhmmer.faa ]]; then
 		if [[ ! -f $outdir/jackhmmer.faa ]]; then

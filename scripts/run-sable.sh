@@ -42,7 +42,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/amplify/AMPlify_results.final.tsv\n \
+		\t$PROGRAM -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/exonerate/final_annotation.tsv\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -126,18 +126,10 @@ else
 	species=$SPECIES
 fi
 
-fasta=$(realpath $1)
-if [[ ! -f $fasta ]]; then
-	print_error "Input file $fasta does not exist."
-elif [[ ! -s $fasta ]]; then
-	# print_error "Input file $fasta is empty!"
-	echo "Input file $fasta is empty. There are no sequences to characterize." 1>&2
-	echo -e "Sequence ID\tSequence\tAnnotation\tScore\tCharge\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outdir/SABLE_results.tsv
-	rm -f $outdir/SABLE.FAIL
-	touch $outdir/SABLE.DONE
-	exit 0
-elif [[ "$fasta" != *.fa* ]]; then
-	print_error "Input file $fasta is not a FASTA file."
+if command -v mlr &>/dev/null; then
+	mlr_join=true
+else
+	mlr_join=false
 fi
 
 tsv_file=$(realpath -s $2)
@@ -149,6 +141,22 @@ if [[ ! -s $tsv_file ]]; then
 	fi
 elif [[ "$tsv_file" != *.tsv ]]; then
 	print_error "Input file $tsv_file is not a TSV file."
+fi
+
+fasta=$(realpath $1)
+if [[ ! -f $fasta ]]; then
+	print_error "Input file $fasta does not exist."
+elif [[ ! -s $fasta ]]; then
+	# print_error "Input file $fasta is empty!"
+	echo "Input file $fasta is empty. There are no sequences to characterize." 1>&2
+	echo -e "Sequence_ID\tSequence\tStructure\tStructure Confidence\tRSA\tRSA Confidence" >$outdir/SABLE_results.tsv
+	# just do regular join and reorder tsv
+	join --header -t$'\t' $tsv_file <(cut -d $'\t' -f 1,3- $outdir/SABLE_results.tsv) >$outdir/final_annotation.tsv
+	rm -f $outdir/SABLE.FAIL
+	touch $outdir/SABLE.DONE
+	exit 0
+elif [[ "$fasta" != *.fa* ]]; then
+	print_error "Input file $fasta is not a FASTA file."
 fi
 
 {
@@ -168,7 +176,7 @@ if [[ ! -v ROOT_DIR ]]; then
 	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
 fi
 
-if [[ -v RUN_SABLE ]]; then
+if [[ ! -v RUN_SABLE ]]; then
 	if command -v run.sable &>/dev/null; then
 		RUN_SABLE=$(command -v run.sable)
 	else
@@ -201,19 +209,31 @@ echo "Predicting secondary structures using SABLE..." 1>&2
 echo -e "COMMAND: (cd $outdir && ln -fs $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)\n" 1>&2
 (cd $outdir && ln -fs $fasta $outdir/data.seq && $RUN_SABLE $threads &>$outdir/sable.log)
 
-if [[ -s $outdir/OUT_SABLE_graph ]]; then
+if [[ "$(wc -l $outdir/OUT_SABLE_graph | awk '{print $1}')" -gt 2 ]]; then
 	echo "Parsing SABLE TXT output into a TSV format..." 1>&2
 	echo -e "COMMAND: $ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph $tsv_file &>>$outdir/sable.log\n" 1>&2
-	$ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph $tsv_file &>>$outdir/sable.log
+	$ROOT_DIR/scripts/process-sable.sh $fasta $outdir/OUT_SABLE_graph &>>$outdir/sable.log
+
+	if [[ "$mlr_join" = true ]]; then
+		mlr --tsv join -f $tsv_file -j "Sequence_ID,Sequence" $outdir/SABLE_results.tsv >$outdir/final_annotation.tsv
+	else
+		join -t$'\t' --header $tsv_file <(cut -f1,3- -d$'\t' $outdir/SABLE_results.tsv) >$outdir/final_annotation.tsv
+	fi
 
 else
 
+	echo -e "Sequence_ID\tSequence\tStructure\tStructure Confidence\tRSA\tRSA Confidence" >$outdir/SABLE_results.tsv
+	echo -e " \t \t \t \t \t " >>$outdir/SABLE_results.tsv
+
+	join -t$'\t' --header $tsv_file <(cut -f1,3- -d$'\t' $outdir/SABLE_results.tsv) >$outdir/final_annotation.tsv
+
+	echo -e "STATUS: FAILED.\n" 1>&2
 	touch $outdir/SABLE.FAIL
 
 	if [[ "$email" = true ]]; then
 		#		org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
 		#		echo "$outdir" | mail -s "Failed SABLE run on $org" $address
-		echo "$outdir" | mail -s "${species^}: STAGE XX: SABLE: FAILED" $address
+		echo "$outdir" | mail -s "${species^}: STAGE 13: SABLE: FAILED" $address
 		echo "Email alert sent to $address." 1>&2
 	fi
 

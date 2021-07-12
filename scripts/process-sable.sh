@@ -28,7 +28,7 @@ function get_help() {
 
 		echo "USAGE(S):"
 		echo -e "\
-		\t$PROGRAM [-h] <SABLE query FASTA file> <SABLE Output TXT file> <AMPlify TSV file>\n \
+		\t$PROGRAM [-h] <SABLE query FASTA file> <SABLE Output TXT file>\n \
 		" | table
 
 		echo "OPTION(S):"
@@ -38,7 +38,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM /path/to/sable/OUT_SABLE_graph /path/to/amplify/AMPlify.final.tsv\n \
+		\t$PROGRAM /path/to/sable/OUT_SABLE_graph /path/to/exonerate/final_annotation.tsv\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -73,7 +73,7 @@ done
 shift $((OPTIND - 1))
 
 # 5 - incorrect arguments
-if [[ "$#" -ne 3 ]]; then
+if [[ "$#" -ne 2 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
@@ -108,22 +108,12 @@ if [[ ! -s $infile ]]; then
 	fi
 fi
 
-amplify_tsv=$(realpath $3)
-if [[ ! -s $amplify_tsv ]]; then
-	if [[ ! -f $amplify_tsv ]]; then
-		print_error "Input file $amplify_tsv does not exist."
-	else
-		print_error "Input file $amplify_tsv is empty!"
-	fi
-elif [[ "$amplify_tsv" != *.tsv ]]; then
-	print_error "Input file $amplify_tsv is not a TSV file."
-fi
-
 outdir=$(dirname $infile)
 outfile=$outdir/SABLE_results.tsv
 cp $fasta $outdir/amps.final.faa
 
-echo -e "Sequence ID\tSequence\tAnnotation\tScore\tCharge\tStructure\tStructure Confidence\tRSA\tRSA Confidence\tAlpha Helix\tLongest Helix\tBeta Strand\tLongest Strand" >$outfile
+echo -e "Sequence_ID\tSequence\tStructure\tStructure Confidence\tRSA\tRSA Confidence" >$outfile
+
 while read line; do
 	seqname=$(echo "$line" | awk '{print $2}')
 	read sequence
@@ -131,16 +121,6 @@ while read line; do
 	read str_conf
 	read rsa
 	read rsa_conf
-	updated_seqname=$(echo "$seqname" | sed 's/-novel//' | sed 's/-annotated//' | sed 's/-known//')
-	# get AMPlify score and charge
-	score=$(awk -F "\t" -v var=$updated_seqname '/var\t/ {print $4}' $amplify_tsv)
-	charge=$(awk -F "\t" -v var=$updated_seqname '/var\t/ {print $6}' $amplify_tsv)
-	annotation=$(grep -F "${updated_seqname} " $fasta | grep -Eo "exonerate=\S+|diamond=\S+" | tr ' ' '\n' | cut -f2 -d= | tr '\n' ' ' || true)
-	if [[ -z $annotation ]]; then
-		annotation=" "
-	fi
-	ss=$($ROOT_DIR/scripts/longest-ss.py "$structure")
-	echo -e "$seqname\t$sequence\t$annotation\t$score\t$charge\t$structure\t${str_conf}\t${rsa}\t${rsa_conf}\t${ss}" >>$outfile
-
-	sed -i "/${seqname} / s/$/ SS=${structure}/" $outdir/amps.final.faa
+	echo -e "$seqname\t$sequence\t$structure\t$str_conf\t$rsa\t$rsa_conf" >>$outfile
+	sed -i "/>${seqname} / s/$/ SS=${structure}/" $outdir/amps.final.faa
 done <$infile

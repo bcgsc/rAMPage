@@ -40,7 +40,7 @@ function get_help() {
 		fi
 		echo "USAGE(S):"
 		echo -e "\
-	\t$PROGRAM [-a <address>] [-h] -o <output directory> <query FASTA file> <annotation TSV file>\n \
+	\t$PROGRAM [-a <address>] [-h] -o <output directory> <query FASTA file> [annotation TSV file]\n \
 	" | table
 
 		echo "OPTION(S):"
@@ -52,7 +52,7 @@ function get_help() {
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-	\t$PROGRAM -a user@example.com -o /path/to/exonerate/outdir /path/to/annotation/amps.final.annotated.faa /path/to/annotation/final_annotations.final.tsv\n \
+	\t$PROGRAM -a user@example.com -o /path/to/exonerate/outdir /path/to/annotation/amps.final.annotated.faa /path/to/annotation/final_annotation.final.tsv\n \
 	" | table
 	} 1>&2
 	exit 1
@@ -105,7 +105,7 @@ done
 
 shift $((OPTIND - 1))
 
-if [[ "$#" -ne 2 ]]; then
+if [[ "$#" -ne 2 && "$#" -ne 1 ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
@@ -160,29 +160,35 @@ elif [[ ! -s $(realpath $1) ]]; then
 	# else
 	join --header -t$'\t' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv >$outdir/annotation.tsv
 	# fi
-	if [[ -s $(realpath $2) && $(wc -l $(realpath $1) | awk '{print $1}') -eq 1 ]]; then
-		cp $(realpath $2) $outdir
+	if [[ -s $(realpath $2) && $(wc -l $(realpath $2) | awk '{print $1}') -eq 1 ]]; then
+		cp $(realpath $2) $outdir/EnTAP_annotation.tsv
 
 		# if [[ "$mlr_bool" = true ]]; then
 		# mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $(realpath $2) >$outdir/final_annotation.tsv
 		# else
-		join --header -t $'\t' $outdir/annotation.tsv $(realpath $2) >$outdir/final_annotation.tsv
+		touch $outdir/annotated.nr.faa
+		join --header -t $'\t' $outdir/annotation.tsv $outdir/EnTAP_annotation.tsv | awk -F "\t" 'BEGIN{OFS="\t"}{seqid=$1; seq=$6; len=$7; score=$8; charge=$10; $1="";$6=""; $7=""; $8=""; $10="";print seqid, seq, score, len, charge, $0}' >$outdir/final_annotation.tsv
 		# fi
-	else
-		(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
+		# else
+		# (cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
 	fi
 	exit 0
 	# print_error "Input file $(realpath $1) is empty."
 fi
 
-if [[ ! -f $(realpath $2) ]]; then
-	print_error "Input file $(realpath $2) does not exist."
-elif [[ ! -s $(realpath $2) ]]; then
-	print_error "Input file $(realpath $2) is empty."
-fi
+# if [[ ! -f $(realpath $2) ]]; then
+# 	print_error "Input file $(realpath $2) does not exist."
+# elif [[ ! -s $(realpath $2) ]]; then
+# 	print_error "Input file $(realpath $2) is empty."
+# fi
 
 query=$(realpath $1)
-file=$(realpath $2)
+if [[ ! -f $(realpath $2) ]]; then
+	annotation=false
+else
+	annotation=true
+	file=$(realpath $2)
+fi
 
 # 8 - print env details
 {
@@ -195,16 +201,17 @@ file=$(realpath $2)
 	if [[ -L $query ]]; then
 		echo "QUERY: $(ls -l $query | awk '{print $(NF-2), $(NF-1), $NF}')"
 	fi
-	if [[ -L $file ]]; then
-		echo "ANNOTATION: $(ls -l $file | awk '{print $(NF-2), $(NF-1), $NF}')"
+	if [[ "$annotation" = true ]]; then
+		if [[ -L $file ]]; then
+			echo "ANNOTATION: $(ls -l $file | awk '{print $(NF-2), $(NF-1), $NF}')"
+		fi
 	fi
 	echo
 } 1>&2
-
-query=$(realpath $1)
-file=$(realpath $2)
-cp $file $outdir/EnTAP_annotation.tsv
-file=$outdir/EnTAP_annotation.tsv
+if [[ "$annotation" = true ]]; then
+	cp $file $outdir/EnTAP_annotation.tsv
+	file=$outdir/EnTAP_annotation.tsv
+fi
 if [[ ! -v ROOT_DIR ]]; then
 	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/repository."
 fi
@@ -462,10 +469,18 @@ if [[ "$exonerate_success" == true ]]; then
 	if [[ "$mlr_bool" = true ]]; then
 		sed -i 's/"//g' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv
 		mlr --tsv join -f $outdir/annotation.precursor.tsv -j "Sequence_ID" $outdir/annotation.mature.tsv >$outdir/annotation.tsv
-		mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $outdir/EnTAP_annotation.tsv >$outdir/final_annotation.tsv
+		if [[ "$annotation" = true ]]; then
+			mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $outdir/EnTAP_annotation.tsv | mlr --tsv reorder -f "Sequence_ID,Sequence,Score,Length,Charge" >$outdir/final_annotation.tsv
+		else
+			(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
+		fi
 	else
 		join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
-		join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+		if [[ "$annotation" = true ]]; then
+			join --header -t $'\t' <(LC_COLLATE=C sort -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) | awk -F "\t" 'BEGIN{OFS="\t"}{seqid=$1; seq=$6; len=$7; score=$8; charge=$10; $1="";$6=""; $7=""; $8=""; $10="";print seqid, seq, score, len, charge, $0}' >$outdir/final_annotation.tsv
+		else
+			(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
+		fi
 	fi
 else
 	echo -e "Sequence_ID\tTop Precursor\tPrecursor Hits" >$outdir/annotation.precursor.tsv
@@ -477,10 +492,18 @@ else
 	if [[ "$mlr_bool" = true ]]; then
 		sed -i 's/"//g' $outdir/annotation.precursor.tsv $outdir/annotation.mature.tsv
 		mlr --tsv join -f $outdir/annotation.precursor.tsv -j "Sequence_ID" $outdir/annotation.mature.tsv >$outdir/annotation.tsv
-		mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $outdir/EnTAP_annotation.tsv >$outdir/final_annotation.tsv
+		if [[ "$annotation" = true ]]; then
+			mlr --tsv join -f $outdir/annotation.tsv -j "Sequence_ID" $outdir/EnTAP_annotation.tsv | mlr --tsv join -f "Sequence_ID,Sequence" | mlr --tsv reorder -f "Sequence_ID,Sequence,Score,Length,Charge" >$outdir/final_annotation.tsv
+		else
+			(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
+		fi
 	else
 		join --header -t $'\t' <(LC_COLLATE=C sort -t $'\t' -k1,1 $outdir/annotation.precursor.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/annotation.mature.tsv) >$outdir/annotation.tsv
-		join --header -t $'\t' <(LC_COLLATE=C sort -t $'\t' -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) >$outdir/final_annotation.tsv
+		if [[ "$annotation" = true ]]; then
+			join --header -t $'\t' <(LC_COLLATE=C sort -t $'\t' -k1,1 $outdir/annotation.tsv) <(LC_COLLATE=C sort -k1,1 $outdir/EnTAP_annotation.tsv) | awk -F "\t" 'BEGIN{OFS="\t"}{seqid=$1; seq=$6; len=$7; score=$8; charge=$10; $1="";$6=""; $7=""; $8=""; $10="";print seqid, seq, score, len, charge, $0}' >$outdir/final_annotation.tsv
+		else
+			(cd $outdir && ln -fs annotation.tsv final_annotation.tsv)
+		fi
 	fi
 fi
 
@@ -526,7 +549,7 @@ else
 	echo -e "Number of Novel AMPs: $(printf "%'d" $num_total)/$(printf "%'d" $num_total)\n" 1>&2
 fi
 
-if [[ -n $file ]]; then
+if [[ -n $outdir/annotation.tsv ]]; then
 	if [[ "$exonerate_mature_success" == true ]]; then
 		echo -e "Output(s): $outdir/final_annotation.tsv\n $amps_some_none_fasta\n $amps_mature_some_none_fasta\n \
 		" | column -s ' ' -t 1>&2

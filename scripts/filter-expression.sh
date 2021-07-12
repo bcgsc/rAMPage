@@ -276,14 +276,14 @@ echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
 
-if [[ "$cutoff" -eq 0 ]]; then
+if [[ "$cutoff" -ne 0 ]]; then
 	awk -v var="$cutoff" '{if($4>=var) print}' $outdir/quant.sf >$outdir/kept.sf
 	awk -v var="$cutoff" '{if($4<var) print}' $outdir/quant.sf >$outdir/discarded.sf
 
 	echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v var=\"$cutoff\" '{if(\$4>=var) print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
 	$RUN_SEQTK subseq $ref <(awk -v var="$cutoff" '{if($4>=var) print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
 else
-	echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk -v '{print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
+	echo -e "COMMAND: $RUN_SEQTK subseq $ref <(awk '{print \$1}' $outdir/quant.sf) > $outdir/rnabloom.transcripts.filtered.fa\n" 1>&2
 	$RUN_SEQTK subseq $ref <(awk '{print $1}' $outdir/quant.sf) >$outdir/rnabloom.transcripts.filtered.fa
 fi
 
