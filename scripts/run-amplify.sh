@@ -204,7 +204,7 @@ fi
 sorted_length=($(echo "${length[@]}" | tr ' ' '\n' | sort -nru | tr '\n' ' '))
 
 if [[ "${#charge[@]}" -eq 0 ]]; then
-	charge=(2)
+	charge=(2 4 6 8)
 fi
 sorted_charge=($(echo "${charge[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
 
@@ -279,8 +279,8 @@ len_seq=$($RUN_SEQTK comp $input | awk '{if($2<2 || $2>200) print $1}' | wc -l)
 
 if [[ "$len_seq" -ne 0 ]]; then
 	echo "Removing sequences with length < 2 or > 200 amino acids..." 1>&2
-	echo -e "COMMAND: $RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <($RUN_SEQTK comp $input | awk '{if(\$2>=2 && \$2<=200) print \$1}') > ${input/.faa/.len.faa}\n" 1>&2
-	$RUN_SEQTK subseq $outdir/AMPlify_results.nr.faa <($RUN_SEQTK comp $input | awk '{if($2>=2 && $2<=200) print $1}') >${input/.faa/.len.faa}
+	echo -e "COMMAND: $RUN_SEQTK subseq $input <($RUN_SEQTK comp $input | awk '{if(\$2>=2 && \$2<=200) print \$1}') > ${input/.faa/.len.faa}\n" 1>&2
+	$RUN_SEQTK subseq $input <($RUN_SEQTK comp $input | awk '{if($2>=2 && $2<=200) print $1}') >${input/.faa/.len.faa}
 	echo -e "Removed $len_seq sequences.\n" 1>&2
 	input=${input/.faa/.len.faa}
 	echo -e "Output: $input\n" 1>&2
@@ -333,7 +333,7 @@ if [[ "$debug" = false ]]; then
 	fi
 
 	echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
-	echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" >$outdir/AMPlify_results.nr.tsv
+	echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention\tClass" >$outdir/AMPlify_results.nr.tsv
 	while read line; do
 		seq_id=$(echo "$line" | awk '{print $NF}')
 		read line
@@ -360,7 +360,7 @@ if [[ "$debug" = false ]]; then
 		echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.nr.faa
 		echo "$sequence" >>$outdir/AMPlify_results.nr.faa
 
-		echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn" >>$outdir/AMPlify_results.nr.tsv
+		echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn\t$class" >>$outdir/AMPlify_results.nr.tsv
 	done <$file
 else
 	if [[ -s $outdir/AMPlify_results.nr.faa && -s $outdir/AMPlify_results.nr.tsv ]]; then
@@ -372,7 +372,14 @@ else
 		fi
 
 		echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
-		echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention" >$outdir/AMPlify_results.nr.tsv
+		echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention\tClass" >$outdir/AMPlify_results.nr.tsv
+
+		if [[ "$class" == [Aa]mphibia ]]; then
+			class=Amphibia
+		else
+			class=Insecta
+		fi
+
 		while read line; do
 			seq_id=$(echo "$line" | awk '{print $NF}')
 			read line
@@ -399,7 +406,7 @@ else
 			echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.nr.faa
 			echo "$sequence" >>$outdir/AMPlify_results.nr.faa
 
-			echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn" >>$outdir/AMPlify_results.nr.tsv
+			echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn\t$class" >>$outdir/AMPlify_results.nr.tsv
 		done <$file
 	fi
 fi
