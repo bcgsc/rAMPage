@@ -11,7 +11,7 @@ rAMPage is an _in silico_ anti-microbial peptide (AMP) discovery pipeline that t
 
 ## Quick Links
 
-1. [Overview](Flowchart.png)
+1. [Overview](Flowchart.png) | [Poster](http://www.birollab.ca/assets/posts/LinDiana_GCB_ISMB2021.pdf)
 1. [Setup](#setup)
 1. [Dependencies](#dependencies)
 	1. [Basics](#basics)
@@ -360,6 +360,14 @@ MAKEFILE TARGETS:
        07) translation  14) all
 ```
 
+### Choosing Thresholds
+
+The best way to choose score, length, and score thresholds is to plot the distribution of the reference AMPs.
+
+```shell
+scripts/helpers/plot-dist.sh -a amphibianAMPs.faa -i insectAMPs.faa -t 8 -o /path/to/output/dir -r
+```
+
 ### Running from the root of the repository
 
 Example: _M. gulosa_ (stranded library construction)
@@ -437,6 +445,14 @@ Example: _P. toftae_ and _M. gulosa_
 ```
 amphibia/ptoftae/skin-liver/input.txt nonstranded
 insecta/mgulosa/venom/input.txt stranded
+```
+
+#### AMPs for Synthesis
+
+Clustering AMPs across datasets and choosing AMPs for synthesis are included in the `scripts/stAMPede.sh` script, but manual clustering can be done using `scripts/cluster.sh`:
+
+```shell
+scripts/cluster.sh -o /path/to/outdir amphibia/ptoftae/skin-liver/exonerate insecta/mgulosa/venom/exonerate
 ```
 
 ## Directory Structure
