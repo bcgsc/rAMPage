@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-major_version=1
-minor_version=0
+major_version=0
+minor_version=9
+patch_version=0
 
 start_sec=$(date '+%s')
 
@@ -181,7 +182,8 @@ while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C: opt; do
 		;;
 	b) benchmark=true ;;
 	v)
-		echo -e "rAMPage v${major_version}.${minor_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
+		version_message="rAMPage v${major_version}.${minor_version}.${patch_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
+		echo -e "$version_message" 1>&2
 		exit 0
 		;;
 	E) custom_evalue=$OPTARG ;;
@@ -413,6 +415,7 @@ charges="-c $custom_charge -c $custom_charge2 -c $custom_charge3 -c $custom_char
 
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
+echo -e "$version_message" 1>&2
 if [[ "$benchmark" = true ]]; then
 	if [[ "$target" != "clean" ]]; then
 		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
