@@ -59,19 +59,19 @@ exonerate/EXONERATE.DONE exonerate/final_annotation.tsv exonerate/annotated.nr.f
 		
 # 11. 
 annotation: annotation/final_results/final_annotations.final.tsv
-annotation/final_annotations.final.tsv annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK amplify/AMPLIFY.DONE
+annotation/final_annotations.final.tsv annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa amplify/AMPlify_results.final.tsv $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK amplify/AMPLIFY.DONE
 	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			$< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			/usr/bin/time -pv $< -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -t $(THREADS) -o annotation -i amplify/amps.final.faa $(DATABASES) &> logs/11-annotation.log; \
+			$< -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	fi
 
@@ -83,22 +83,22 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		else \
-			$< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			$< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.nr.faa &> logs/10-amplify.log; \
 		fi; \
 	fi
 
 # 9. cleavage
-cleavage: cleavage/cleaved.mature.len.rmdup.nr.faa
+cleavage: cleavage/cleaved.mature.len.nr.faa
 
-cleavage/cleaved.mature.len.rmdup.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh $(ROOT_DIR)/scripts/run-cdhit.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
+cleavage/cleaved.mature.len.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh $(ROOT_DIR)/scripts/run-cdhit.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
 	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs)/09-cleavage.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -284,4 +284,5 @@ DEPENDENCIES.CHECK logs/01-check.log &: $(ROOT_DIR)/scripts/check-dependencies.s
 	fi
 
 clean:
-	@rm -rf DEPENDENCIES.CHECK $(INPUT_PROCESSED) trimmed_reads assembly filtering translation homology cleavage amplify nohup.out logs sable raw_reads/READS.DONE RAMPAGE.DONE exonerate annotation env.txt
+	@rm -f DEPENDENCIES.CHECK $(INPUT_PROCESSED) nohup.out raw_reads/READS.DONE RAMPAGE.DONE env.txt
+	@rm -rf trimmed_reads assembly filtering translation homology cleavage amplify sable exonerate annotation logs
