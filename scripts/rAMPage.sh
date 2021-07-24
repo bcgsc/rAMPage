@@ -61,6 +61,10 @@ function get_help() {
 		\t-s\tstrand-specific library construction\t(default = false)\n \
 		\t-t <int>\tnumber of threads\t(default = 48)\n \
 		\t-v\tprint version number\n \
+		\t-E <e-value>\tE-value threshold for homology search\t(default = 1e-5)\n \
+		\t-S <0 to 1>\tAMPlify score threshold for amphibian AMPs\t(default = 0.90)\n \
+		\t-L <int>\tLength threshold for AMPs\t(default = 30)\n \
+		\t-C <int>\tCharge threshold for AMPs\t(default = 2)\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -180,10 +184,10 @@ while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C: opt; do
 		echo -e "rAMPage v${major_version}.${minor_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
 		exit 0
 		;;
-	E) custom_evalue=$OPTARG;;
-	S) custom_score=$OPTARG;;
-	L) custom_length=$OPTARG;;
-	C) custom_charge=$OPTARG;;
+	E) custom_evalue=$OPTARG ;;
+	S) custom_score=$OPTARG ;;
+	L) custom_length=$OPTARG ;;
+	C) custom_charge=$OPTARG ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -340,79 +344,131 @@ if ! /usr/bin/time -pv echo &>/dev/null; then
 fi
 
 if [[ $CLASS == [Aa]mphibia ]]; then
-	if (($(echo "$custom_score <= 0.5")); then
-		custom_score=0.70
+	if (($(echo "$custom_score < 0.50" | bc -l))); then
+		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
+		custom_score=$(printf "%1.${places}f" 0.50)
+		scores="-s $custom_score"
 		# want 0.50 to be the lowest option
+	else
+		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
+		custom_score2=$(printf "%1.${places}f" $(echo "${custom_score}-0.1" | bc -l))
+		if (($(echo "$custom_score2 >= 0.50" | bc -l))); then
+			custom_score2_opt="-s $custom_score2"
+		else
+			custom_score2_opt=""
+		fi
+		custom_score3=$(printf "%1.${places}f" $(echo "${custom_score2}-0.1" | bc -l))
+		if (($(echo "$custom_score3 >= 0.50" | bc -l))); then
+			custom_score3_opt="-s $custom_score3"
+		else
+			custom_score3_opt=""
+		fi
+		scores="-s $custom_score $custom_score2_opt $custom_score3_opt"
 	fi
-	custom_score2=$(echo "${custom_score}-0.1" | bc -l)
-	custom_score3=$(echo "${custom_score2}-0.1" | bc -l)
-	scores="-s $custom_score -s $custom_score2 -s $custom_score3"
 else
-	if (($(echo "$custom_score <= 0.5")); then
-		custom_score=0.80
+	if (($(echo "$custom_score < 0.5" | bc -l))); then
+		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
+		custom_score=$(printf "%1.${places}f" 0.50)
+		scores="-s $custom_score"
 		# want 0.50 to be the lowest option
+	else
+		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
+		custom_score1=$(printf "%1.${places}f" $(echo "${custom_score}-0.1" | bc -l))
+		if (($(echo "$custom_score1 >= 0.50" | bc -l))); then
+			custom_score1_opt="-s $custom_score1"
+		else
+			custom_score1_opt=""
+		fi
+
+		custom_score2=$(printf "%1.${places}f" $(echo "${custom_score1}-0.1" | bc -l))
+		if (($(echo "$custom_score2 >= 0.50" | bc -l))); then
+			custom_score2_opt="-s $custom_score2"
+		else
+			custom_score2_opt=""
+		fi
+
+		custom_score3=$(printf "%1.${places}f" $(echo "${custom_score2}-0.1" | bc -l))
+		if (($(echo "$custom_score3 >= 0.50" | bc -l))); then
+			custom_score3_opt="-s $custom_score3"
+		else
+			custom_score3_opt=""
+		fi
+		if [[ -z "$custom_score1_opt" ]]; then
+			scores="-s $custom_score"
+		else
+			scores="$custom_score1_opt $custom_score2_opt $custom_score3_opt"
+		fi
 	fi
-	custom_score1=$(echo "${custom_score}-0.1" | bc -l)
-	custom_score2=$(echo "${custom_score1}-0.1" | bc -l)
-	custom_score3=$(echo "${custom_score2}-0.1" | bc -l)
-	scores="-s $custom_score1 -s $custom_score2 -s $custom_score3"
 fi
 
 custom_length2=$(echo "${custom_length}+20" | bc -l)
-custom_length3=$(echo "${custom_length}+20" | bc -l)
+custom_length3=$(echo "${custom_length2}+20" | bc -l)
 lengths="-l $custom_length -l $custom_length2 -l $custom_length3"
 
 custom_charge2=$(echo "${custom_charge}+2" | bc -l)
 custom_charge3=$(echo "${custom_charge2}+2" | bc -l)
-custom_charge4 = $(echo "${custom_charge3}+2" | bc -l)
+custom_charge4=$(echo "${custom_charge3}+2" | bc -l)
 
 charges="-c $custom_charge -c $custom_charge2 -c $custom_charge3 -c $custom_charge4"
-
 
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
 if [[ "$benchmark" = true ]]; then
-	echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	if [[ "$target" != "clean" ]]; then
+		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+
+		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	else
+		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+
+		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+	fi
 else
-	echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-	make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	if [[ "$target" != "clean" ]]; then
+		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+
+		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	else
+		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+
+		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+	fi
 fi
 
 # PERFORM SUMMARY
-
-if [[ "$email" = true ]]; then
-	if [[ "$benchmark" == true ]]; then
-		echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
-		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
+if [[ "$target" != "clean" ]]; then
+	if [[ "$email" = true ]]; then
+		if [[ "$benchmark" == true ]]; then
+			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
+			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
+		else
+			echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		fi
 	else
-		echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		if [[ "$benchmark" == true ]]; then
+			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
+			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh $outdir/logs &>$outdir/logs/00-summary.log
+		else
+			echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		fi
 	fi
-else
-	if [[ "$benchmark" == true ]]; then
-		echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
-		/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh $outdir/logs &>$outdir/logs/00-summary.log
+	# summarize the log files here
+	if [[ "$email" = true ]]; then
+		if [[ "$benchmark" == true ]]; then
+			echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+			/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
+		else
+			echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+			$ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
+		fi
 	else
-		echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
-	fi
-fi
-
-# summarize the log files here
-if [[ "$email" = true ]]; then
-	if [[ "$benchmark" == true ]]; then
-		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
-		/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
-	else
-		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
-		$ROOT_DIR/scripts/summarize.sh -a "$address" $outdir/logs &>$outdir/logs/00-stats.log
-	fi
-else
-	if [[ "$benchmark" == true ]]; then
-		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
-		/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
-	else
-		echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
-		$ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
+		if [[ "$benchmark" == true ]]; then
+			echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+			/usr/bin/time -pv $ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
+		else
+			echo -e "\nSummary statistics: $outdir/logs/00-stats.log" 1>&2
+			$ROOT_DIR/scripts/summarize.sh $outdir/logs &>$outdir/logs/00-stats.log
+		fi
 	fi
 fi
 

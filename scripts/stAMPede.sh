@@ -43,6 +43,10 @@ function get_help() {
 		\t-s\tsimultaenously run rAMPAge on all datasets\t(default if SLURM available)\n \
 		\t-t <int>\tnumber of threads\t(default = 48)\n \
 		\t-v\tverbose (uses /usr/bin/time -pv to time each rAMPage run)\n \
+		\t-E <e-value>\tE-value threshold for homology search\t(default = 1e-5)\n \
+		\t-S <0 to 1>\tAMPlify score threshold for amphibian AMPs\t(default = 0.90)\n \
+		\t-L <int>\tLength threshold for AMPs\t(default = 30)\n \
+		\t-C <int>\tCharge threshold for AMPs\t(default = 2)\n \
 		" | table
 
 		echo "ACCESSIONS TXT FORMAT:"
@@ -97,8 +101,12 @@ multi=false
 threads=48
 debug=""
 target=""
+custom_evalue=1e-5
+custom_score=0.90
+custom_length=30
+custom_charge=2
 # 4 - get options
-while getopts :ha:dpst:vm: opt; do
+while getopts :ha:dpst:vm:E:S:L:C: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -115,6 +123,10 @@ while getopts :ha:dpst:vm: opt; do
 	s) multi=true ;;
 	t) threads="$OPTARG" ;;
 	v) verbose=true ;;
+	E) custom_evalue=$OPTARG ;;
+	S) custom_score=$OPTARG ;;
+	L) custom_length=$OPTARG ;;
+	C) custom_charge=$OPTARG ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -167,7 +179,7 @@ else
 fi
 
 if [[ "$verbose" = true ]]; then
-	verbose_opt="-v"
+	verbose_opt="-b"
 else
 	verbose_opt=""
 fi
@@ -199,8 +211,8 @@ if command -v sbatch &>/dev/null; then
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		pool=$(echo "$outdir" | awk -F "/" '{print $NF}' | sed 's/-/_/g')
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}-${pool} --output ${species}-${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		sbatch $sbatch_email_opt --exclusive --job-name=${species}-${pool} --output ${species}-${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path
+		echo -e "COMMAND: sbatch $sbatch_email_opt --exclusive --job-name=${species}-${pool} --output ${species}-${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt -E $custom_evalue -S $custom_score -L $custom_length -C $custom_charge $input_path 1>&2\n" 1>&2
+		sbatch $sbatch_email_opt --exclusive --job-name=${species}-${pool} --output ${species}-${pool}.out $ROOT_DIR/scripts/rAMPage.sh $target $debug $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt -E $custom_evalue -S $custom_score -L $custom_length -C $custom_charge $input_path
 		print_line
 	done <$input
 	email=false # don't email when this script is done because it just submits only
@@ -226,13 +238,20 @@ elif [[ "$multi" = false ]]; then
 		class=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}')
 		species=$(echo "$outdir" | awk -F "/" '{print $(NF-1)}')
 		pool=$(echo "$outdir" | awk -F "/" '{print $NF}' | sed 's/-/_/g')
-		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
-		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2\n" 1>&2
-		$ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path 1>&2
+		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /') serially..." 1>&2
+		echo -e "COMMAND: $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt -E $custom_evalue -S $custom_score -L $custom_length -C $custom_charge $input_path 1>&2\n" 1>&2
+		$ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt -E $custom_evalue -S $custom_score -L $custom_length -C $custom_charge $input_path 1>&2
 		print_line
 	done <$input
 	echo -e "Path\tPercent of CPU this job got\tElapsed (wall clock) time (h:mm:ss or m:ss)\tMaximum resident set size (kbytes)" >$ROOT_DIR/summary.tsv
 
+	exonerate_dirs=()
+	while read path strandedness; do
+		dir=$(dirname $(realpath $path))/exonerate
+		exonerate_dirs+=($dir)
+	done <$input
+
+	$ROOT_DIR/scripts/cluster.sh ${exonerate_dirs[*]}
 	if [[ "$verbose" = true ]]; then
 		while read path strandedness; do
 			dir=$(dirname $path)
@@ -267,12 +286,22 @@ else
 		mkdir -p $outdir/logs
 		echo "Running rAMPage on $(echo "$species" | sed 's/.\+/\L&/' | sed 's/^./\u&. /')..." 1>&2
 		echo "See $outdir/logs/00-rAMPage.log for details." 1>&2
-		echo -e "COMMAND: nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>/dev/null &\n" 1>&2
+		echo -e "COMMAND: nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt -E $custom_evalue -S $custom_score -L $custom_length -C $custom_charge $input_path &>/dev/null &\n" 1>&2
 
-		nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt $input_path &>${species}-${pool}.out &
+		nohup $ROOT_DIR/scripts/rAMPage.sh $target $debug $email_opt $verbose_opt -o $outdir -c $class -n $species $strand_opt $parallel_opt -E $custom_evalue -S $custom_score -L $custom_length -C $custom_charge $input_path &>${species}-${pool}.out &
 	done <$input
-	echo "Submitted using nohup." 1>&2
-#	wait
+	echo "$(date): Submitted using nohup." 1>&2
+	wait
+
+	# do the clustering
+	exonerate_dirs=()
+	while read path strandedness; do
+		dir=$(dirname $(realpath $path))/exonerate
+		exonerate_dirs+=($dir)
+	done <$input
+
+	echo "$(date): Clustering..." 1>&2
+	$ROOT_DIR/scripts/cluster.sh ${exonerate_dirs[*]}
 #
 #	#
 #	if [[ "$verbose" = true ]]; then
