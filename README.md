@@ -92,9 +92,13 @@ rAMPage
 | GNU `grep` | v3.4 |
 | GNU `make` | v4.3 |
 | GNU `column` | 2.36 |
+| Miller `mlr` | 5.4.0 |
 | `bc` | v1.07.1 |
 | `gzip` | v1.10|
 | `python` | v3.7.7 |
+| `Rscript`* | v4.0.2 |
+
+*requires `tidyverse v1.3.0`, `glue v1.4.2`, and `docopt v0.7.1`.
 <!-- - [ ] Perl v5.32.0 -->
 
 ### Tools
@@ -116,6 +120,7 @@ rAMPage
 | [E<sub>N</sub>TAP](https://github.com/harta55/EnTAP/tree/v0.10.7-beta) | v0.10.7-beta|
 | [Exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate) | v2.4.0|
 | [SABLE](https://sourceforge.net/projects/meller-sable/) | v4.0 |
+| [Clustal Omega](http://www.clustal.org/omega/) | v1.2.4 |
 
 #### Configurations
 
@@ -316,24 +321,28 @@ DESCRIPTION:
       Runs the rAMPage pipeline, using the Makefile.
       
 USAGE(S):
-      rAMPage.sh [-a <address>] [-b] [-c <taxonomic class>] [-d] [-n <species name>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-o <output directory>] [-v] <input reads TXT file>
+      rAMPage.sh [-a <address>] [-b] [-c <taxonomic class>] [-d] [-f] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>
       
 OPTIONS:
-       -a <address>    email address for alerts     
-	   -b              benchmark (uses /usr/bin/time -pv)                 
+       -a <address>    email address for alerts                      
+       -b              benchmark (uses /usr/bin/time -pv)            
        -c <class>      taxonomic class of the dataset                (default = top-level directory in $outdir)
        -d              debug mode of Makefile                        
        -f              force characterization even if no AMPs found  
        -h              show help menu                                
        -m <target>     Makefile target                               (default = exonerate)
-       -n <species>    taxnomic species or name of the dataset       (default = second-level directory in $outdir)
+       -n <species>    taxonomic species or name of the dataset      (default = second-level directory in $outdir)
        -o <directory>  output directory                              (default = directory of input reads TXT file)
        -p              run processes in parallel                     
        -r <FASTA.gz>   reference transcriptome                       (accepted multiple times, *.fna.gz *.fsa_nt.gz)
        -s              strand-specific library construction          (default = false)
        -t <int>        number of threads                             (default = 48)
-       -v              print version number
-                                                                
+       -v              print version number                          
+       -E <e-value>    E-value threshold for homology search         (default = 1e-5)
+       -S <0 to 1>     AMPlify score threshold for amphibian AMPs    (default = 0.90)
+       -L <int>        Length threshold for AMPs                     (default = 30)
+       -C <int>        Charge threshold for AMPs                     (default = 2)
+                                                                     
 EXAMPLE(S):
       rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
       
@@ -368,7 +377,7 @@ rAMPage will use all `*.fsa_nt*` and `*.fna*` files located in the working direc
 Example: _M. gulosa_ (stranded library construction)
 
 ```shell
-scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa input.txt
+$ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa input.txt
 ```
 
 ### Running multiple datasets from the root of the repository
@@ -393,6 +402,10 @@ OPTION(S):
        -s            simultaenously run rAMPAge on all datasets                 (default if SLURM available)
        -t <int>      number of threads                                          (default = 48)
        -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)  
+       -E <e-value>  E-value threshold for homology search                      (default = 1e-5)
+       -S <0 to 1>   AMPlify score threshold for amphibian AMPs                 (default = 0.90)
+       -L <int>      Length threshold for AMPs                                  (default = 30)
+       -C <int>      Charge threshold for AMPs                                  (default = 2)
                                                                                 
 ACCESSIONS TXT FORMAT:
        CLASS/SPECIES/TISSUE_OR_CONDITION/input.txt strandedness
