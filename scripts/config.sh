@@ -19,7 +19,7 @@ fi
 # export FASTERQ_DUMP=$ROOT_DIR/src/sratoolkit.2.10.5-centos_linux64/bin/fasterq-dump
 
 ## FOR TRIMMING READS
-export RUN_FASTP=$ROOT_DIR/fastp/0.20.1/bin/fastp
+export RUN_FASTP=$ROOT_DIR/src/fastp/0.20.1/bin/fastp
 
 ## FOR ASSEMBLY
 export RUN_RNABLOOM=$ROOT_DIR/src/RNA-Bloom_v1.3.1/RNA-Bloom.jar
@@ -58,5 +58,8 @@ export RUN_EXONERATE=$ROOT_DIR/src/exonerate/2.4.0/bin/exonerate
 export RUN_ENTAP=$ROOT_DIR/src/EnTAP-0.10.7-beta/EnTAP
 export RUN_DIAMOND=$ROOT_DIR/src/EnTAP-0.10.7-beta/libs/diamond-0.9.9/bin/diamond
 export RUN_INTERPROSCAN=$ROOT_DIR/src/interproscan-5.30-69.0/interproscan.sh # required
+
+export CLUSTALO=$ROOT_DIR/src/clustalo-omega/1.2.4/bin/clustalo
+export RSCRIPT=$ROOT_DIR/src/r/4.0.2_1/bin/Rscript
 
 touch -a $ROOT_DIR/CONFIG.DONE
