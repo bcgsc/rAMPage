@@ -17,12 +17,12 @@
 
 This directory holds the AMP sequences collated on July 20, 2020, using the script [`rAMPage/scripts/homology-db.sh`](../scripts/helpers/homology-db.sh). The sequences were downloaded from APD3, DADP, and NCBI. Remember to update the soft symlinks if the AMP sequences are updated.
 
-**Note**: The `rAMpage/scripts/homology-db.sh` script requires the [EDirect](https://www.ncbi.nlm.nih.gov/books/NBK179288/) dependency.
+**Note**: The `rAMpage/scripts/homology-db.sh` script requires [EDirect](https://www.ncbi.nlm.nih.gov/books/NBK179288/), CD-HIT, and AMPlify as dependencies.
 
 ### APD3: Antimicrobial Peptide Database 3
 
-* Website: ~~http://aps.unmc.edu/AP/main.php~~ https://wangapd3.com/main.php
-* Source: http://aps.unmc.edu/AP/APD3_update_2020_release.fasta
+* Website: https://aps.unmc.edu
+* Source: https://aps.unmc.edu/assets/sequences/APD_sequence_release_09142020.fasta
 
 ### DADP: Database of Anuran Defense Peptides
 
