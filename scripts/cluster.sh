@@ -51,12 +51,12 @@ function get_help() {
 		echo -e "\
 		\t-h\tShow this help menu\n \
 		\t-o <directory>\tOutput directory \n \
-		\t-c <int>\tSpecies count (at least) threshold for SpeciesCount\n \
-		\t-i <int>\tNumber of insect sequences to select for TopInsect\n \
-		\t-C <int>\tSpecies count (at most) thresold for TopInsect\n \
-		\t-s <float>\tAMPlify score threshold for TopInsect\n \
-		\t-n <int>\tNumber of sequences to select for TopAMPlifyCluster\n \
-		\t-r <int>\tNumber of arginines that is too hard to synthesize\n \
+		\t-c <int>\tSpecies count (at least) threshold for SpeciesCount\t(default = 3)\n \
+		\t-i <int>\tNumber of insect sequences to select for TopInsect\t(default = 30)\n \
+		\t-C <int>\tSpecies count (at most) thresold for TopInsect\t(default = 1)\n \
+		\t-s <float>\tAMPlify score threshold for TopInsect\t(default = 0.99)\n \
+		\t-n <int>\tNumber of sequences to select for TopAMPlifyCluster\t(default = 30)\n \
+		\t-r <int>\tNumber of arginines that is too hard to synthesize\t(default = 5)\n \
 		" | table
 	} 1>&2
 	exit 1
