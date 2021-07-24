@@ -88,6 +88,7 @@ email=false
 outdir=""
 threads=8
 input=""
+amplify_tsv=""
 while getopts :a:f:hi:o:t: opt; do
 	case $opt in
 	a)
@@ -366,6 +367,7 @@ fi
 # choose the tsv that is not empty to symlink
 
 # use no contaminant for level 0 for no contaminants if found
+final_tsv=$outdir/final_annotations.final.tsv
 if [[ "$code" -eq 0 ]]; then
 	if [[ -s "$outdir/final_results/final_annotations_no_contam_lvl0.tsv" && "$(wc -l $outdir/final_results/final_annotations_no_contam_lvl0.tsv | awk '{print $1}')" -gt 1 ]]; then
 		(cd $outdir/final_results && ln -fs final_annotations_no_contam_lvl0.tsv final_annotations.final.tsv)
@@ -388,8 +390,6 @@ if [[ "$code" -eq 0 ]]; then
 	fi
 	# join with AMPlify TSV instead of soft linking
 	# (cd $outdir && ln -fs final_results/final_annotations.final.tsv final_annotations.final.tsv)
-
-	final_tsv=$outdir/final_annotations.final.tsv
 
 	processed=$outdir/$(basename $input | sed 's/.faa$/.annotated.faa/')
 	cp $input $processed
