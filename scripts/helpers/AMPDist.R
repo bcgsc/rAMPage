@@ -13,7 +13,7 @@ OPTIONS:
   -h --help                 Show this screen
   --input_tsv=<file>        AMPlify TSV of AMPs
   --output_dir=<path>       Output directory
-  --sensitivity             BETA: Turn on sensitivity (sensitivity uses default thresholds)
+  --sensitivity             BETA: Turn on sensitivity (sensitivity uses thresholds given by --thresholds)
   --thresholds              Show thresholds on plot
   --reference               AMPs provided in --input_tsv are REFERENCE AMPs (changes title of plot)
   --amphibian_score=<float> Amphibian AMPlify score thresold [default: 0.90]
