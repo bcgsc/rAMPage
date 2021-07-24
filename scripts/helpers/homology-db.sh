@@ -4,7 +4,8 @@ PROGRAM=$(basename $0)
 
 # apd3_url="http://aps.unmc.edu/AP/APD3_update_2020_release.fasta"
 if [[ ! -v APD3_URL ]]; then
-	apd3_url="https://wangapd3.com/APD_sequence_release_09142020.fasta"
+	# apd3_url="https://wangapd3.com/APD_sequence_release_09142020.fasta"
+	apd3_url="https://aps.unmc.edu/assets/sequences/APD_sequence_release_09142020.fasta"
 else
 	apd3_url=$APD3_URL
 
@@ -45,6 +46,8 @@ function get_help() {
 		echo -e "\
 		\t-h\tshow this help menu\n \
 		\t-o <directory>\toutput directory\t(required)\n \
+		\t-p\tplot distributions (requires AMPlify)\n \
+		\t-s\tskip certificate check\n \
 		" | table
 	} 1>&2
 	exit 1
@@ -71,16 +74,19 @@ function print_error() {
 }
 
 # 3 - doesn't take arguments so no check needed
-
+skip_opt=""
 outdir=""
+plot=false
 # 4 - get options
-while getopts :ho: opt; do
+while getopts :ho:sp opt; do
 	case $opt in
 	h) get_help ;;
 	o)
 		outdir="$(realpath $OPTARG)"
 		mkdir -p $outdir
 		;;
+	p) plot=true ;;
+	s) skip_opt="--insecure" ;;
 	\?)
 		print_error "ERROR: Invalid option: -$OPTARG"
 		;;
@@ -141,14 +147,14 @@ fi
 echo 1>&2
 
 echo "Checking APD3 URL..." 1>&2
-if ! curl --head --silent --fail --connect-timeout 10 "$apd3_url" &>/dev/null; then
+if ! curl --head $skip_opt --silent --fail --connect-timeout 10 "$apd3_url" &>/dev/null; then
 	print_error "The APD3 URL $apd3_url does not exist. Please bind the updated URL to the exported variable APD3_URL, e.g. export APD3_URL=\"https://newURL.com/APD3.fasta\""
 fi
 
 echo "Downloading sequences from APD3..." 1>&2
 apd3=$(basename $apd3_url)
-echo "COMMAND: curl -L -o $outdir/$apd3 \"$apd3_url\" &> $outdir/APD3.log" 1>&2
-curl -L -o $outdir/$apd3 "$apd3_url" &>$outdir/APD3.log
+echo "COMMAND: curl -L $skip_opt -o $outdir/$apd3 \"$apd3_url\" &> $outdir/APD3.log" 1>&2
+curl -L $skip_opt -o $outdir/$apd3 "$apd3_url" &>$outdir/APD3.log
 # echo "COMMAND: wget -o $outdir/APD3.log -O $outdir/$apd3 $apd3_url" 1>&2
 # wget -o $outdir/APD3.log -O $outdir/$apd3 $apd3_url
 echo 1>&2
@@ -182,13 +188,13 @@ echo -e "COMMAND: grep --no-group-separator -A1 -i amphibians $outdir/${apd3%.*}
 grep --no-group-separator -A1 -i amphibians $outdir/${apd3%.*}.faa >$outdir/${apd3%.*}.amphibians.faa
 
 echo "Checking DADP URL..." 1>&2
-if ! curl --head --silent --fail --connect-timeout 10 "$dadp_url" &>/dev/null; then
+if ! curl --head $skip_opt --silent --fail --connect-timeout 10 "$dadp_url" &>/dev/null; then
 	print_error "The APD3 URL $dadp_url does not exist. Please bind the updated URL to the exported variable DADP_URL, e.g. export DADP_URL=\"https://newURL.com/DADP.fasta\""
 fi
 echo "Downloading additional Anuran AMPs from DADP..." 1>&2
 dadp=$(basename $dadp_url)
-echo -e "COMMAND: curl -L -o $outdir/$dadp \"$dadp_url\" &> $outdir/DADP.log\n" 1>&2
-curl -L -o $outdir/$dadp "$dadp_url" &>$outdir/DADP.log
+echo -e "COMMAND: curl -L $skip_opt -o $outdir/$dadp \"$dadp_url\" &> $outdir/DADP.log\n" 1>&2
+curl -L $skip_opt -o $outdir/$dadp "$dadp_url" &>$outdir/DADP.log
 # echo -e "COMMAND: wget -o $outdir/DADP.log -O $outdir/$dadp $dadp_url\n" 1>&2
 # wget -o $outdir/DADP.log -O $outdir/$dadp $dadp_url
 
@@ -198,12 +204,23 @@ cat $outdir/$dadp $outdir/${apd3%.*}.amphibians.faa >$outdir/amps.${class}.prot.
 
 echo "Combining the NCBI AMPs with APD3 and DADP sequences..." 1>&2
 echo -e "COMMAND: cat $outfile $outdir/amps.${class}.prot.mature.faa > $outdir/amps.${class}.prot.${today}.combined.faa\n" 1>&2
-cat $outfile $outdir/amps.${class}.prot.mature.faa >$outdir/amps.${class}.prot.${today}.combined.faa
-if [[ -L $outdir/amps.${class}.prot.combined.faa ]]; then
-	unlink $outdir/amps.${class}.prot.combined.faa
+
+cat $outfile $outdir/amps.${class}.prot.mature.faa | $RUN_SEQTK seq >$outdir/amps.${class}.prot.${today}.combined.faa
+
+$ROOT_DIR/scripts/run-cdhit.sh -d $outdir/amps.${class}.prot.${today}.combined.faa
+echo 1>&2
+
+sed '/^>/N; s/\n/\t/' $outdir/amps.${class}.prot.${today}.combined.rmdup.nr.faa | grep -v $'\t''.*[BJOUZX]' | tr '\t' '\n' >$outdir/amps.${class}.prot.${today}.combined.unambiguous.rmdup.nr.faa
+
+if [[ -L $outdir/amps.${class}.prot.combined.rmdup.nr.faa ]]; then
+	unlink $outdir/amps.${class}.prot.combined.rmdup.nr.faa
+fi
+if [[ -L $outdir/amps.${class}.prot.combined.unambiguous.rmdup.nr.faa ]]; then
+	unlink $outdir/amps.${class}.prot.combined.unambiguous.rmdup.nr.faa
 fi
 
-(cd $outdir && ln -fs amps.${class}.prot.${today}.combined.faa amps.${class}.prot.combined.faa)
+(cd $outdir && ln -fs amps.${class}.prot.${today}.combined.rmdup.nr.faa amps.${class}.prot.combined.rmdup.nr.faa && ln -fs amps.${class}.prot.${today}.combined.unambiguous.rmdup.nr.faa amps.${class}.prot.combined.unambiguous.rmdup.nr.faa)
+
 # ln -s $outdir/amps.${class}.prot.${today}.combined.faa $outdir/amps.${class}.prot.combined.faa
 
 # echo "Combining the APD3 and DADP sequences (mature only)..." 1>&2
@@ -225,13 +242,22 @@ grep --no-group-separator -A1 -i insects $outdir/${apd3%.*}.faa >$outdir/${apd3%
 
 echo "Combining the NCBI AMPs with APD3 sequences..." 1>&2
 echo -e "COMMAND: cat $outfile $outdir/${apd3%.*}.insects.faa > $outdir/amps.${class}.prot.${today}.combined.faa\n" 1>&2
-cat $outfile $outdir/${apd3%.*}.insects.faa >$outdir/amps.${class}.prot.${today}.combined.faa
+cat $outfile $outdir/${apd3%.*}.insects.faa | $RUN_SEQTK seq >$outdir/amps.${class}.prot.${today}.combined.faa
 
-if [[ -L $outdir/amps.${class}.prot.combined.faa ]]; then
-	unlink $outdir/amps.${class}.prot.combined.faa
+$ROOT_DIR/scripts/run-cdhit.sh -d $outdir/amps.${class}.prot.${today}.combined.faa
+echo 1>&2
+
+sed '/^>/N; s/\n/\t/' $outdir/amps.${class}.prot.${today}.combined.rmdup.nr.faa | grep -v $'\t''.*[BJOUZX]' | tr '\t' '\n' >$outdir/amps.${class}.prot.${today}.combined.unambiguous.rmdup.nr.faa
+
+if [[ -L $outdir/amps.${class}.prot.combined.rmdup.nr.faa ]]; then
+	unlink $outdir/amps.${class}.prot.combined.rmdup.nr.faa
 fi
 
-(cd $outdir && ln -fs amps.${class}.prot.${today}.combined.faa amps.${class}.prot.combined.faa)
+if [[ -L $outdir/amps.${class}.prot.combined.unambiguous.rmdup.nr.faa ]]; then
+	unlink $outdir/amps.${class}.prot.combined.unambiguous.rmdup.nr.faa
+fi
+
+(cd $outdir && ln -fs amps.${class}.prot.${today}.combined.rmdup.nr.faa amps.${class}.prot.combined.rmdup.nr.faa && ln -fs amps.${class}.prot.${today}.combined.unambiguous.rmdup.nr.faa amps.${class}.prot.combined.unambiguous.rmdup.nr.faa)
 # ln -s $outdir/amps.${class}.prot.${today}.combined.faa $outdir/amps.${class}.prot.combined.faa
 
 if [[ -L $outdir/amps.${class}.prot.mature.faa ]]; then
@@ -241,6 +267,17 @@ fi
 # ln -s $outdir/${apd3%.*}.insects.faa $outdir/amps.${class}.prot.mature.faa
 
 #-------------------------------------------------------------------------------------
+# cat $outdir/amps.Amphibia.prot.combined.faa $outdir/amps.Insecta.prot.combined.faa >$outdir/ref.amps.combined.faa
+
+# $ROOT_DIR/scripts/run-cdhit.sh -d $outdir/ref.amps.combined.faa
+
+# RUNS AMPLIFY and gets the TSV
+if [[ "$plot" = true ]]; then
+	$ROOT_DIR/scripts/plot-dist.sh -a $outdir/amps.Amphibia.prot.combined.unambiguous.rmdup.nr.faa -i $outdir/amps.Insecta.prot.combined.unambiguous.rmdup.nr.faa -o $outdir -r
+fi
+
+# export CLASS=Amphibia && mkdir -p $outdir/amphibia && $ROOT_DIR/scripts/run-amplify.sh -o $outdir/amphibia -T $outdir/amps.Amphibia.prot.combined.unambiguous.rmdup.nr.faa
+# export CLASS=Insecta && mkdir -p $outdir/insecta && $ROOT_DIR/scripts/run-amplify.sh -o $outdir/insecta -T $outdir/amps.Insecta.prot.combined.unambiguous.rmdup.nr.faa
 
 # Do the remaining ones if they exist
 # if [[ "$#" -gt 0 ]]; then
