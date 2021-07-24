@@ -52,12 +52,13 @@ function get_help() {
 		\t-a <address>\temail address for alerts\n \
 		\t-c <int>\tcharge cut-off (multiple accepted) [i.e. keep charge(sequences >= int]\t(default = 2)\n \
 		\t-d\tdebug mode\t(skips running AMPlify)\n \
-		\t-f\tforce final AMPs to be the lowest number of non-zero AMPs*\n \
+		\t-f\tforce final AMPs to be the least number of non-zero AMPs*\n \
 		\t-h\tshow this help menu\n \
 		\t-l <int>\tlength cut-off (multiple accepted) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <0 to 1>\tAMPlify score cut-off (multiple accepted) [i.e. keep score(sequences) >= dbl]\t(default = 0.90)\n \
-		\t-t <int>\tnumber of threads\t(default = all)\n \
+		\t-t <int>\tnumber of threads\t(default = all)\n
+		\t-T\tstop after obtaining AMPlify TSV file\n\
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -65,7 +66,7 @@ function get_help() {
 		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 0.90 -s 0.80 -s 0.70 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
 		" | table
 
-		echo "*i.e. if filtering by score >= 0.90, length <= 30, and charge >= 2 yields zero AMPs, then score >= 0.90, length <= 50, and charge >=2 will be used for the next step of the pipeline, etc."
+		echo "*i.e. if filtering by score >= 0.90, length <= 30, and charge >= 2 yields zero AMPs, then score >= 0.90, length <= 50, and charge >= 2 will be used for the next step of the pipeline, etc."
 	} 1>&2
 	exit 1
 }
@@ -109,8 +110,9 @@ charge=()
 outdir=""
 debug=false
 forced_characterization=false
+tsv_file_only=false
 # 4 - read options
-while getopts :a:c:dfhl:o:s:t: opt; do
+while getopts :a:c:dfhl:o:s:t:T opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -129,6 +131,7 @@ while getopts :a:c:dfhl:o:s:t: opt; do
 		threads="$OPTARG"
 		custom_threads=true
 		;;
+	T) tsv_file_only=true ;;
 	\?)
 		print_error "Invalid option: -$OPTARG"
 		;;
@@ -192,7 +195,7 @@ fi
 # sort / unique
 
 sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
-for i in "${confidence[@]}"; do
+for i in "${sorted_confidence[@]}"; do
 	if (($(echo "$i < 0.5" | bc -l) || $(echo "$i > 1" | bc -l))); then
 		print_error "Invalid argument for -c <0.5 to 1>: $i"
 	fi
@@ -286,6 +289,19 @@ if [[ "$len_seq" -ne 0 ]]; then
 	echo -e "Output: $input\n" 1>&2
 else
 	echo -e "Sequences are already between 2 and 200 amino acids long.\n" 1>&2
+fi
+
+if [[ $input != *.nr.* ]]; then
+	$ROOT_DIR/scripts/run-cdhit.sh -d $input
+	input=${input/.faa/.rmdup.nr.faa}
+	echo 1>&2
+fi
+
+# remove ambiguous bases if there are any
+
+if [[ "$(grep -v '^>' $input | grep -c '.*[BJOUZX]' || true)" -ne 0 ]]; then
+	$RUN_SEQTK seq $input | sed '/^>/N; s/\n/\t/' | grep -v $'\t''.*[BJOUZX]' | tr '\t' '\n' >${input/.faa/.unambiguous.faa}
+	input=${input/.faa/.unambiguous.faa}
 fi
 
 # RUNNING AMPLIFY
@@ -452,6 +468,25 @@ count=$(grep -c '^>' $amps_fasta || true)
 
 print_line
 echo 1>&2
+#----------------------------------------------------------
+if [[ $tsv_file_only == true ]]; then
+
+	echo -e "END: $(date)\n" 1>&2
+	echo -e "STATUS: DONE.\n" 1>&2
+	touch $outdir/AMPLIFY.DONE
+
+	echo "Output: $amps_tsv" 1>&2
+	if [[ "$email" = true ]]; then
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+		species=$(echo "$species" | sed 's/^./\u&. /')
+		#	echo "$outdir" | mail -s "${species^}: STAGE 10: AMPLIFY: SUCCESS" $address
+		echo "$outdir" | mail -s "${species}: STAGE 10: AMPLIFY: SUCCESS" $address
+		# echo "$outdir" | mail -s "Successful AMPlify run on $org" $address
+		echo -e "\nEmail alert sent to $address." 1>&2
+	fi
+	exit 0
+fi
 
 #----------------------------------------------------------
 ((filter_counter += 1))
@@ -879,14 +914,19 @@ sed -i '/^-\+\t-\+/d' $outdir/amps.summary.tsv
 # sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
 # soft link the file that has the least number of AMPs but isn't 0
 # final_amps=$most_filtered_fasta
-final_amps=$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
+least_nonzero_amps=$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)
+least_nonzero_amps_tsv=$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
+highest_score=${sorted_confidence[0]}
+shortest_length=${sorted_length[-1]}
+lowest_charge=${sorted_charge[0]}
+final_amps=amps.score_${highest_score}-length_${shortest_length}-charge_${lowest_charge}.nr.faa
 filename=$(echo "$final_amps" | sed 's/^/AMPlify_results./' | sed 's/\.faa/.tsv/')
 # filename=$most_filtered_tsv
 
-if [[ $forced_characterization = true ]]; then
+if [[ $forced_characterization = false ]]; then
 	(cd $outdir && ln -fs ${final_amps} amps.final.faa && ln -fs ${filename} AMPlify_results.final.tsv)
 else
-	(cd $outdir && ln -fs $(basename $most_filtered_fasta) amps.final.faa && ln -fs $(basename $most_filtered_tsv) AMPlify_results.final.tsv)
+	(cd $outdir && ln -fs $(basename $least_nonzero_amps) amps.final.faa && ln -fs $(basename $least_nonzero_amps_tsv) AMPlify_results.final.tsv)
 fi
 
 final_count=$(grep -c '^>' $outdir/amps.final.faa || true)

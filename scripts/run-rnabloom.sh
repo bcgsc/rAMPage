@@ -203,7 +203,7 @@ fi
 
 echo "Checking ntCard..." 1>&2
 if command -v ntcard &>/dev/null; then
-	echo "PROGRAM: $bin" 1>&2
+	echo "PROGRAM: $(command -v ntcard)" 1>&2
 	echo -e "VERSION: $(ntcard --version 2>&1 | awk '/ntCard/ {print $NF}')\n" 1>&2
 else
 	print_error "Cannot find 'ntcard' in PATH."
