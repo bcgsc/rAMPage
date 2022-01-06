@@ -474,4 +474,4 @@ rAMPage
 
 ## Citation
 
-rAMPage: Rapid AMP Annotation and Gene Estimation (2021). Diana Lin, Ka Ming Nip, Sambina Aninta, Chenkai Li, Rene L. Warren, Caren Helbing, Linda Hoang, Inanc Birol
+rAMPage: Rapid AMP Annotation and Gene Estimation (2021). Diana Lin, Darcy Sutherland, Sambina Aninta, Ka Ming Nip, Chenkai Li, Rene L. Warren, Caren Helbing, Linda Hoang, Inanc Birol
