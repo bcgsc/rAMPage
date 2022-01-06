@@ -11,6 +11,7 @@ EVALUE := 1e-5
 SCORE := "-s 0.90 -s 0.80 -s 0.70"
 LENGTH := "-l 30 -l 50 -l 70"
 CHARGE := "-c 2 -c 4 -c 6 -c 8"
+RR := true
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 REF_AMP_PRECURSOR := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.precursor.faa)
@@ -179,15 +180,31 @@ assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE logs/05-assembly.log
 	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY: $$(realpath logs)/05-assembly.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			if [[ $(RR) == true ]]; then \
+				/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			else \
+				/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			fi; \
 		else \
-			$< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			if [[ $(RR) == true ]]; then \
+				$< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			else \
+				$< -a $(EMAIL) -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			fi; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			if [[ $(RR) == true ]]; then \
+				/usr/bin/time -pv $< -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			else \
+				/usr/bin/time -pv $< -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			fi; \
 		else \
-			$< -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			if [[ $(RR) == true ]]; then \
+				$< -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			else \
+				$< -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+			fi; \
 		fi; \
 	fi
 

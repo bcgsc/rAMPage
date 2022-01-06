@@ -54,6 +54,7 @@ function get_help() {
 		\t-d\tdebug mode\n (skips RNA-Bloom)\n \
 		\t-h\tshow help menu\n \
 		\t-m <int K/M/G>\tallotted memory for Java (e.g. 500G)\n \
+		\t-n\tno redundancy removal\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
@@ -124,8 +125,10 @@ memory_bool=false
 email=false
 outdir=""
 stranded=false
+rr=true 
+
 # 4 - read options
-while getopts :a:dhm:o:st: opt; do
+while getopts :a:dhm:no:st: opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -137,6 +140,7 @@ while getopts :a:dhm:o:st: opt; do
 		memory_bool=true
 		memory="-Xmx${OPTARG}"
 		;;
+	n) rr=false ;;
 	o)
 		outdir="$(realpath $OPTARG)"
 		;;
@@ -377,6 +381,12 @@ else
 	pool=true
 fi
 
+if [[ "$rr" = true ]]; then
+	rr_opt=""
+else
+	rr_opt="-norr"
+fi
+
 logfile=$outdir/rnabloom.out
 
 label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $(NF-1)); gsub(/-/, "_", $NF); print $(NF-1), $NF}')
@@ -389,12 +399,12 @@ fi
 if [[ "$debug" = false ]]; then
 	echo "Running RNA-Bloom..." 1>&2
 
-	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>> $logfile\n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- ${rr_opt} &>> $logfile\n" | tee $logfile 1>&2
 
-	${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>>$logfile
+	${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- ${rr_opt} &>>$logfile
 else
 	echo -e "DEBUG MODE: Skipping RNA-Bloom..." 1>&2
-	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- &>> $logfile\n" | tee $logfile 1>&2
+	echo -e "COMMAND: ${rnabloom_jar} -f -k 25-75:5 -ntcard -fpr 0.005 -extend -t $threads ${reads_opt} ${mergepool_opt} ${revcomp_opt} -outdir ${outdir} ${stranded_opt} ${ref_opt} -prefix ${label}- ${rr_opt} &>> $logfile\n" | tee $logfile 1>&2
 fi
 
 if [[ "${#references[@]}" -ne 0 ]]; then
@@ -415,7 +425,7 @@ fi
 
 label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $NF); print $(NF-1), $NF}')
 
-if [[ $pool = false ]]; then
+if [[ $pool = false || $rr = true ]]; then
 	echo "Renaming transcripts in rnabloom.transcripts.nr.fa..." 1>&2
 	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.fa
 	echo "Renaming transcripts in rnabloom.transcripts.nr.short.fa..." 1>&2
@@ -437,8 +447,13 @@ echo "Fetching total number of transcripts..." 1>&2
 # echo "COMMAND: tac $logfile | grep -m 1 "after:" | awk '{print $NF}'" 1>&2
 # tx_total=$(tac $logfile | grep -m 1 "after:" | awk '{print $NF}')
 # echo "COMMAND: grep \"after:\" $logfile | tail -n1 | awk '{print \$NF}')" 1>&2
-tx_total=$(grep "after:" $logfile | tail -n1 | awk '{print $NF}')
-echo -e "Total number of assembled non-redundant transcripts: $tx_total\n" 1>&2
+if [[ $pool = false || $rr = true ]]; then
+	tx_total=$(grep "after:" $logfile | tail -n1 | awk '{print $NF}')
+	echo -e "Total number of assembled non-redundant transcripts: $tx_total\n" 1>&2
+else
+	tx_total=$(grep -c '^>' $outdir/rnabloom.transcripts.all.fa || true)
+	echo -e "Total number of assembled transcripts: $tx_total\n" 1>&2
+fi
 
 echo -e "Assembly: $outdir/rnabloom.transcripts.all.fa\n" 1>&2
 default_name="$(realpath -s ${workdir}/assembly)"

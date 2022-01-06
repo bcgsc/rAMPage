@@ -3,7 +3,9 @@ set -euo pipefail
 
 major_version=0
 minor_version=9
-patch_version=0
+patch_version=1
+
+version_message="rAMPage v${major_version}.${minor_version}.${patch_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
 
 start_sec=$(date '+%s')
 
@@ -66,6 +68,7 @@ function get_help() {
 		\t-S <0 to 1>\tAMPlify score threshold for amphibian AMPs\t(default = 0.90)\n \
 		\t-L <int>\tLength threshold for AMPs\t(default = 30)\n \
 		\t-C <int>\tCharge threshold for AMPs\t(default = 2)\n \
+		\t-R\tDisable redundancy removal during transcript assembly\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -142,13 +145,14 @@ benchmark=false
 target="exonerate"
 debug=""
 forced_characterization=false
+rr_assembly=true
 
 custom_evalue=1e-5
 custom_score=0.90
 custom_length=30
 custom_charge=2
 
-while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C: opt; do
+while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -182,7 +186,6 @@ while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C: opt; do
 		;;
 	b) benchmark=true ;;
 	v)
-		version_message="rAMPage v${major_version}.${minor_version}.${patch_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
 		echo -e "$version_message" 1>&2
 		exit 0
 		;;
@@ -190,6 +193,7 @@ while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C: opt; do
 	S) custom_score=$OPTARG ;;
 	L) custom_length=$OPTARG ;;
 	C) custom_charge=$OPTARG ;;
+	R) rr_assembly=false ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -215,9 +219,9 @@ else
 fi
 
 # check that input file is somehwere in the repository
-if [[ "$(realpath $1)" != */rAMPage* ]]; then
-	print_error "Input file $(realpath $1) must be located within the rAMPage directory."
-fi
+# if [[ "$(realpath $1)" != */rAMPage* ]]; then
+	# print_error "Input file $(realpath $1) must be located within the rAMPage directory."
+# fi
 
 if [[ ! -v ROOT_DIR ]]; then
 	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
@@ -418,23 +422,23 @@ echo "Running rAMPage..." 1>&2
 echo -e "$version_message" 1>&2
 if [[ "$benchmark" = true ]]; then
 	if [[ "$target" != "clean" ]]; then
-		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
 
-		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 	else
-		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
 
-		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
 	fi
 else
 	if [[ "$target" != "clean" ]]; then
-		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
 
-		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
 	else
-		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
 
-		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
 	fi
 fi
 
