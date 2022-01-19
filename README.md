@@ -324,25 +324,25 @@ USAGE(S):
       rAMPage.sh [-a <address>] [-b] [-c <taxonomic class>] [-d] [-f] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>
       
 OPTIONS:
-       -a <address>    email address for alerts                      
-       -b              benchmark (uses /usr/bin/time -pv)            
-       -c <class>      taxonomic class of the dataset                (default = top-level directory in $outdir)
-       -d              debug mode of Makefile                        
-       -f              force characterization even if no AMPs found  
-       -h              show help menu                                
-       -m <target>     Makefile target                               (default = exonerate)
-       -n <species>    taxonomic species or name of the dataset      (default = second-level directory in $outdir)
-       -o <directory>  output directory                              (default = directory of input reads TXT file)
-       -p              run processes in parallel                     
-       -r <FASTA.gz>   reference transcriptome                       (accepted multiple times, *.fna.gz *.fsa_nt.gz)
-       -s              strand-specific library construction          (default = false)
-       -t <int>        number of threads                             (default = 48)
-       -v              print version number                          
-       -E <e-value>    E-value threshold for homology search         (default = 1e-5)
-       -S <0 to 1>     AMPlify score threshold for amphibian AMPs    (default = 0.90)
-       -L <int>        Length threshold for AMPs                     (default = 30)
-       -C <int>        Charge threshold for AMPs                     (default = 2)
-                                                                     
+       -a <address>    email address for alerts                               
+       -c <class>      taxonomic class of the dataset                         (default = top-level directory in $outdir)
+       -d              debug mode of Makefile                                 
+       -f              force characterization even if no AMPs found           
+       -h              show help menu                                         
+       -m <target>     Makefile target                                        (default = exonerate)
+       -n <species>    taxonomic species or name of the dataset               (default = second-level directory in $outdir)
+       -o <directory>  output directory                                       (default = directory of input reads TXT file)
+       -p              run processes in parallel                              
+       -r <FASTA.gz>   reference transcriptome                                (accepted multiple times, *.fna.gz *.fsa_nt.gz)
+       -s              strand-specific library construction                   (default = false)
+       -t <int>        number of threads                                      (default = 48)
+       -v              print version number                                   
+       -E <e-value>    E-value threshold for homology search                  (default = 1e-5)
+       -S <0 to 1>     AMPlify score threshold for amphibian AMPs             (default = 0.90)
+       -L <int>        Length threshold for AMPs                              (default = 30)
+       -C <int>        Charge threshold for AMPs                              (default = 2)
+       -R              Disable redundancy removal during transcript assembly  
+                                                                              
 EXAMPLE(S):
       rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
       

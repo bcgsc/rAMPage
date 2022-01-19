@@ -139,14 +139,14 @@ DESCRIPTION:
        For more information: https://github.com/bcgsc/RNA-Bloom
        
 USAGE(S):
-      run-rnabloom.sh [-a <address>] [-m <int K/M/G>] [-s] [-t <int>] -o <output directory> <reads list TXT file>
+      run-rnabloom.sh [-a <address>] [-d] [-h] [-m <int K/M/G>] [-s] [-t <int>] -o <output directory> <reads list TXT file>
       
 OPTION(S):
                         -a <address>    email address for alerts              
-                        -d              debug mode                            
- (skips RNA-Bloom)                                                            
+                        -d              debug mode                            (skips RNA-Bloom)                                                            
                         -h              show help menu                        
                         -m <int K/M/G>  allotted memory for Java (e.g. 500G)  
+                        -n              no redundancy removal                 
                         -o <directory>  output directory                      (required)
                         -s              strand-specific library construction  (default = false)
                         -t <int>        number of threads                     (default = 8)
