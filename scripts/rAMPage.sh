@@ -51,7 +51,6 @@ function get_help() {
 		echo "OPTIONS:"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-b\tbenchmark (uses /usr/bin/time -pv)\n \
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
 		\t-d\tdebug mode of Makefile\n \
 		\t-f\tforce characterization even if no AMPs found\n \
@@ -141,7 +140,6 @@ email=false
 email_opt=""
 class=""
 species=""
-benchmark=false
 target="exonerate"
 debug=""
 forced_characterization=false
@@ -152,7 +150,7 @@ custom_score=0.90
 custom_length=30
 custom_charge=2
 
-while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
+while getopts :ha:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -184,7 +182,6 @@ while getopts :hba:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
 		num_threads="$OPTARG"
 		threads="THREADS=$num_threads"
 		;;
-	b) benchmark=true ;;
 	v)
 		echo -e "$version_message" 1>&2
 		exit 0
@@ -346,7 +343,9 @@ if [[ ! -s $db ]]; then
 fi
 if ! /usr/bin/time -pv echo &>/dev/null; then
 	benchmark=false
-	echo -e "Benchmark option selected but /usr/bin/time -pv not available.\n" 1>&2
+	echo -e "/usr/bin/time -pv not available.\n" 1>&2
+else
+	benchmark=true
 fi
 
 if [[ $CLASS == [Aa]mphibia ]]; then
@@ -419,7 +418,7 @@ charges="-c $custom_charge -c $custom_charge2 -c $custom_charge3 -c $custom_char
 
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
-echo -e "$version_message" 1>&2
+echo -e "$version_message\n" 1>&2
 if [[ "$benchmark" = true ]]; then
 	if [[ "$target" != "clean" ]]; then
 		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
@@ -448,15 +447,15 @@ if [[ "$target" != "clean" ]]; then
 		if [[ "$benchmark" == true ]]; then
 			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
 			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
-		else
-			echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		# else
+			# echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
 		fi
 	else
 		if [[ "$benchmark" == true ]]; then
 			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
 			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh $outdir/logs &>$outdir/logs/00-summary.log
-		else
-			echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
+		# else
+			# echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
 		fi
 	fi
 	# summarize the log files here

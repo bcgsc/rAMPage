@@ -916,7 +916,7 @@ sed -i '/^-\+\t-\+/d' $outdir/amps.summary.tsv
 # final_amps=$most_filtered_fasta
 least_nonzero_amps=$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)
 least_nonzero_amps_tsv=$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
-highest_score=${sorted_confidence[0]}
+highest_score=${sorted_confidence[-1]}
 shortest_length=${sorted_length[-1]}
 lowest_charge=${sorted_charge[0]}
 final_amps=amps.score_${highest_score}-length_${shortest_length}-charge_${lowest_charge}.nr.faa

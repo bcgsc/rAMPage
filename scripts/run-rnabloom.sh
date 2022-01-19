@@ -368,17 +368,22 @@ if [[ "$paired" = false ]]; then
 	reads_opt="-left $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//')"
 	revcomp_opt=""
 	mergepool_opt=""
-	pool=false
+	mergepool=false
 elif [[ "$(awk '{print $1}' $readslist | sort -u | wc -l)" -eq 1 ]]; then
 	reads_opt="-left $(awk '{print $2}' $readslist | tr '\n' ' ' | sed 's/ $//') -right $(awk '{print $3}' $readslist | tr '\n' ' ' | sed 's/ $//')"
 	revcomp_opt="-revcomp-right"
 	mergepool_opt=""
-	pool=false
+	mergepool=false
 else
 	reads_opt="-pool ${readslist}"
 	revcomp_opt="-revcomp-right"
-	mergepool_opt="-mergepool"
-	pool=true
+	if [[ "$rr" = true ]]; then
+		mergepool_opt="-mergepool"
+		mergepool=true
+	else
+		mergepool_opt=""
+		mergepool=false
+	fi
 fi
 
 if [[ "$rr" = true ]]; then
@@ -412,20 +417,47 @@ if [[ "${#references[@]}" -ne 0 ]]; then
 	${compress} ${references[*]} 2>/dev/null || true
 fi
 
-if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
-	touch $outdir/ASSEMBLY.FAIL
-	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
-	if [[ "$email" = true ]]; then
-		# echo "$outdir" | mail -s "Failed assembling $org" "$address"
-		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
-		echo "$outdir" | mail -s "${species^}: STAGE 05: ASSEMBLY: FAILED" "$address"
-		echo "Email alert sent to $address." 1>&2
+if [[ "$rr" = true ]]; then
+	if [[ ! -f $outdir/TRANSCRIPTS_NR.DONE ]]; then
+		touch $outdir/ASSEMBLY.FAIL
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		if [[ "$email" = true ]]; then
+			# echo "$outdir" | mail -s "Failed assembling $org" "$address"
+			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+			echo "$outdir" | mail -s "${species^}: STAGE 05: ASSEMBLY: FAILED" "$address"
+			echo "Email alert sent to $address." 1>&2
+		fi
+	fi
+else
+	if [[ ! -f $outdir/TRANSCRIPTS.DONE ]]; then
+		touch $outdir/ASSEMBLY.FAIL
+		# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
+		if [[ "$email" = true ]]; then
+			# echo "$outdir" | mail -s "Failed assembling $org" "$address"
+			# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2)}' | sed 's/^./&. /')
+			echo "$outdir" | mail -s "${species^}: STAGE 05: ASSEMBLY: FAILED" "$address"
+			echo "Email alert sent to $address." 1>&2
+		fi
 	fi
 fi
 
 label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $NF); print $(NF-1), $NF}')
 
-if [[ $pool = false || $rr = true ]]; then
+# if mergepool = false && rr = false, then there are .fa (not nr) in individual pooled folders - cat them together (no CDHIT) and then use seqtk rename to get consistent numbering like the others
+# if mergepool = true then there is .fa in the assembly dir
+# if mergepool = false && rr = true, then there are .nr.fa 
+
+if [[ "$mergepool" = true ]]; then
+	# merged into main assembly directory
+	echo "Renaming transcripts in rnabloom.transcripts.fa..." 1>&2
+	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.fa
+	echo "Renaming transcripts in rnabloom.transcripts.short.fa..." 1>&2
+	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.short.fa
+
+	echo -e "Combining rnabloom.transcripts.fa and rnabloom.transcripts.short.fa...\n" 1>&2
+	cat $outdir/rnabloom.transcripts.fa $outdir/rnabloom.transcripts.short.fa >$outdir/rnabloom.transcripts.all.fa
+elif [[ "$rr" = true ]]; then
+	# if mergepool is false and rr is true, then this is a one line readslist.txt
 	echo "Renaming transcripts in rnabloom.transcripts.nr.fa..." 1>&2
 	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.fa
 	echo "Renaming transcripts in rnabloom.transcripts.nr.short.fa..." 1>&2
@@ -434,6 +466,12 @@ if [[ $pool = false || $rr = true ]]; then
 	echo -e "Combining rnabloom.transcripts.nr.fa and rnabloom.transcripts.nr.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.nr.fa $outdir/rnabloom.transcripts.nr.short.fa >$outdir/rnabloom.transcripts.all.fa
 else
+	# if mergepool is false and rr is false, then memory usage is too high
+	# combine all without redundancy removal
+	cat $outdir/*/*.transcripts.fa > $outdir/rnabloom.transcripts.fa
+	cat $outdir/*/*.transcripts.short.fa > $outdir/rnabloom.transcripts.short.fa
+
+
 	echo "Renaming transcripts in rnabloom.transcripts.fa..." 1>&2
 	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.fa
 	echo "Renaming transcripts in rnabloom.transcripts.short.fa..." 1>&2
@@ -447,7 +485,7 @@ echo "Fetching total number of transcripts..." 1>&2
 # echo "COMMAND: tac $logfile | grep -m 1 "after:" | awk '{print $NF}'" 1>&2
 # tx_total=$(tac $logfile | grep -m 1 "after:" | awk '{print $NF}')
 # echo "COMMAND: grep \"after:\" $logfile | tail -n1 | awk '{print \$NF}')" 1>&2
-if [[ $pool = false || $rr = true ]]; then
+if [[ "$rr" = true ]]; then
 	tx_total=$(grep "after:" $logfile | tail -n1 | awk '{print $NF}')
 	echo -e "Total number of assembled non-redundant transcripts: $tx_total\n" 1>&2
 else
