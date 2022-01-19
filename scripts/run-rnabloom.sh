@@ -51,7 +51,7 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-d\tdebug mode\n (skips RNA-Bloom)\n \
+		\t-d\tdebug mode\t(skips RNA-Bloom)\n \
 		\t-h\tshow help menu\n \
 		\t-m <int K/M/G>\tallotted memory for Java (e.g. 500G)\n \
 		\t-n\tno redundancy removal\n \
