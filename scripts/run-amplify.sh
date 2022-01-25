@@ -30,8 +30,8 @@ function get_help() {
 		\n \
 		\tOUTPUT:\n \
 		\t-------\n \
-		\t  - amps.conf.short.charge.nr.faa\n \
-		\t  - AMPlify_results.conf.short.charge.nr.tsv\n \
+		\t  - amps.final.faa\n \
+		\t  - AMPlify_results.final.tsv\n \
 		\n \
 		\tEXIT CODES:\n \
 		\t-----------\n \
@@ -51,22 +51,22 @@ function get_help() {
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
 		\t-c <int>\tcharge cut-off (multiple accepted) [i.e. keep charge(sequences >= int]\t(default = 2)\n \
-		\t-d\tdebug mode\t(skips running AMPlify)\n \
+		\t-d\tdownstream filtering only\t(skips running AMPlify)\n \
 		\t-f\tforce final AMPs to be the least number of non-zero AMPs*\n \
 		\t-h\tshow this help menu\n \
 		\t-l <int>\tlength cut-off (multiple accepted) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <0 to 1>\tAMPlify score cut-off (multiple accepted) [i.e. keep score(sequences) >= dbl]\t(default = 0.90)\n \
+		\t-s <3.0103 to 80>\tAMPlify score cut-off (multiple accepted) [i.e. keep score(sequences) >= dbl]\t(default = 10 or 7)\n \
 		\t-t <int>\tnumber of threads\t(default = all)\n
 		\t-T\tstop after obtaining AMPlify TSV file\n\
 		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 0.90 -s 0.80 -s 0.70 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
 		" | table
 
-		echo "*i.e. if filtering by score >= 0.90, length <= 30, and charge >= 2 yields zero AMPs, then score >= 0.90, length <= 50, and charge >= 2 will be used for the next step of the pipeline, etc."
+		echo "*i.e. if filtering by score >= 10, length <= 30, and charge >= 2 yields zero AMPs, then score >= 10, length <= 50, and charge >= 2 will be used for the next step of the pipeline, etc."
 	} 1>&2
 	exit 1
 }
@@ -186,9 +186,11 @@ fi
 # set default confidence
 if [[ "${#confidence[@]}" -eq 0 ]]; then
 	if [[ "$class" == [Aa]mphibia ]]; then
-		confidence=(0.90 0.80 0.70)
+		confidence=(10 7 5)
+		# corresponds to 0.9, 0.8, 0.7
 	else
-		confidence=(0.80 0.70 0.60)
+		confidence=(7 5 4)
+		# corresponds to 0.8, 0.7, 0.6
 	fi
 fi
 
@@ -196,8 +198,8 @@ fi
 
 sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
 for i in "${sorted_confidence[@]}"; do
-	if (($(echo "$i < 0.5" | bc -l) || $(echo "$i > 1" | bc -l))); then
-		print_error "Invalid argument for -c <0.5 to 1>: $i"
+	if (($(echo "$i < 3.0103" | bc -l) || $(echo "$i > 80" | bc -l))); then
+		print_error "Invalid argument for -c <3.0103 to 80>: $i"
 	fi
 done
 
@@ -309,19 +311,21 @@ fi
 if [[ "$debug" = false ]]; then
 	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
 	echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
-	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-	$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+	$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 
 	echo "Finished running AMPlify." 1>&2
 else
-	echo "DEBUG MODE: Skipping AMPlify..." 1>&2
+	echo "FILTERING ONLY: Skipping AMPlify..." 1>&2
 	# echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
 	# model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
 	# echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
 	# echo "Finished running AMPlify." 1>&2
 fi
 # -------------------
-file=$(ls -t $outdir/AMPlify_results_*.txt 2>/dev/null | head -n1 || true)
+
+# just do a TSV check instead!
+file=$(ls -t $outdir/AMPlify_results_*.tsv 2>/dev/null | head -n1 || true)
 echo -e "Output: $file\n" 1>&2
 
 if [[ ! -s $file ]]; then
@@ -337,93 +341,48 @@ if [[ ! -s $file ]]; then
 	exit 2
 fi
 
-# remove empty lines
-(cd $outdir && ln -fs $(basename $file) AMPlify_results.nr.txt)
-file=$outdir/AMPlify_results.nr.txt
-sed -i --follow-symlinks '/^$/d' $file
+# (cd $outdir && ln -fs $(basename $file) AMPlify_results.nr.tsv)
+# file=$outdir/AMPlify_results.nr.tsv
 
 # convert TXT to TSV
+# if length or charge is added to next version, do not need to calculate it here
+# only need to add "Class" variable
 if [[ "$debug" = false ]]; then
 	if [[ -s $outdir/AMPlify_results.nr.faa ]]; then
 		rm $outdir/AMPlify_results.nr.faa
 	fi
 
-	echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
+	echo -e "Adding taxonomic class to AMPlify TSV...\n" 1>&2
+		# do NOT change this order or downstream may be affected
 	echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention\tClass" >$outdir/AMPlify_results.nr.tsv
-	while read line; do
-		seq_id=$(echo "$line" | awk '{print $NF}')
-		read line
-		sequence=$(echo "$line" | awk '{print $NF}')
-		read line
-		score=$(echo "$line" | awk '{print $NF}')
-		read line
-		pred=$(echo "$line" | awk '{print $NF}')
-		read line
-		attn=$(echo "$line" | awk -F ": " '{print $NF}')
-
-		# calculate charge
-		num_K=$(echo "$sequence" | tr -cd "K" | wc -c)
-		num_R=$(echo "$sequence" | tr -cd "R" | wc -c)
-		num_D=$(echo "$sequence" | tr -cd "D" | wc -c)
-		num_E=$(echo "$sequence" | tr -cd "E" | wc -c)
-
-		num_pos=$((num_K + num_R))
-		num_neg=$((num_D + num_E))
-
-		pepcharge=$((num_pos - num_neg))
-
-		len=$(echo -n "$sequence" | wc -c)
-		echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.nr.faa
+		# Change order of these according to AMPlify v1.0.3
+	while IFS=$'\t' read seq_id sequence length charge raw_score score pred attn; do
+		echo ">$seq_id length=$length charge=$charge score=$score prediction=$pred" >>$outdir/AMPlify_results.nr.faa
 		echo "$sequence" >>$outdir/AMPlify_results.nr.faa
 
-		echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn\t$class" >>$outdir/AMPlify_results.nr.tsv
-	done <$file
+		# do NOT change this order or downstream may be affected
+		echo -e "$seq_id\t$sequence\t$length\t$score\t$pred\t$charge\t$attn\t$class" >>$outdir/AMPlify_results.nr.tsv
+	done < <(tail -n +2 $file)
 else
 	if [[ -s $outdir/AMPlify_results.nr.faa && -s $outdir/AMPlify_results.nr.tsv ]]; then
 		# echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
-		echo -e "DEBUG MODE: Skipping TXT to TSV conversion...\n" 1>&2
+		echo -e "FILTERING ONLY: Skipping TSV processing...\n" 1>&2
 	else
 		if [[ -s $outdir/AMPlify_results.nr.faa ]]; then
 			rm $outdir/AMPlify_results.nr.faa
 		fi
 
-		echo -e "Converting the AMPlify TXT output to a TSV file and a FASTA file...\n" 1>&2
+		echo -e "Adding taxonomic class to AMPlify TSV...\n" 1>&2
+		# do NOT change this order or downstream may be affected
 		echo -e "Sequence_ID\tSequence\tLength\tScore\tPrediction\tCharge\tAttention\tClass" >$outdir/AMPlify_results.nr.tsv
-
-		if [[ "$class" == [Aa]mphibia ]]; then
-			class=Amphibia
-		else
-			class=Insecta
-		fi
-
-		while read line; do
-			seq_id=$(echo "$line" | awk '{print $NF}')
-			read line
-			sequence=$(echo "$line" | awk '{print $NF}')
-			read line
-			score=$(echo "$line" | awk '{print $NF}')
-			read line
-			pred=$(echo "$line" | awk '{print $NF}')
-			read line
-			attn=$(echo "$line" | awk -F ": " '{print $NF}')
-
-			# calculate charge
-			num_K=$(echo "$sequence" | tr -cd "K" | wc -c)
-			num_R=$(echo "$sequence" | tr -cd "R" | wc -c)
-			num_D=$(echo "$sequence" | tr -cd "D" | wc -c)
-			num_E=$(echo "$sequence" | tr -cd "E" | wc -c)
-
-			num_pos=$((num_K + num_R))
-			num_neg=$((num_D + num_E))
-
-			pepcharge=$((num_pos - num_neg))
-
-			len=$(echo -n "$sequence" | wc -c)
-			echo ">$seq_id length=$len score=$score prediction=$pred charge=$pepcharge" >>$outdir/AMPlify_results.nr.faa
+		# change teh order of these read while loop after AMPlify v1.0.3 comes out
+		while IFS=$'\t' read seq_id sequence length charge raw_score score pred attn; do
+			echo ">$seq_id length=$length charge=$charge score=$score prediction=$pred" >>$outdir/AMPlify_results.nr.faa
 			echo "$sequence" >>$outdir/AMPlify_results.nr.faa
 
-			echo -e "$seq_id\t$sequence\t$len\t$score\t$pred\t$pepcharge\t$attn\t$class" >>$outdir/AMPlify_results.nr.tsv
-		done <$file
+			# do NOT change this order or downstream may be affected
+			echo -e "$seq_id\t$sequence\t$length\t$score\t$pred\t$charge\t$attn\t$class" >>$outdir/AMPlify_results.nr.tsv
+			done < <(tail -n +2 $file)
 	fi
 fi
 
@@ -437,10 +396,11 @@ echo -e "Number of input sequences: $(printf "%'d" $input_count)\n" 1>&2
 echo "PROGRAM: $(command -v $RUN_SEQTK)" 1>&2
 seqtk_version=$($RUN_SEQTK 2>&1 || true)
 echo -e "VERSION: $(echo "$seqtk_version" | awk '/Version:/ {print $NF}')\n" 1>&2
+
 ### 1 - Filter all sequences for those that are labelled AMP
 #----------------------------------------------------------
 filter_counter=1
-echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50)..." 1>&2
+echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\")..." 1>&2
 
 amps_fasta=$outdir/amps.nr.faa
 amps_tsv=$outdir/AMPlify_results.amps.nr.tsv
@@ -499,7 +459,7 @@ for score in "${sorted_confidence[@]}"; do
 	all_tsv+=($loop_tsv)
 	### 2 - Filter all sequences for those with AMPlify score >= $confidence
 	#--------------------------------------------------------------------
-	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with an AMPlify score >= $score..." 1>&2
+	echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with an AMPlify score >= $score..." 1>&2
 	echo "$header" >$loop_tsv
 	echo -e "COMMAND: awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
 	awk -F "\t" -v var=$score '{if($4>=var) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
@@ -536,7 +496,7 @@ for len in "${sorted_length[@]}"; do
 	all_tsv+=($loop_tsv)
 	### 3 - Filter all sequences for those labelled 'AMP' and length <= $length
 	#--------------------------------------------------------------------
-	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) and with length <= $len..." 1>&2
+	echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") and with length <= $len..." 1>&2
 	echo "$header" >$loop_tsv
 	echo -e "COMMAND: awk -F \"\\\t\" -v var=$len '{if(\$3<=var) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
 	awk -F "\t" -v var=$len '{if($3<=var) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
@@ -573,7 +533,7 @@ for net in "${sorted_charge[@]}"; do
 	all_tsv+=($loop_tsv)
 	### 4 - Filter all sequences labelled 'AMP' and have charge >= $charge
 	#--------------------------------------------------------------------
-	echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) and with charge >= ${net}..." 1>&2
+	echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") and with charge >= ${net}..." 1>&2
 	echo "$header" >$loop_tsv
 	echo -e "COMMAND: awk -F \"\\\t\" -v var=$net '{if(\$6>=var) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
 	awk -F "\t" -v var=$net '{if($6>=var) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
@@ -612,7 +572,7 @@ for score in "${sorted_confidence[@]}"; do
 		((filter_counter += 1))
 		### 5 - Filter all sequences for those AMPlify score >= $confidence and have charge >= $charge
 		#--------------------------------------------------------------------
-		echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= ${score} and with charge >= ${net}..." 1>&2
+		echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score} and with charge >= ${net}..." 1>&2
 		echo "$header" >$loop_tsv
 		echo -e "COMMAND: awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
 		awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
@@ -653,7 +613,7 @@ for score in "${sorted_confidence[@]}"; do
 		#--------------------------------------------------------------------
 		### 6 - Filter all sequences for those with AMPlify score >= $confidence and length <= $length
 		#--------------------------------------------------------------------
-		echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= ${score} and length <= $len..." 1>&2
+		echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score} and length <= $len..." 1>&2
 		echo "$header" >$loop_tsv
 		echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
 		awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
@@ -694,7 +654,7 @@ for len in "${sorted_length[@]}"; do
 		#--------------------------------------------------------------------
 		### 7 - Filter all sequences for those with charge >= $charge and length <= $length
 		#--------------------------------------------------------------------
-		echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with length <= $len and charge >= ${net}..." 1>&2
+		echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with length <= $len and charge >= ${net}..." 1>&2
 		echo "$header" >$loop_tsv
 		echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$net '{if(\$3<=l && \$6>=c) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
 		awk -F "\t" -v l=$len -v c=$net '{if($3<=l && $6>=c) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
@@ -735,7 +695,7 @@ for score in "${sorted_confidence[@]}"; do
 			((filter_counter += 1))
 			### 9 - Filter short and confident sequences for those with AMPlify score >= $confidence and length <= $length, and charge >= $charge
 			#--------------------------------------------------------------------
-			echo "${filter_counter} >>> Filtering for AMP sequences (AMPlify score >= 0.50) with AMPlify score >= ${score}, length <= $len, and charge >= $net..." 1>&2
+			echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score}, length <= $len, and charge >= $net..." 1>&2
 
 			echo "$header" >$loop_tsv
 			echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
@@ -782,15 +742,15 @@ echo "FINAL SUMMARY" 1>&2
 print_line
 
 {
-	echo -e "TSV File\tDescription"
+	echo -e "File\tDescription"
 	echo -e "--------\t-----------"
-	echo -e "AMPlify_results.nr.txt\traw AMPlify results"
-	echo -e "AMPlify_results.nr.tsv\traw AMPlify results in TSV format"
-	echo -e "AMPlify_results.nr.faa\traw AMPlify results in FASTA format"
+	echo -e "$(basename $file)\traw AMPlify results in TSV format"
+	echo -e "AMPlify_results.nr.tsv\tprocessed AMPlify results in TSV format"
+	echo -e "AMPlify_results.nr.faa\tprocessed AMPlify results in FASTA format"
 
 	for i in "${!all_tsv[@]}"; do
 		tsv=${all_tsv[$i]}
-		score=$(echo "$tsv" | grep -o 'score_[0-9]\.[0-9]\+' | cut -f2 -d_ || true)
+		score=$(echo "$tsv" | grep -o 'score_[0-9]\+\.\?[0-9]*' | cut -f2 -d_ || true)
 		length=$(echo "$tsv" | grep -o 'length_[0-9]\+' | cut -f2 -d_ || true)
 		charge=$(echo "$tsv" | grep -o 'charge_[0-9]\+' | cut -f2 -d_ || true)
 
@@ -809,12 +769,12 @@ print_line
 		elif [[ -n "$charge" ]]; then
 			desc="AMPlify results with charge >= ${charge}"
 		else
-			desc="AMPlify results with labelled AMPs (score >= 0.50)"
+			desc="AMPlify results with labelled AMPs (prediction == \"AMP\")"
 		fi
 
 		echo -e "$(basename $tsv)\t$desc"
 	done
-} | table | tee $outdir/README
+} | table | tee $outdir/README 1>&2
 # table <$outdir/README 1>&2
 echo >>$outdir/README
 echo 1>&2
