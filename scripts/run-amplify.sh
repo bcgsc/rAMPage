@@ -50,20 +50,24 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-c <int>\tcharge cut-off (multiple accepted) [i.e. keep charge(sequences >= int]\t(default = 2)\n \
+		\t-c <int>\tcharge cut-off (multiple accepted for sweeps) [i.e. keep charge(sequences >= int]\t(default = 2)\n \
 		\t-d\tdownstream filtering only\t(skips running AMPlify)\n \
+		\t-e <str>\texplicitly force final AMPs to be specified cut-offs [overrides -f, -F]\t(e.g. Score:Length:Charge, AMP:Length:Charge, AMP::)\n \
 		\t-f\tforce final AMPs to be the least number of non-zero AMPs*\n \
+		\t-F\tforce final AMPs to be those passing the most lenient cut-offs [overrides -f]\n \
 		\t-h\tshow this help menu\n \
-		\t-l <int>\tlength cut-off (multiple accepted) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
+		\t-l <int>\tlength cut-off (multiple accepted for sweeps) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <3.0103 to 80>\tAMPlify score cut-off (multiple accepted) [i.e. keep score(sequences) >= dbl]\t(default = 10 or 7)\n \
+		\t-s <3.0103 to 80>\tAMPlify score cut-off (multiple accepted for sweeps) [i.e. keep score(sequences) >= dbl]\t(default = 10 or 7)\n \
 		\t-t <int>\tnumber of threads\t(default = all)\n
 		\t-T\tstop after obtaining AMPlify TSV file\n\
 		" | table
 
 		echo "EXAMPLE(S):"
 		echo -e "\
-		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.rmdup.nr.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -e 10:30:2 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.rmdup.nr.faa\n \
+		\t$PROGRAM -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -e AMP:30:2 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.rmdup.nr.faa\n \
 		" | table
 
 		echo "*i.e. if filtering by score >= 10, length <= 30, and charge >= 2 yields zero AMPs, then score >= 10, length <= 50, and charge >= 2 will be used for the next step of the pipeline, etc."
@@ -111,17 +115,22 @@ outdir=""
 debug=false
 forced_characterization=false
 tsv_file_only=false
+all=false
+explicit=""
+score_amp=false
 # 4 - read options
-while getopts :a:c:dfhl:o:s:t:T opt; do
+while getopts :a:c:de:fFhl:o:s:t:T opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
 		email=true
 		;;
+	F) all=true ;;
 	c) charge+=("$OPTARG") ;;
 	d) debug=true ;;
+	e) explicit="$OPTARG";;
 	f) forced_characterization=true ;;
-	s) confidence+=("$OPTARG") ;;
+	s) if [[ "$OPTARG" == [Aa][Mm][Pp] ]]; then score_amp=true; else confidence+=("$OPTARG"); fi ;;
 	h) get_help ;;
 	l) length+=("$OPTARG") ;;
 	o)
@@ -183,35 +192,14 @@ if [[ -v FORCE_CHAR ]]; then
 	forced_characterization=$FORCE_CHAR
 fi
 
-# set default confidence
-if [[ "${#confidence[@]}" -eq 0 ]]; then
-	if [[ "$class" == [Aa]mphibia ]]; then
-		confidence=(10 7 5)
-		# corresponds to 0.9, 0.8, 0.7
-	else
-		confidence=(7 5 4)
-		# corresponds to 0.8, 0.7, 0.6
-	fi
+if [[ "$all" = true ]]; then
+	forced_characterization=false
 fi
 
-# sort / unique
-
-sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
-for i in "${sorted_confidence[@]}"; do
-	if (($(echo "$i < 3.0103" | bc -l) || $(echo "$i > 80" | bc -l))); then
-		print_error "Invalid argument for -c <3.0103 to 80>: $i"
-	fi
-done
-
-if [[ "${#length[@]}" -eq 0 ]]; then
-	length=(50 30)
+if [[ -n "$explicit" ]]; then
+	all=false
+	forced_characterization=false
 fi
-sorted_length=($(echo "${length[@]}" | tr ' ' '\n' | sort -nru | tr '\n' ' '))
-
-if [[ "${#charge[@]}" -eq 0 ]]; then
-	charge=(2 4 6 8)
-fi
-sorted_charge=($(echo "${charge[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
 
 # 7 - remove status files
 rm -f $outdir/AMPLIFY.DONE
@@ -225,8 +213,9 @@ rm -f $outdir/AMPLIFY.DONE
 	echo "CALL: $args (wd: $(pwd))"
 	if [[ "$custom_threads" = true ]]; then
 		echo
-		echo -e "THREADS: $threads"
+		echo "THREADS: $threads"
 	fi
+	echo
 } 1>&2
 
 if ! command -v mail &>/dev/null; then
@@ -262,6 +251,108 @@ elif ! command -v $RUN_AMPLIFY &>/dev/null; then
 	print_error "Unable to execute $RUN_AMPLIFY."
 fi
 
+# set default confidence
+# default values are used if no input is given through -s
+# if -s AMP is used, then defaults are NOT used
+if [[ "${#confidence[@]}" -eq 0  && "$score_amp" = false ]]; then
+	no_score_given=true
+	if [[ "$class" == [Aa]mphibia ]]; then
+		confidence=(10 7 5)
+		# corresponds to 0.9, 0.8, 0.7
+	else
+		confidence=(7 5 4)
+		# corresponds to 0.8, 0.7, 0.6
+	fi
+elif [[ "$score_amp" = true ]]; then
+	no_score_given=true
+else
+	no_score_given=false
+fi
+# if explicit score is given using -e 6::, then the explicit score is added 
+# to default only if -s is NOT used 
+# if -s is used, then it is added to those values, and no default sweep done.
+# there is no circumstance where it is the ONLY value done in the sweep?
+if [[ -n "$explicit" ]]; then
+	explicit_score=$(echo "$explicit" | cut -f1 -d:)
+	if [[ -n "$explicit_score" ]]; then
+		if [[ "$explicit_score" == [Aa][Mm][Pp] ]]; then
+			score_amp=true
+			no_score_given=true
+			# explicit_score=""
+		else
+			confidence+=("$explicit_score")
+			score_amp=false
+			no_score_given=false
+		fi
+	fi
+fi
+
+# sort / unique
+if [[ "$score_amp" = false ]]; then
+	sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
+
+	for i in "${sorted_confidence[@]}"; do
+		if (($(echo "$i < 3.0103" | bc -l) || $(echo "$i > 80" | bc -l))); then
+			print_error "Invalid argument for -c <3.0103 to 80>: $i"
+		fi
+	done
+fi
+if [[ "${#confidence[@]}" -gt 0 ]]; then
+	echo "Score thresholds: ${sorted_confidence[*]}" 1>&2
+else
+	if [[ "$score_amp" = true ]]; then
+		echo "Score thresholds: None (prediction == \"AMP\" instead)" 1>&2
+	else
+		echo "Score thresholds: None" 1>&2
+	fi
+fi
+# default values only used if -l is not used
+if [[ "${#length[@]}" -eq 0 ]]; then
+	no_length_given=true
+	length=(50 30)
+else
+	no_length_given=false
+fi
+# if -e :10: is used, then the value is either added to default, or other specified values
+# there is no circumstance where it is the only value in the sweep?
+if [[ -n "$explicit" ]]; then
+	explicit_length=$(echo "$explicit" | cut -f2 -d:)
+	if [[ -n "$explicit_length" ]]; then
+		length+=("$explicit_length")
+		no_length_given=false
+	fi
+fi
+sorted_length=($(echo "${length[@]}" | tr ' ' '\n' | sort -nru | tr '\n' ' '))
+
+if [[ "${#sorted_length[@]}" -gt 0 ]]; then
+	echo "Length thresholds: ${sorted_length[*]}" 1>&2
+else
+	echo "Length thresholds: None" 1>&2
+fi
+# default used if no input passed through -c
+if [[ "${#charge[@]}" -eq 0 ]]; then
+	charge=(2 4 6 8)
+	no_charge_given=true
+else
+	no_charge_given=false
+fi
+
+# there is no circumstance where it is the only value in the sweep
+if [[ -n "$explicit" && "$explicit" != [Aa][Mm][Pp] ]]; then
+	explicit_charge=$(echo "$explicit" | cut -f3 -d:)
+	if [[ -n "$explicit_charge" ]]; then
+		charge+=("$explicit_charge")
+		no_charge_given=false
+	fi
+fi
+sorted_charge=($(echo "${charge[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
+
+if [[ "${#sorted_charge[@]}" -gt 0 ]]; then
+	echo "Charge thresholds: ${sorted_charge[*]}" 1>&2
+else
+	echo "Charge thresholds: None" 1>&2
+fi
+echo 1>&2
 echo "PROGRAM: $(command -v $RUN_AMPLIFY)" 1>&2
 echo -e "VERSION: $(command -v $RUN_AMPLIFY | awk -F "/" '{print $(NF-2)}' | cut -f2 -d-)\n" 1>&2
 # echo "VERSION: 1.0.0" 1>&2
@@ -449,49 +540,52 @@ if [[ $tsv_file_only == true ]]; then
 fi
 
 #----------------------------------------------------------
-((filter_counter += 1))
+if [[ "$score_amp" = false ]]; then
+	((filter_counter += 1))
+	mkdir -p $outdir/sweep/score
+	# Go through sorted confidence loop
+	for score in "${sorted_confidence[@]}"; do
+		loop_tsv=$outdir/sweep/score/AMPlify_results.amps.score_${score}.nr.tsv
+		loop_fasta=$outdir/sweep/score/amps.score_${score}.nr.faa
+		all_fastas+=($loop_fasta)
+		all_tsv+=($loop_tsv)
+		### 2 - Filter all sequences for those with AMPlify score >= $confidence
+		#--------------------------------------------------------------------
+		echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with an AMPlify score >= $score..." 1>&2
+		echo "$header" >$loop_tsv
+		echo -e "COMMAND: awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+		awk -F "\t" -v var=$score '{if($4>=var) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
-# Go through sorted confidence loop
-for score in "${sorted_confidence[@]}"; do
-	loop_tsv=$outdir/AMPlify_results.amps.score_${score}.nr.tsv
-	loop_fasta=$outdir/amps.score_${score}.nr.faa
-	all_fastas+=($loop_fasta)
-	all_tsv+=($loop_tsv)
-	### 2 - Filter all sequences for those with AMPlify score >= $confidence
-	#--------------------------------------------------------------------
-	echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with an AMPlify score >= $score..." 1>&2
-	echo "$header" >$loop_tsv
-	echo -e "COMMAND: awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
-	awk -F "\t" -v var=$score '{if($4>=var) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
+		echo "Converting those sequences to FASTA format..." 1>&2
+		echo -e "COMMAND: $RUN_SEQTK subseq $amps_fasta <(awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+		$RUN_SEQTK subseq $amps_fasta <(awk -F "\t" -v var=$score '{if($4>=var) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+		# 	(
+		# 		cd $outdir &&
+		# 			ln -fs $(basename $outfile_conf_nr) $outfile_conf_nr_ln &&
+		# 			ln -fs $(basename $outfile_conf_nr_tsv) $outfile_conf_nr_tsv_ln
+		# 	)
 
-	echo "Converting those sequences to FASTA format..." 1>&2
-	echo -e "COMMAND: $RUN_SEQTK subseq $amps_fasta <(awk -F \"\\\t\" -v var=$score '{if(\$4>=var) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
-	$RUN_SEQTK subseq $amps_fasta <(awk -F "\t" -v var=$score '{if($4>=var) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
-	# 	(
-	# 		cd $outdir &&
-	# 			ln -fs $(basename $outfile_conf_nr) $outfile_conf_nr_ln &&
-	# 			ln -fs $(basename $outfile_conf_nr_tsv) $outfile_conf_nr_tsv_ln
-	# 	)
+		echo "SUMMARY" 1>&2
+		print_line
 
-	echo "SUMMARY" 1>&2
-	print_line
+		count_conf=$(grep -c '^>' ${loop_fasta} || true)
 
-	count_conf=$(grep -c '^>' ${loop_fasta} || true)
+		{
+			echo "Output: ${loop_fasta}"
+			echo "Number of unique predicted AMPs (score >= $score): $(printf "%'d" ${count_conf})"
+		} | sed 's/^/\t/' 1>&2
 
-	{
-		echo "Output: ${loop_fasta}"
-		echo "Number of unique predicted AMPs (score >= $score): $(printf "%'d" ${count_conf})"
-	} | sed 's/^/\t/' 1>&2
+		print_line
+		echo 1>&2
+		#--------------------------------------------------------------------
+	done
+fi
 
-	print_line
-	echo 1>&2
-	#--------------------------------------------------------------------
-done
-
+mkdir -p $outdir/sweep/length
 for len in "${sorted_length[@]}"; do
 	((filter_counter += 1))
-	loop_fasta=$outdir/amps.length_${len}.nr.faa
-	loop_tsv=$outdir/AMPlify_results.amps.length_${len}.nr.tsv
+	loop_fasta=$outdir/sweep/length/amps.length_${len}.nr.faa
+	loop_tsv=$outdir/sweep/length/AMPlify_results.amps.length_${len}.nr.tsv
 	all_fastas+=($loop_fasta)
 	all_tsv+=($loop_tsv)
 	### 3 - Filter all sequences for those labelled 'AMP' and length <= $length
@@ -524,11 +618,11 @@ for len in "${sorted_length[@]}"; do
 	print_line
 	echo 1>&2
 done
-
+mkdir -p $outdir/sweep/charge
 for net in "${sorted_charge[@]}"; do
 	((filter_counter += 1))
-	loop_fasta=$outdir/amps.charge_${net}.nr.faa
-	loop_tsv=$outdir/AMPlify_results.amps.charge_${net}.nr.tsv
+	loop_fasta=$outdir/sweep/charge/amps.charge_${net}.nr.faa
+	loop_tsv=$outdir/sweep/charge/AMPlify_results.amps.charge_${net}.nr.tsv
 	all_fastas+=($loop_fasta)
 	all_tsv+=($loop_tsv)
 	### 4 - Filter all sequences labelled 'AMP' and have charge >= $charge
@@ -563,91 +657,98 @@ for net in "${sorted_charge[@]}"; do
 	#--------------------------------------------------------------------
 done
 
-for score in "${sorted_confidence[@]}"; do
-	for net in "${sorted_charge[@]}"; do
-		loop_fasta=$outdir/amps.score_${score}-charge_${net}.nr.faa
-		loop_tsv=$outdir/AMPlify_results.amps.score_${score}-charge_${net}.nr.tsv
-		all_fastas+=($loop_fasta)
-		all_tsv+=($loop_tsv)
-		((filter_counter += 1))
-		### 5 - Filter all sequences for those AMPlify score >= $confidence and have charge >= $charge
-		#--------------------------------------------------------------------
-		echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score} and with charge >= ${net}..." 1>&2
-		echo "$header" >$loop_tsv
-		echo -e "COMMAND: awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
-		awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
+if [[ "$score_amp" = false ]]; then
+	mkdir -p $outdir/sweep/score_charge
+	for score in "${sorted_confidence[@]}"; do
+		for net in "${sorted_charge[@]}"; do
+			loop_fasta=$outdir/sweep/score_charge/amps.score_${score}-charge_${net}.nr.faa
+			loop_tsv=$outdir/sweep/score_charge/AMPlify_results.amps.score_${score}-charge_${net}.nr.tsv
+			all_fastas+=($loop_fasta)
+			all_tsv+=($loop_tsv)
+			((filter_counter += 1))
+			### 5 - Filter all sequences for those AMPlify score >= $confidence and have charge >= $charge
+			#--------------------------------------------------------------------
+			echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score} and with charge >= ${net}..." 1>&2
+			echo "$header" >$loop_tsv
+			echo -e "COMMAND: awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print }' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+			awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print }' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
-		echo "Converting those sequences into FASTA format..." 1>&2
-		echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print \$1}' <(tail -n +2 $amps_tsv)) > $loop_fasta\n" 1>&2
-		$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+			echo "Converting those sequences into FASTA format..." 1>&2
+			echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v var=$net -v c=$score '{if(\$6>=var && \$4>=c) print \$1}' <(tail -n +2 $amps_tsv)) > $loop_fasta\n" 1>&2
+			$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v var=$net -v c=$score '{if($6>=var && $4>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
 
-		# (
-		# 	cd $outdir &&
-		# 		ln -fs $(basename $outfile_conf_charge_nr) $outfile_conf_charge_nr_ln &&
-		# 		ln -fs $(basename $outfile_conf_charge_nr_tsv) $outfile_conf_charge_nr_tsv_ln
-		# )
+			# (
+			# 	cd $outdir &&
+			# 		ln -fs $(basename $outfile_conf_charge_nr) $outfile_conf_charge_nr_ln &&
+			# 		ln -fs $(basename $outfile_conf_charge_nr_tsv) $outfile_conf_charge_nr_tsv_ln
+			# )
 
-		echo "SUMMARY" 1>&2
-		print_line
+			echo "SUMMARY" 1>&2
+			print_line
 
-		count_conf_charge=$(grep -c '^>' ${loop_fasta} || true)
+			count_conf_charge=$(grep -c '^>' ${loop_fasta} || true)
 
-		{
-			echo "Output: ${loop_fasta}"
-			echo "Number of unique predicted AMPs (score >= $score, charge >= ${net}): $(printf "%'d" ${count_conf_charge})"
-		} | sed 's/^/\t/' 1>&2
+			{
+				echo "Output: ${loop_fasta}"
+				echo "Number of unique predicted AMPs (score >= $score, charge >= ${net}): $(printf "%'d" ${count_conf_charge})"
+			} | sed 's/^/\t/' 1>&2
 
-		print_line
-		echo 1>&2
-		#--------------------------------------------------------------------
+			print_line
+			echo 1>&2
+			#--------------------------------------------------------------------
+		done
 	done
-done
+fi
 
-for score in "${sorted_confidence[@]}"; do
-	for len in "${sorted_length[@]}"; do
-		((filter_counter += 1))
-		loop_fasta=$outdir/amps.score_${score}-length_${len}.nr.faa
-		loop_tsv=$outdir/AMPlify_results.amps.score_${score}-length_${len}.nr.tsv
-		all_fastas+=($loop_fasta)
-		all_tsv+=($loop_tsv)
-		#--------------------------------------------------------------------
-		### 6 - Filter all sequences for those with AMPlify score >= $confidence and length <= $length
-		#--------------------------------------------------------------------
-		echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score} and length <= $len..." 1>&2
-		echo "$header" >$loop_tsv
-		echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
-		awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
+if [[ "$score_amp" = false ]]; then
+	mkdir -p $outdir/sweep/score_length
+	for score in "${sorted_confidence[@]}"; do
+		for len in "${sorted_length[@]}"; do
+			((filter_counter += 1))
+			loop_fasta=$outdir/sweep/score_length/amps.score_${score}-length_${len}.nr.faa
+			loop_tsv=$outdir/sweep/score_length/AMPlify_results.amps.score_${score}-length_${len}.nr.tsv
+			all_fastas+=($loop_fasta)
+			all_tsv+=($loop_tsv)
+			#--------------------------------------------------------------------
+			### 6 - Filter all sequences for those with AMPlify score >= $confidence and length <= $length
+			#--------------------------------------------------------------------
+			echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score} and length <= $len..." 1>&2
+			echo "$header" >$loop_tsv
+			echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+			awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
-		echo "Converting those sequences to FASTA format..." 1>&2
-		echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
-		$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+			echo "Converting those sequences to FASTA format..." 1>&2
+			echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$score '{if(\$3<=l && \$4>=c) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+			$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$score '{if($3<=l && $4>=c) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
 
-		# (
-		# 	cd $outdir &&
-		# 		ln -fs $(basename $outfile_conf_short_nr) $outfile_conf_short_nr_ln &&
-		# 		ln -fs $(basename $outfile_conf_short_nr_tsv) $outfile_conf_short_nr_tsv_ln
-		# )
+			# (
+			# 	cd $outdir &&
+			# 		ln -fs $(basename $outfile_conf_short_nr) $outfile_conf_short_nr_ln &&
+			# 		ln -fs $(basename $outfile_conf_short_nr_tsv) $outfile_conf_short_nr_tsv_ln
+			# )
 
-		echo "SUMMARY" 1>&2
-		print_line
+			echo "SUMMARY" 1>&2
+			print_line
 
-		count_conf_short=$(grep -c '^>' ${loop_fasta} || true)
+			count_conf_short=$(grep -c '^>' ${loop_fasta} || true)
 
-		{
-			echo "Output: ${loop_fasta}"
-			echo "Number of unique predicted AMPs (score >= $score, length <= $len): $(printf "%'d" ${count_conf_short})"
-		} | sed 's/^/\t/' 1>&2
+			{
+				echo "Output: ${loop_fasta}"
+				echo "Number of unique predicted AMPs (score >= $score, length <= $len): $(printf "%'d" ${count_conf_short})"
+			} | sed 's/^/\t/' 1>&2
 
-		print_line
-		echo 1>&2
-		#--------------------------------------------------------------------
+			print_line
+			echo 1>&2
+			#--------------------------------------------------------------------
+		done
 	done
-done
+fi
 
+mkdir -p $outdir/sweep/length_charge
 for len in "${sorted_length[@]}"; do
 	for net in "${sorted_charge[@]}"; do
-		loop_fasta=$outdir/amps.length_${len}-charge_${net}.nr.faa
-		loop_tsv=$outdir/AMPlify_results.amps.length_${len}-charge_${net}.nr.tsv
+		loop_fasta=$outdir/sweep/length_charge/amps.length_${len}-charge_${net}.nr.faa
+		loop_tsv=$outdir/sweep/length_charge/AMPlify_results.amps.length_${len}-charge_${net}.nr.tsv
 		all_fastas+=($loop_fasta)
 		all_tsv+=($loop_tsv)
 		((filter_counter += 1))
@@ -685,57 +786,60 @@ for len in "${sorted_length[@]}"; do
 	done
 done
 
-for score in "${sorted_confidence[@]}"; do
-	for len in "${sorted_length[@]}"; do
-		for net in "${sorted_charge[@]}"; do
-			loop_fasta=$outdir/amps.score_${score}-length_${len}-charge_${net}.nr.faa
-			loop_tsv=$outdir/AMPlify_results.amps.score_${score}-length_${len}-charge_${net}.nr.tsv
-			all_fastas+=($loop_fasta)
-			all_tsv+=($loop_tsv)
-			((filter_counter += 1))
-			### 9 - Filter short and confident sequences for those with AMPlify score >= $confidence and length <= $length, and charge >= $charge
-			#--------------------------------------------------------------------
-			echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score}, length <= $len, and charge >= $net..." 1>&2
+if [[ "$score_amp" = false ]]; then
+	mkdir -p $outdir/sweep/score_length_charge
+	for score in "${sorted_confidence[@]}"; do
+		for len in "${sorted_length[@]}"; do
+			for net in "${sorted_charge[@]}"; do
+				loop_fasta=$outdir/sweep/score_length_charge/amps.score_${score}-length_${len}-charge_${net}.nr.faa
+				loop_tsv=$outdir/sweep/score_length_charge/AMPlify_results.amps.score_${score}-length_${len}-charge_${net}.nr.tsv
+				all_fastas+=($loop_fasta)
+				all_tsv+=($loop_tsv)
+				((filter_counter += 1))
+				### 9 - Filter short and confident sequences for those with AMPlify score >= $confidence and length <= $length, and charge >= $charge
+				#--------------------------------------------------------------------
+				echo "${filter_counter} >>> Filtering for AMP sequences (prediction == \"AMP\") with AMPlify score >= ${score}, length <= $len, and charge >= $net..." 1>&2
 
-			echo "$header" >$loop_tsv
-			echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
-			awk -F "\t" -v l=$len -v c=$score -v p=$net '{if($3<=l && $4>=c && $6>=p) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
+				echo "$header" >$loop_tsv
+				echo -e "COMMAND: awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print}' <(tail -n +2 $amps_tsv) >> $loop_tsv\n" 1>&2
+				awk -F "\t" -v l=$len -v c=$score -v p=$net '{if($3<=l && $4>=c && $6>=p) print}' <(tail -n +2 $amps_tsv) >>$loop_tsv
 
-			echo "Converting those sequences to FASTA format..." 1>&2
-			echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
-			$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$score -v p=$net '{if($3<=l && $4>=c && $6>=p) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
+				echo "Converting those sequences to FASTA format..." 1>&2
+				echo -e "COMMAND: $RUN_SEQTK subseq ${amps_fasta} <(awk -F \"\\\t\" -v l=$len -v c=$score -v p=$net '{if(\$3<=l && \$4>=c && \$6>=p) print \$1}' <(tail -n +2 $amps_tsv)) > ${loop_fasta}\n" 1>&2
+				$RUN_SEQTK subseq ${amps_fasta} <(awk -F "\t" -v l=$len -v c=$score -v p=$net '{if($3<=l && $4>=c && $6>=p) print $1}' <(tail -n +2 $amps_tsv)) >${loop_fasta}
 
-			# (
-			# cd $outdir &&
-			# ln -fs $(basename $outfile_conf_short_charge_nr) $outfile_conf_short_charge_nr_ln &&
-			# ln -fs $(basename $outfile_conf_short_charge_nr_tsv) $outfile_conf_short_charge_nr_tsv_ln &&
-			# ln -fs $outfile_conf_short_charge_nr_ln amps.conf.short.charge.nr.faa &&
-			# ln -fs $outfile_conf_short_charge_nr_tsv_ln AMPlify_results.conf.short.charge.nr.tsv
-			# )
+				# (
+				# cd $outdir &&
+				# ln -fs $(basename $outfile_conf_short_charge_nr) $outfile_conf_short_charge_nr_ln &&
+				# ln -fs $(basename $outfile_conf_short_charge_nr_tsv) $outfile_conf_short_charge_nr_tsv_ln &&
+				# ln -fs $outfile_conf_short_charge_nr_ln amps.conf.short.charge.nr.faa &&
+				# ln -fs $outfile_conf_short_charge_nr_tsv_ln AMPlify_results.conf.short.charge.nr.tsv
+				# )
 
-			echo "SUMMARY" 1>&2
-			print_line
+				echo "SUMMARY" 1>&2
+				print_line
 
-			count_conf_short_charge=$(grep -c '^>' ${loop_fasta} || true)
+				count_conf_short_charge=$(grep -c '^>' ${loop_fasta} || true)
 
-			{
-				echo "Output: ${loop_fasta}"
-				echo "Number of unique AMPs (score >= $score, length <= $len, charge >= $net): $(printf "%'d" ${count_conf_short_charge})"
-			} | sed 's/^/\t/' 1>&2
+				{
+					echo "Output: ${loop_fasta}"
+					echo "Number of unique AMPs (score >= $score, length <= $len, charge >= $net): $(printf "%'d" ${count_conf_short_charge})"
+				} | sed 's/^/\t/' 1>&2
 
-			print_line
-			echo 1>&2
-			#--------------------------------------------------------------------
+				print_line
+				echo 1>&2
+				#--------------------------------------------------------------------
 
+			done
 		done
 	done
-done
+fi
 
 most_filtered_fasta=$loop_fasta
 most_filtered_tsv=$loop_tsv
 
 # echo $outdir/*.faa
-sed --follow-symlinks -i '/^$/d' $outdir/*.faa
+# sed --follow-symlinks -i '/^$/d' $outdir/*.faa
 
 # rewrite final summary using all_tsv and all_fastas and their counts!! trying in ptoftae amplify-new
 echo "FINAL SUMMARY" 1>&2
@@ -750,7 +854,11 @@ print_line
 
 	for i in "${!all_tsv[@]}"; do
 		tsv=${all_tsv[$i]}
-		score=$(echo "$tsv" | grep -o 'score_[0-9]\+\.\?[0-9]*' | cut -f2 -d_ || true)
+		if [[ "$score_amp" = false ]]; then
+			score=$(echo "$tsv" | grep -o 'score_[0-9]\+\.\?[0-9]*' | cut -f2 -d_ | sed 's/\.$//' || true)
+		else
+			score=""
+		fi	
 		length=$(echo "$tsv" | grep -o 'length_[0-9]\+' | cut -f2 -d_ || true)
 		charge=$(echo "$tsv" | grep -o 'charge_[0-9]\+' | cut -f2 -d_ || true)
 
@@ -874,19 +982,108 @@ sed -i '/^-\+\t-\+/d' $outdir/amps.summary.tsv
 # sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
 # soft link the file that has the least number of AMPs but isn't 0
 # final_amps=$most_filtered_fasta
-least_nonzero_amps=$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)
-least_nonzero_amps_tsv=$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)
-highest_score=${sorted_confidence[-1]}
+least_nonzero_amps=$(find $(basename $outdir) -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)" | cut -f2- -d/)
+least_nonzero_amps_tsv=$(find $(basename $outdir) -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)" | cut -f2- -d/)
+
+if [[ "$score_amp" = false ]]; then
+	highest_score=${sorted_confidence[-1]}
+	lowest_score=${sorted_confidence[0]}
+fi
+
 shortest_length=${sorted_length[-1]}
+longest_length=${sorted_length[0]}
 lowest_charge=${sorted_charge[0]}
-final_amps=amps.score_${highest_score}-length_${shortest_length}-charge_${lowest_charge}.nr.faa
-filename=$(echo "$final_amps" | sed 's/^/AMPlify_results./' | sed 's/\.faa/.tsv/')
+highest_charge=${sorted_charge[-1]}
+
+if [[ "$all" = true ]]; then
+	echo -e "\n~~~ Final AMPs determined by -F option used: most lenient thresholds ~~~" 1>&2
+	if [[ "$no_score_given" = false && "$no_length_given" = false && "$no_charge_given" = false ]]; then
+		final_amps=sweep/score_length_charge/amps.score_${lowest_score}-length_${longest_length}-charge_${lowest_charge}.nr.faa
+	elif [[ "$no_score_given" = false && "$no_length_given" = false ]]; then
+		final_amps=sweep/score_length/amps.score_${lowest_score}-length_${longest_length}.nr.faa
+	elif [[ "$no_score_given" = false && "$no_charge_given" = false ]]; then
+		final_amps=sweep/score_charge/amps.score_${lowest_score}-score_${lowest_charge}.nr.faa
+	elif [[ "$no_length_given" = false && "$no_charge_given" = false ]]; then
+		final_amps=sweep/length_charge/amps.length_${longest_length}-charge_${lowest_charge}.nr.faa
+	elif [[ "$no_score_given" = false ]]; then
+		final_amps=sweep/score/amps.score_${lowest_score}.nr.faa
+	elif [[ "$no_length_given" = false ]]; then
+		final_amps=sweep/length/amps.length_${longest_length}.nr.faa
+	elif [[ "$no_charge_given" = false ]]; then
+		final_amps=sweep/charge/amps.charge_${lowest_charge}.nr.faa
+	fi
+	filename=$(echo "$final_amps" | sed 's|amps|AMPlify_results.\0|' | sed 's|\.faa|.tsv|')
+elif [[ -n "$explicit" ]]; then
+	echo -e "\n~~~ Final AMPs determined by -e $explicit parameter ~~~" 1>&2
+	if [[ -n "$explicit_score" && -n "$explicit_length" && -n "$explicit_charge" ]]; then
+		if [[ "$score_amp" = true ]]; then
+			final_amps=sweep/length_charge/amps.length_${explicit_length}-charge_${explicit_charge}.nr.faa
+			echo "~~~ Score: AMP | Length: $explicit_length | Charge: $explicit_charge ~~~" 1>&2
+		else
+			final_amps=sweep/score_length_charge/amps.score_${explicit_score}-length_${explicit_length}-charge_${explicit_charge}.nr.faa
+			echo "~~~ Score: $explicit_score | Length: $explicit_length | Charge: $explicit_charge ~~~" 1>&2
+		fi
+	elif [[ -n "$explicit_score" && -n "$explicit_length" ]]; then
+		if [[ "$score_amp" = true ]]; then
+			final_amps=sweep/length/amps.length_${explicit_length}.nr.faa
+			echo "~~~ Score: AMP | Length: $explicit_length ~~~" 1>&2
+		else
+			final_amps=sweep/score_length/amps.score_${explicit_score}-length_${explicit_length}.nr.faa
+			echo "~~~ Score: $explicit_score | Length: $explicit_length ~~~" 1>&2
+		fi
+	elif [[ -n "$explicit_score" && -n "$explicit_charge" ]]; then
+		if [[ "$score_amp" = true ]]; then
+			final_amps=sweep/charge/amps.charge_${explicit_charge}.nr.faa
+			echo "~~~ Score: AMP | Charge: $explicit_charge ~~~" 1>&2
+		else
+			final_amps=sweep/score_charge/amps.score_${explicit_score}-charge_${explicit_charge}.nr.faa
+			echo "~~~ Score: $explicit_score | Charge: $explicit_charge ~~~" 1>&2
+		fi
+	elif [[ -n "$explicit_length" && -n "$explicit_charge" ]]; then
+		final_amps=sweep/length_charge/amps.length_${explicit_length}-charge_${explicit_charge}.nr.faa
+		echo "~~~ Length: $explicit_length | Charge: $explicit_charge ~~~" 1>&2
+	elif [[ -n "$explicit_score" ]]; then
+		final_amps=sweep/score/amps.score_${explicit_score}.nr.faa
+		echo "~~~ Score: $explicit_score ~~~" 1>&2
+	elif [[ -n "$explicit_length" ]]; then
+		final_amps=sweep/length/amps.length_${explicit_length}.nr.faa
+		echo "~~~ Length: $explicit_length ~~~" 1>&2
+	elif [[ -n "$explicit_charge" ]]; then
+		final_amps=sweep/charge/amps.charge_${explicit_charge}.nr.faa
+		echo "~~~ Charge: $explicit_charge ~~~" 1>&2
+	else
+		final_amps=$(basename $amps_fasta)
+		echo "~~~ Prediction: AMP ~~~" 1>&2
+	fi
+	filename=$(echo "$final_amps" | sed 's|amps|AMPlify_results.\0|' | sed 's|\.faa|.tsv|')
+elif [[ "$forced_characterization" = true ]]; then
+	echo -e "\n~~~ Final AMPs determined by -f: strictest non-zero AMP filters ~~~" 1>&2
+else
+	echo -e "\n~~~ Final AMPs determined to be strictest putative AMP filters (default) ~~~" 1>&2
+	if [[ "$no_score_given" = false && "$no_length_given" = false && "$no_charge_given" = false ]]; then
+		final_amps=sweep/score_length_charge/amps.score_${highest_score}-length_${shortest_length}-charge_${highest_charge}.nr.faa
+	elif [[ "$no_score_given" = false && "$no_length_given" = false ]]; then
+		final_amps=sweep/score_length/amps.score_${highest_score}-length_${shortest_length}.nr.faa
+	elif [[ "$no_score_given" = false && "$no_charge_given" = false ]]; then
+		final_amps=sweep/score_charge/amps.score_${highest_score}-score_${highest_charge}.nr.faa
+	elif [[ "$no_length_given" = false && "$no_charge_given" = false ]]; then
+		final_amps=sweep/length_charge/amps.length_${shortest_length}-charge_${highest_charge}.nr.faa
+	elif [[ "$no_score_given" = false ]]; then
+		final_amps=sweep/score/amps.score_${highest_score}.nr.faa
+	elif [[ "$no_length_given" = false ]]; then
+		final_amps=sweep/length/amps.length_${shortest_length}.nr.faa
+	elif [[ "$no_charge_given" = false ]]; then
+		final_amps=sweep/charge/amps.charge_${highest_charge}.nr.faa
+	fi
+	filename=$(echo "$final_amps" | sed 's|amps|AMPlify_results.\0|' | sed 's|\.faa|.tsv|')
+fi
+
 # filename=$most_filtered_tsv
 
 if [[ $forced_characterization = false ]]; then
 	(cd $outdir && ln -fs ${final_amps} amps.final.faa && ln -fs ${filename} AMPlify_results.final.tsv)
 else
-	(cd $outdir && ln -fs $(basename $least_nonzero_amps) amps.final.faa && ln -fs $(basename $least_nonzero_amps_tsv) AMPlify_results.final.tsv)
+	(cd $outdir && ln -fs $least_nonzero_amps amps.final.faa && ln -fs $least_nonzero_amps_tsv AMPlify_results.final.tsv)
 fi
 
 final_count=$(grep -c '^>' $outdir/amps.final.faa || true)
