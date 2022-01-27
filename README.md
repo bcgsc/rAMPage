@@ -159,7 +159,7 @@ Download **and** decompress the following [databases](https://entap.readthedocs.
 After decompression, the databases can be configured using [`scripts/config-entap.sh`](scripts/config-entap.sh):
 
 ```
-scripts/config-entap.sh -t 8 invertebrate.protein.faa vertebrate_other.protein.faa uniprot_sprot.fasta nr.fasta
+scripts/config-entap.sh -t 8 invertebrate_protein.faa vertebrate_other.protein.faa uniprot_sprot.fasta nr.fasta
 ```
 
 The script configures all the databases in the `EnTAP-0.10.7-beta/bin` directory.
