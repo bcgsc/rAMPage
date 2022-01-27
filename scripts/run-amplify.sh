@@ -407,11 +407,29 @@ if [[ "$debug" = false ]]; then
 
 	echo "Finished running AMPlify." 1>&2
 else
-	echo "FILTERING ONLY: Skipping AMPlify..." 1>&2
-	# echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
-	# model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
-	# echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format txt 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-	# echo "Finished running AMPlify." 1>&2
+	if [[ -s $outdir/amplify.out ]]; then
+		output_file=$(awk '/Results saved as:/ {print $NF}' $outdir/amplify.out)
+		if [[ -s $output_file ]]; then
+			echo "FILTERING ONLY: Skipping AMPlify..." 1>&2
+		else
+			model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
+			echo "WARNING: FILTERING ONLY -d option selected but no previous AMPlify runs detected:"
+			echo "MISSING: $output_file" 1>&2
+			echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
+			echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+			# $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+			echo "Finished running AMPlify." 1>&2
+		fi
+	else
+		model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
+		echo "WARNING: FILTERING ONLY -d option selected but no previous AMPlify runs detected." 1>&2
+		echo "MISSING: $outdir/amplify.out" 1>&2
+		echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
+		echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+		# $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+		
+		echo "Finished running AMPlify." 1>&2
+	fi
 fi
 # -------------------
 
