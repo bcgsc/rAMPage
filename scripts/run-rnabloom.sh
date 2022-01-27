@@ -450,32 +450,37 @@ label=$(echo "$workdir" | awk -F "/" 'BEGIN{OFS="-"}{gsub(/-/, "_", $NF); print 
 if [[ "$mergepool" = true ]]; then
 	# merged into main assembly directory
 	echo "Renaming transcripts in rnabloom.transcripts.fa..." 1>&2
-	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.fa
+	sed -i "s/^>/>${label}-/" $outdir/rnabloom.transcripts.fa
 	echo "Renaming transcripts in rnabloom.transcripts.short.fa..." 1>&2
-	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.short.fa
+	sed -i "s/^>/>${label}-/" $outdir/rnabloom.transcripts.short.fa
 
 	echo -e "Combining rnabloom.transcripts.fa and rnabloom.transcripts.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.fa $outdir/rnabloom.transcripts.short.fa >$outdir/rnabloom.transcripts.all.fa
 elif [[ "$rr" = true ]]; then
 	# if mergepool is false and rr is true, then this is a one line readslist.txt
-	echo "Renaming transcripts in rnabloom.transcripts.nr.fa..." 1>&2
-	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.fa
-	echo "Renaming transcripts in rnabloom.transcripts.nr.short.fa..." 1>&2
-	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.short.fa
+	# prefix is already applied
+	# echo "Renaming transcripts in rnabloom.transcripts.nr.fa..." 1>&2
+	# sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.fa
+	# echo "Renaming transcripts in rnabloom.transcripts.nr.short.fa..." 1>&2
+	# sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.nr.short.fa
 
 	echo -e "Combining rnabloom.transcripts.nr.fa and rnabloom.transcripts.nr.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.nr.fa $outdir/rnabloom.transcripts.nr.short.fa >$outdir/rnabloom.transcripts.all.fa
 else
 	# if mergepool is false and rr is false, then memory usage is too high
 	# combine all without redundancy removal
-	cat $outdir/*/*.transcripts.fa > $outdir/rnabloom.transcripts.fa
-	cat $outdir/*/*.transcripts.short.fa > $outdir/rnabloom.transcripts.short.fa
-
 
 	echo "Renaming transcripts in rnabloom.transcripts.fa..." 1>&2
-	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.fa
+	for i in $outdir/*/*.transcripts.fa; do 
+		tissue=$(echo "$i" | awk -F "/" '{print $(NF-1)}')
+		sed "s/^>${label}-/\0${tissue}-/" $i >> $outdir/rnabloom.transcripts.fa
+	done
+
 	echo "Renaming transcripts in rnabloom.transcripts.short.fa..." 1>&2
-	sed -i "s/^>/>${label}-/g" $outdir/rnabloom.transcripts.short.fa
+	for i in $outdir/*/*.transcripts.short.fa; do 
+		tissue=$(echo "$i" | awk -F "/" '{print $(NF-1)}')
+		sed "s/^>${label}-/\0${tissue}-/" $i >> $outdir/rnabloom.transcripts.short.fa
+	done
 
 	echo -e "Combining rnabloom.transcripts.fa and rnabloom.transcripts.short.fa...\n" 1>&2
 	cat $outdir/rnabloom.transcripts.fa $outdir/rnabloom.transcripts.short.fa >$outdir/rnabloom.transcripts.all.fa
