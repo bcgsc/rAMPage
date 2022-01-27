@@ -498,7 +498,8 @@ else
 	echo -e "Total number of assembled transcripts: $tx_total\n" 1>&2
 fi
 
-echo -e "Assembly: $outdir/rnabloom.transcripts.all.fa\n" 1>&2
+echo -e "Output: $outdir/rnabloom.transcripts.all.fa\n" 1>&2
+
 default_name="$(realpath -s ${workdir}/assembly)"
 if [[ "$default_name" != "$outdir" ]]; then
 	count=1
@@ -530,7 +531,6 @@ echo -e "END: $(date)\n" 1>&2
 touch $outdir/ASSEMBLY.DONE
 echo -e "STATUS: DONE.\n" 1>&2
 
-echo "Output: $outdir/rnabloom.transcripts.all.fa" 1>&2
 
 if [[ "$email" = true ]]; then
 	# org=$(echo "$outdir" | awk -F "/" '{print $(NF-2), $(NF-1)}')
