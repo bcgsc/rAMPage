@@ -8,10 +8,12 @@ BENCHMARK := true
 ENTAPDIR := $(shell dirname $(RUN_ENTAP))
 DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
 EVALUE := 1e-5
-SCORE := "-s 0.90 -s 0.80 -s 0.70"
-LENGTH := "-l 30 -l 50 -l 70"
-CHARGE := "-c 2 -c 4 -c 6 -c 8"
+SCORE := ""
+LENGTH := ""
+CHARGE := ""
 RR := true
+FILTER_ONLY := false
+
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 REF_AMP_PRECURSOR := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.precursor.faa)
@@ -76,7 +78,6 @@ annotation/final_annotations.final.tsv annotation/final_results/final_annotation
 		fi; \
 	fi
 
-
 # 10. amplify
 amplify: amplify/amps.final.faa
 
@@ -84,15 +85,159 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
 	@if [[ -n $(EMAIL) ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			if [[ $(FILTER_ONLY) == true ]]; then \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			else \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			fi; \
 		else \
-			$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			if [[ $(FILTER_ONLY) == true ]]; then \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					$< -d -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					$< -d -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			else \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					$< -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					$< -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					$< -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					$< -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					$< -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			fi; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			if [[ $(FILTER_ONLY) == true ]]; then \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					/usr/bin/time -pv $< -d -a -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			else \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					/usr/bin/time -pv $< -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					/usr/bin/time -pv $< -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					/usr/bin/time -pv $< -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			fi; \
 		else \
-			$< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+			if [[ $(FILTER_ONLY) == true ]]; then \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					$< -d -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					$< -d -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					$< -d -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					$< -d -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					$< -d -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					$< -d -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					$< -d -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					$< -d -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			else \
+				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					$< -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
+					$< -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
+					$< -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+					$< -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(SCORE)" ]]; then \
+					$< -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" ]]; then \
+					$< -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(CHARGE)" ]]; then \
+					$< -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				else \
+					$< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				fi; \
+			fi; \
 		fi; \
 	fi
 

@@ -51,23 +51,26 @@ function get_help() {
 		echo "OPTIONS:"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir)\n \
+		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir; should be Amphibia or Insecta)\n \
+		\t-C <int>\tcharge threshold sweep for AMPs\t(accepted multiple times; default = 2)\n \
 		\t-d\tdebug mode of Makefile\n \
+		\t-e <str>\texplicit putative AMP filter\t(overrides -f, -F; e.g. 10:30:2 [Score:Length:Charge])
+		\t-E <e-value>\te-value threshold for homology search\t(default = 1e-5)\n \
 		\t-f\tforce characterization even if no AMPs found\n \
+		\t-F\tfilter AMPs only (do not re-run AMPlify, only downstream steps)\n \
 		\t-h\tshow help menu\n \
+		\t-l\tuse lenient thresholds for the putative AMP filter\t(overrides -f; default = uses strictest filter)\n \
+		\t-L <int>\tlength threshold sweep for AMPs\t(accepted multiple times; default = 30)\n \
 		\t-m <target>\tMakefile target\t(default = exonerate)\n \
 		\t-n <species>\ttaxonomic species or name of the dataset\t(default = second-level directory in \$outdir)\n \
 		\t-o <directory>\toutput directory\t(default = directory of input reads TXT file)\n \
 		\t-p\trun processes in parallel\n \
-		\t-r <FASTA.gz>\treference transcriptome\t(accepted multiple times, *.fna.gz *.fsa_nt.gz)\n \
+		\t-r <FASTA.gz>\treference transcriptome\t(accepted multiple times; file ext: *.fna.gz *.fsa_nt.gz)\n \
+		\t-R\tdisable redundancy removal during transcript assembly\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
+		\t-S <3.0103 to 80>\tAMPlify score threshold sweep for AMPs\t(accepted multiple times; default = 10 [amphibians], 7 [insects])\n \
 		\t-t <int>\tnumber of threads\t(default = 48)\n \
 		\t-v\tprint version number\n \
-		\t-E <e-value>\tE-value threshold for homology search\t(default = 1e-5)\n \
-		\t-S <0 to 1>\tAMPlify score threshold for amphibian AMPs\t(default = 0.90)\n \
-		\t-L <int>\tLength threshold for AMPs\t(default = 30)\n \
-		\t-C <int>\tCharge threshold for AMPs\t(default = 2)\n \
-		\t-R\tDisable redundancy removal during transcript assembly\n \
 		" | table
 
 		echo "EXAMPLE(S):"
@@ -146,11 +149,15 @@ forced_characterization=false
 rr_assembly=true
 
 custom_evalue=1e-5
-custom_score=0.90
-custom_length=30
-custom_charge=2
+custom_score=()
+custom_length=()
+custom_charge=()
+lenient=false
+explicit=""
+filter=false
 
-while getopts :ha:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
+
+while getopts :ha:c:dfFr:m:n:o:pst:vE:S:L:C:R:e:l opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -164,7 +171,9 @@ while getopts :ha:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
 	d)
 		debug="--debug"
 		;;
+	e) explicit="$OPTARG" ;;
 	f) forced_characterization=true ;;
+	F) filter=true ;;
 	h) get_help ;;
 	m) target=$(echo "$OPTARG" | sed 's/.\+/\L&/') ;;
 	n)
@@ -187,10 +196,11 @@ while getopts :ha:c:dfr:m:n:o:pst:vE:S:L:C:R opt; do
 		exit 0
 		;;
 	E) custom_evalue=$OPTARG ;;
-	S) custom_score=$OPTARG ;;
-	L) custom_length=$OPTARG ;;
-	C) custom_charge=$OPTARG ;;
+	S) custom_score+=($OPTARG) ;;
+	L) custom_length+=($OPTARG) ;;
+	C) custom_charge+=($OPTARG) ;;
 	R) rr_assembly=false ;;
+	l) lenient=true;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done
@@ -231,9 +241,26 @@ if [[ -z $class ]]; then
 fi
 
 if [[ -z $species ]]; then
-	species=$(echo "$outdir" | sed "s|$ROOT_DIR||" | awk -F "/" '{print $3}' | sed 's/.\+/\L&/')
+	species=$(echo "$outdir" | sed "s|$ROOT_DIR||" | awk -F "/" '{print $3}' | sed 's/.\+/\L&/' | sed 's/-/_/g')
 fi
 
+if [[ "$class" != [Aa][Mm][Pp][Hh][Ii][Bb][Ii][Aa]  && "$class" != [Ii][Nn][Ss][Ee][Cc][Tt][Aa] ]]; then
+	print_error "-c $class must be Amphibia or Insecta."
+fi
+
+# explicit overrides forced char, and leniency
+if [[ -n "$explicit" ]]; then
+	export EXPLICIT=$explicit
+	forced_characterization=false
+	lenient=false
+fi
+
+if [[ "$lenient" = true ]]; then
+	forced_characterization=false
+fi
+
+export FORCE_CHAR=$forced_characterization
+export LENIENT=$lenient
 export CLASS=$class
 # export CLASS=${class,,}
 export SPECIES=$species
@@ -275,7 +302,7 @@ mkdir -p $outdir/logs
 
 	echo "CALL: $args (wd: $(pwd))"
 	echo -e "THREADS: $num_threads\n"
-} | tee $outdir/logs/00-rAMPage.log 1>&2
+} | tee -a $outdir/logs/00-rAMPage.log 1>&2
 
 # check that all rows have the same number of columns
 if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
@@ -283,6 +310,7 @@ if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
 fi
 
 export WORKDIR=$outdir
+export STRANDED=$stranded
 
 # check that there are either 2 or 3 columns
 num_cols=$(awk '{print NF}' $input | sort -u)
@@ -296,13 +324,6 @@ else
 	print_error "There are too many columns in the input TXT file."
 fi
 
-if [[ "$stranded" = true ]]; then
-	#	touch $outdir/STRANDED.LIB
-	export STRANDED=true
-else
-	#	touch $outdir/NONSTRANDED.LIB
-	export STRANDED=false
-fi
 
 {
 	echo "EXPORTED VARIABLES:"
@@ -314,9 +335,13 @@ fi
 	echo "CLASS=$CLASS"
 	echo "SPECIES=$SPECIES"
 	echo "FORCE_CHAR"=$forced_characterization
+	echo "LENIENT=$lenient"
+	echo "EXPLICIT=$explicit"
 	print_line
 	echo
 } | tee -a $outdir/logs/00-rAMPage.log 1>&2
+
+printenv > $outdir/env.txt
 # class=$(echo "$outdir" | sed "s|$ROOT_DIR/\?||" | awk -F "/" '{print $1}')
 # if [[ -n $class ]]; then
 # 	touch $outdir/${class^^}.CLASS
@@ -348,96 +373,149 @@ else
 	benchmark=true
 fi
 
-if [[ $CLASS == [Aa]mphibia ]]; then
-	if (($(echo "$custom_score < 0.50" | bc -l))); then
-		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
-		custom_score=$(printf "%1.${places}f" 0.50)
-		scores="-s $custom_score"
-		# want 0.50 to be the lowest option
-	else
-		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
-		custom_score2=$(printf "%1.${places}f" $(echo "${custom_score}-0.1" | bc -l))
-		if (($(echo "$custom_score2 >= 0.50" | bc -l))); then
-			custom_score2_opt="-s $custom_score2"
-		else
-			custom_score2_opt=""
+if [[ "${#custom_score[@]}" -gt 0 ]]; then
+	for i in "${custom_score[@]}"; do
+		if (($(echo "$i < 3.0103" | bc -l) || $(echo "$i > 80" | bc -l))); then
+			print_error "Invalid argument for -S <3.0103 to 80>: $i"
 		fi
-		custom_score3=$(printf "%1.${places}f" $(echo "${custom_score2}-0.1" | bc -l))
-		if (($(echo "$custom_score3 >= 0.50" | bc -l))); then
-			custom_score3_opt="-s $custom_score3"
-		else
-			custom_score3_opt=""
-		fi
-		scores="-s $custom_score $custom_score2_opt $custom_score3_opt"
-	fi
+	done
+	# create the argument
+	scores=$(echo "${custom_score[*]}" | sed 's/ / -s /g' | sed 's/^/-s /' )
 else
-	if (($(echo "$custom_score < 0.5" | bc -l))); then
-		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
-		custom_score=$(printf "%1.${places}f" 0.50)
-		scores="-s $custom_score"
-		# want 0.50 to be the lowest option
-	else
-		places=$(echo "$custom_score" | cut -d. -f2 | tr -d '\n' | wc -m)
-		custom_score1=$(printf "%1.${places}f" $(echo "${custom_score}-0.1" | bc -l))
-		if (($(echo "$custom_score1 >= 0.50" | bc -l))); then
-			custom_score1_opt="-s $custom_score1"
-		else
-			custom_score1_opt=""
-		fi
-
-		custom_score2=$(printf "%1.${places}f" $(echo "${custom_score1}-0.1" | bc -l))
-		if (($(echo "$custom_score2 >= 0.50" | bc -l))); then
-			custom_score2_opt="-s $custom_score2"
-		else
-			custom_score2_opt=""
-		fi
-
-		custom_score3=$(printf "%1.${places}f" $(echo "${custom_score2}-0.1" | bc -l))
-		if (($(echo "$custom_score3 >= 0.50" | bc -l))); then
-			custom_score3_opt="-s $custom_score3"
-		else
-			custom_score3_opt=""
-		fi
-		if [[ -z "$custom_score1_opt" ]]; then
-			scores="-s $custom_score"
-		else
-			scores="$custom_score1_opt $custom_score2_opt $custom_score3_opt"
-		fi
-	fi
+	# if there are no arguments, opt is nothing to trigger default in AMPlify.
+	scores=""
 fi
 
-custom_length2=$(echo "${custom_length}+20" | bc -l)
-custom_length3=$(echo "${custom_length2}+20" | bc -l)
-lengths="-l $custom_length -l $custom_length2 -l $custom_length3"
+if [[ "${#custom_length[@]}" -gt 0 ]]; then
+	for i in "${custom_score[@]}"; do
+		if (($(echo "$i < 2" | bc -l) || $(echo "$i > 200" | bc -l))); then
+			print_error "Invalid argument for -L <int>: $i. AMPlify only classifies sequences from 2 to 200 amino acids long."
+		fi
+	done
 
-custom_charge2=$(echo "${custom_charge}+2" | bc -l)
-custom_charge3=$(echo "${custom_charge2}+2" | bc -l)
-custom_charge4=$(echo "${custom_charge3}+2" | bc -l)
+	lengths=$(echo "${custom_length[*]}" | sed 's/ / -l /g' | sed 's/^/-l /')
+else
+	lengths=""
+fi
 
-charges="-c $custom_charge -c $custom_charge2 -c $custom_charge3 -c $custom_charge4"
+if [[ "${#custom_charge[@]}" -gt 0 ]]; then
+	charges=$(echo "${custom_charge[*]}" | sed 's/ / -c /g' | sed 's/^/-c /')
+else
+	charges=""
+fi
 
 # RUN THE PIPELINE USING THE MAKE FILE
 echo "Running rAMPage..." 1>&2
 echo -e "$version_message\n" 1>&2
 if [[ "$benchmark" = true ]]; then
 	if [[ "$target" != "clean" ]]; then
-		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
 
-		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		if [[ -n "$scores" && -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$scores" && -n "$lengths" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$scores" && -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$scores" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter $lenient_opt $explicit_opt SCORE="$scores" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$lengths" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		else 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		fi
+		
 	else
-		echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
-
-		/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		if [[ -n "$scores" && -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$scores" && -n "$lengths" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths  EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$scores" && -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$scores" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$lengths" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$charges" ]]; then 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		else 
+			echo "COMMAND: /usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			/usr/bin/time -pv make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		fi
 	fi
 else
 	if [[ "$target" != "clean" ]]; then
-		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee $outdir/logs/00-rAMPage.log 1>&2" 1>&2
-
-		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		if [[ -n "$scores" && -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$scores" && -n "$lengths" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$scores" && -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$scores" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$lengths" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		elif [[ -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		else 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 2>&1 | tee -a $outdir/logs/00-rAMPage.log 1>&2
+		fi
 	else
-		echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
-
-		make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		if [[ -n "$scores" && -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$scores" && -n "$lengths" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$scores" && -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$lengths" && -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths CHARGE=$charges EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$scores" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE=$scores EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter SCORE="$scores" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$lengths" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH="$lengths" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		elif [[ -n "$charges" ]]; then 
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter LENGTH=$lengths EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter CHARGE="$charges" EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		else
+			echo "COMMAND: make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2" 1>&2
+			make INPUT=$input $threads PARALLEL=$parallel BENCHMARK=$benchmark FILTER_ONLY=$filter EVALUE=$custom_evalue RR=$rr_assembly $email_opt -C $outdir -f $ROOT_DIR/scripts/Makefile $debug $target 1>&2
+		fi
 	fi
 fi
 
@@ -446,14 +524,14 @@ if [[ "$target" != "clean" ]]; then
 	if [[ "$email" = true ]]; then
 		if [[ "$benchmark" == true ]]; then
 			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
-			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh -a "$address" $outdir/logs &>$outdir/logs/00-summary.log
+			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh -a "$address" $outdir/logs &>>$outdir/logs/00-summary.log
 		# else
 			# echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
 		fi
 	else
 		if [[ "$benchmark" == true ]]; then
 			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
-			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh $outdir/logs &>$outdir/logs/00-summary.log
+			/usr/bin/time -pv $ROOT_DIR/scripts/summarize-benchmark.sh $outdir/logs &>>$outdir/logs/00-summary.log
 		# else
 			# echo -e "\nBenchmark option not selected-- time, CPU, and memory usage not recorded." 1>&2
 		fi

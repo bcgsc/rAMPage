@@ -59,7 +59,7 @@ function get_help() {
 		\t-l <int>\tlength cut-off (multiple accepted for sweeps) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s <3.0103 to 80>\tAMPlify score cut-off (multiple accepted for sweeps) [i.e. keep score(sequences) >= dbl]\t(default = 10 or 7)\n \
-		\t-t <int>\tnumber of threads\t(default = all)\n
+		\t-t <int>\tnumber of threads\t(default = all)\n \
 		\t-T\tstop after obtaining AMPlify TSV file\n\
 		" | table
 
@@ -196,6 +196,9 @@ if [[ "$all" = true ]]; then
 	forced_characterization=false
 fi
 
+if [[ -v EXPLICIT ]]; then
+	explicit=$EXPLICIT
+fi
 if [[ -n "$explicit" ]]; then
 	all=false
 	forced_characterization=false
@@ -288,15 +291,14 @@ if [[ -n "$explicit" ]]; then
 fi
 
 # sort / unique
-if [[ "$score_amp" = false ]]; then
-	sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
+sorted_confidence=($(echo "${confidence[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
 
-	for i in "${sorted_confidence[@]}"; do
-		if (($(echo "$i < 3.0103" | bc -l) || $(echo "$i > 80" | bc -l))); then
-			print_error "Invalid argument for -c <3.0103 to 80>: $i"
-		fi
-	done
-fi
+for i in "${sorted_confidence[@]}"; do
+	if (($(echo "$i < 3.0103" | bc -l) || $(echo "$i > 80" | bc -l))); then
+		print_error "Invalid argument for -c <3.0103 to 80>: $i"
+	fi
+done
+
 if [[ "${#confidence[@]}" -gt 0 ]]; then
 	echo "Score thresholds: ${sorted_confidence[*]}" 1>&2
 else
@@ -306,6 +308,7 @@ else
 		echo "Score thresholds: None" 1>&2
 	fi
 fi
+
 # default values only used if -l is not used
 if [[ "${#length[@]}" -eq 0 ]]; then
 	no_length_given=true
@@ -417,7 +420,7 @@ else
 			echo "MISSING: $output_file" 1>&2
 			echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
 			echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-			# $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+			$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 			echo "Finished running AMPlify." 1>&2
 		fi
 	else
@@ -426,7 +429,7 @@ else
 		echo "MISSING: $outdir/amplify.out" 1>&2
 		echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
 		echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-		# $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+		$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 		
 		echo "Finished running AMPlify." 1>&2
 	fi
@@ -1092,6 +1095,8 @@ else
 		final_amps=sweep/length/amps.length_${shortest_length}.nr.faa
 	elif [[ "$no_charge_given" = false ]]; then
 		final_amps=sweep/charge/amps.charge_${highest_charge}.nr.faa
+	else
+		final_amps=sweep/score_length_charge/amps.score_${highest_score}-length_${shortest_length}-charge_${highest_charge}.nr.faa
 	fi
 	filename=$(echo "$final_amps" | sed 's|amps|AMPlify_results.\0|' | sed 's|\.faa|.tsv|')
 fi
