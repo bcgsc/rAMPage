@@ -208,15 +208,18 @@ done
 shift $((OPTIND - 1))
 
 # 5 - incorrect number of arguments
-if [[ "$#" -ne 1 ]]; then
+
+if [[ "$#" -ne 1  && "$target" != "clean" ]]; then
 	print_error "Incorrect number of arguments."
 fi
 
 # 6 - check inputs
-if [[ ! -f $(realpath $1) ]]; then
-	print_error "Input file $(realpath $1) does not exist."
-elif [[ ! -s $(realpath $1) ]]; then
-	print_error "Input file $(realpath $1) is empty."
+if [[ "$#" -eq 1 && "$target" != "clean" ]] ; then
+	if [[ ! -f $(realpath $1) ]]; then
+		print_error "Input file $(realpath $1) does not exist."
+	elif [[ ! -s $(realpath $1) ]]; then
+		print_error "Input file $(realpath $1) is empty."
+	fi
 fi
 
 if [[ "${target,,}" =~ ^(check|reads|trim|readslist|assembly|filtering|translation|homology|cleavage|amplify|annotation|exonerate|sable|all|clean)$ ]]; then
@@ -234,6 +237,10 @@ if [[ ! -v ROOT_DIR ]]; then
 	print_error "ROOT_DIR is unbound. Please export ROOT_DIR=/path/to/rAMPage/GitHub/directory."
 fi
 
+if [[ "$target" != "clean" && -z "$outdir" ]]; then
+	outdir=$(pwd)
+fi
+
 if [[ -z $class ]]; then
 	# get class from outdir
 	class=$(echo "$outdir" | sed "s|$ROOT_DIR||" | awk -F "/" '{print $2}' | sed 's/.\+/\L&/')
@@ -245,7 +252,7 @@ if [[ -z $species ]]; then
 fi
 
 if [[ "$class" != [Aa][Mm][Pp][Hh][Ii][Bb][Ii][Aa]  && "$class" != [Ii][Nn][Ss][Ee][Cc][Tt][Aa] ]]; then
-	print_error "-c $class must be Amphibia or Insecta."
+	print_error "-c $class must be Amphibia or Insecta. Detected: $class".
 fi
 
 # explicit overrides forced char, and leniency
@@ -280,20 +287,28 @@ if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
 	exit 1
 fi
 
-input=$(realpath $1)
+if [[ "$target" != "clean" ]]; then
+	input=$(realpath $1)
 
-if [[ -z $outdir ]]; then
-	outdir=$(dirname $input)
-else
-	mkdir -p $outdir
-	# if INPUT given ISN'T in the output directory, put it there (it IS supposed to be there)
-	if [[ ! -s $outdir/$(basename $input) ]]; then
-		mv $input $outdir/$(basename $input)
+	if [[ -z $outdir ]]; then
+		outdir=$(dirname $input)
+	else
+		mkdir -p $outdir
+		# if INPUT given ISN'T in the output directory, put it there (it IS supposed to be there)
+		if [[ ! -s $outdir/$(basename $input) ]]; then
+			mv $input $outdir/$(basename $input)
+		fi
+		input=$outdir/$(basename $input)
 	fi
-	input=$outdir/$(basename $input)
+else
+	input=""
 fi
-mkdir -p $outdir/logs
 
+mkdir -p $outdir/logs
+if [[ -s "$outdir/logs/00-rAMPage.log" ]]; then
+	timestamp=$(ls -l --time-style='+%Y%m%d_%H%M%S' $outdir/logs/00-rAMPage.log | awk '{print $(NF-1)}')
+	mv $outdir/logs/00-rAMPage.log $outdir/logs/00-rAMPage-${timestamp}.log
+fi
 {
 	echo "HOSTNAME: $(hostname)"
 	echo -e "START: $(date)\n"
@@ -302,46 +317,52 @@ mkdir -p $outdir/logs
 
 	echo "CALL: $args (wd: $(pwd))"
 	echo -e "THREADS: $num_threads\n"
-} | tee -a $outdir/logs/00-rAMPage.log 1>&2
+} | tee $outdir/logs/00-rAMPage.log 1>&2
 
 # check that all rows have the same number of columns
-if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
-	print_error "Inconsistent number of columns."
+if [[ "$target" != "clean" ]]; then
+	if [[ "$(awk '{print NF}' $input | sort -u | wc -l)" -ne 1 ]]; then
+		print_error "Inconsistent number of columns."
+	fi
 fi
 
 export WORKDIR=$outdir
 export STRANDED=$stranded
 
 # check that there are either 2 or 3 columns
-num_cols=$(awk '{print NF}' $input | sort -u)
-if [[ "$num_cols" -eq 2 ]]; then
-	#	touch $outdir/SINGLE.END
-	export PAIRED=false
-elif [[ "$num_cols" -eq 3 ]]; then
-	#	touch $outdir/PAIRED.END
-	export PAIRED=true
+if [[ "$target" != "clean" ]]; then
+	num_cols=$(awk '{print NF}' $input | sort -u)
+	if [[ "$num_cols" -eq 2 ]]; then
+		#	touch $outdir/SINGLE.END
+		export PAIRED=false
+	elif [[ "$num_cols" -eq 3 ]]; then
+		#	touch $outdir/PAIRED.END
+		export PAIRED=true
+	else
+		print_error "There are too many columns in the input TXT file."
+	fi
 else
-	print_error "There are too many columns in the input TXT file."
+	PAIRED=""
+fi
+if [[ "$target" != "clean" ]]; then
+	{
+		echo "EXPORTED VARIABLES:"
+		print_line
+		echo "TARGET=$TARGET"
+		echo "WORKDIR=$WORKDIR"
+		echo "PAIRED=$PAIRED"
+		echo "STRANDED=$STRANDED"
+		echo "CLASS=$CLASS"
+		echo "SPECIES=$SPECIES"
+		echo "FORCE_CHAR"=$forced_characterization
+		echo "LENIENT=$lenient"
+		echo "EXPLICIT=$explicit"
+		print_line
+		echo
+	} | tee -a $outdir/logs/00-rAMPage.log 1>&2
+	printenv > $outdir/env.txt
 fi
 
-
-{
-	echo "EXPORTED VARIABLES:"
-	print_line
-	echo "TARGET=$TARGET"
-	echo "WORKDIR=$WORKDIR"
-	echo "PAIRED=$PAIRED"
-	echo "STRANDED=$STRANDED"
-	echo "CLASS=$CLASS"
-	echo "SPECIES=$SPECIES"
-	echo "FORCE_CHAR"=$forced_characterization
-	echo "LENIENT=$lenient"
-	echo "EXPLICIT=$explicit"
-	print_line
-	echo
-} | tee -a $outdir/logs/00-rAMPage.log 1>&2
-
-printenv > $outdir/env.txt
 # class=$(echo "$outdir" | sed "s|$ROOT_DIR/\?||" | awk -F "/" '{print $1}')
 # if [[ -n $class ]]; then
 # 	touch $outdir/${class^^}.CLASS
@@ -521,6 +542,12 @@ fi
 
 # PERFORM SUMMARY
 if [[ "$target" != "clean" ]]; then
+
+	if [[ -s "$outdir/logs/00-summary.log" ]]; then
+		timestamp=$(ls -l --time-style='+%Y%m%d_%H%M%S' $outdir/logs/00-summary.log | awk '{print $(NF-1)}')
+		mv $outdir/logs/00-summary.log $outdir/logs/00-summary-${timestamp}.log
+	fi
+
 	if [[ "$email" = true ]]; then
 		if [[ "$benchmark" == true ]]; then
 			echo -e "\nSummary of time, CPU, and memory usage: $outdir/logs/00-summary.log" 1>&2
