@@ -1,19 +1,12 @@
 SHELL := /usr/bin/env bash -ceuo pipefail
-THREADS := 48
 INPUT := input.txt
 INPUT_PROCESSED := $(shell x='$(INPUT)'; echo "$${x/.txt/.processed.txt}")
-PARALLEL := false
-EMAIL := ""
-BENCHMARK := true
 ENTAPDIR := $(shell dirname $(RUN_ENTAP))
 DATABASES := $(wildcard $(ENTAPDIR)/bin/*.dmnd)
-EVALUE := 1e-5
+
 SCORE := ""
 LENGTH := ""
 CHARGE := ""
-RR := true
-FILTER_ONLY := false
-
 
 REF_AMP := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.combined.faa)
 REF_AMP_PRECURSOR := $(wildcard $(ROOT_DIR)/amp_seqs/amps.*.prot.precursor.faa)
@@ -27,12 +20,16 @@ all: sable/final_annotation.tsv
 sable: sable/final_annotation.tsv
 
 sable/final_annotation.tsv sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sable.log &: $(ROOT_DIR)/scripts/run-sable.sh $(ROOT_DIR)/scripts/process-sable.sh exonerate/annotated.nr.faa exonerate/final_annotation.tsv DEPENDENCIES.CHECK exonerate/EXONERATE.DONE
+	@if [[ -s logs/13-sable.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/13-sable.log | awk '{print $$(NF-1)}'); \
+		mv logs/13-sable.log logs/.13-sable-$${timestamp}.log; \
+	fi
 	@echo "STAGE 13: SABLE: $$(realpath logs)/13-sable.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
 		else \
-			$< -a $(EMAIL) -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
+			$< -a $(ADDRESS) -t $(THREADS) -o sable exonerate/annotated.nr.faa exonerate/final_annotation.tsv &> logs/13-sable.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -45,12 +42,16 @@ sable/final_annotation.tsv sable/SABLE_results.tsv sable/SABLE.DONE logs/13-sabl
 # 12. exonerate
 exonerate: exonerate/annotated.nr.faa
 exonerate/EXONERATE.DONE exonerate/final_annotation.tsv exonerate/annotated.nr.faa logs/12-exonerate.log &: $(ROOT_DIR)/scripts/exonerate.sh $(REF_AMP_PRECURSOR) $(REF_AMP_MATURE) annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv DEPENDENCIES.CHECK annotation/ANNOTATION.DONE
+	@if [[ -s logs/12-exonerate.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/12-exonerate.log | awk '{print $$(NF-1)}'); \
+		mv logs/12-exonerate.log logs/.12-exonerate-$${timestamp}.log; \
+	fi
 	@echo "STAGE 12: EXONERATE: $$(realpath logs)/12-exonerate.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		else \
-			$< -a $(EMAIL) -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
+			$< -a $(ADDRESS) -o exonerate annotation/amps.final.annotated.faa annotation/final_annotations.final.tsv &> logs/12-exonerate.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -63,12 +64,16 @@ exonerate/EXONERATE.DONE exonerate/final_annotation.tsv exonerate/annotated.nr.f
 # 11. 
 annotation: annotation/final_results/final_annotations.final.tsv
 annotation/final_annotations.final.tsv annotation/final_results/final_annotations.final.tsv annotation/amps.final.annotated.faa annotation/ANNOTATION.DONE logs/11-annotation.log &: $(ROOT_DIR)/scripts/run-entap.sh amplify/amps.final.faa amplify/AMPlify_results.final.tsv $(DATABASES) $(ENTAPDIR)/CONFIG.DONE DEPENDENCIES.CHECK amplify/AMPLIFY.DONE
+	@if [[ -s logs/11-annotation.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/11-annotation.log | awk '{print $$(NF-1)}'); \
+		mv logs/11-annotation.log logs/.11-annotation-$${timestamp}.log; \
+	fi
 	@echo "STAGE 11: ANNOTATION: $$(realpath logs)/11-annotation.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
 		else \
-			$< -a $(EMAIL) -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
+			$< -a $(ADDRESS) -t $(THREADS) -o annotation -i amplify/amps.final.faa -f amplify/AMPlify_results.final.tsv $(DATABASES) &> logs/11-annotation.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -82,82 +87,86 @@ annotation/final_annotations.final.tsv annotation/final_results/final_annotation
 amplify: amplify/amps.final.faa
 
 amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE logs/10-amplify.log &: $(ROOT_DIR)/scripts/run-amplify.sh cleavage/cleaved.mature.len.rmdup.nr.faa cleavage/CLEAVE.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/10-amplify.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/10-amplify.log | awk '{print $$(NF-1)}'); \
+		mv logs/10-amplify.log logs/.10-amplify-$${timestamp}.log; \
+	fi
 	@echo "STAGE 10: AMPLIFY: $$(realpath logs)/10-amplify.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
 			if [[ $(FILTER_ONLY) == true ]]; then \
 				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(LENGTH)" ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(CHARGE)" ]]; then \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
-					/usr/bin/time -pv $< -d -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -a $(ADDRESS) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			else \
 				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(LENGTH)" ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(CHARGE)" ]]; then \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
-					/usr/bin/time -pv $< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -a $(ADDRESS) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			fi; \
 		else \
 			if [[ $(FILTER_ONLY) == true ]]; then \
 				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					$< -d -a $(ADDRESS) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(LENGTH)" ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(CHARGE)" ]]; then \
-					$< -d -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
-					$< -d -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -d -a $(ADDRESS) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			else \
 				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
-					$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(LENGTH)" ]]; then \
-					$< -a $(EMAIL) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
-					$< -a $(EMAIL) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
-					$< -a $(EMAIL) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
+					$< -a $(ADDRESS) -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
-					$< -a $(EMAIL) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(LENGTH)" ]]; then \
-					$< -a $(EMAIL) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(CHARGE)" ]]; then \
-					$< -a $(EMAIL) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
-					$< -a $(EMAIL) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					$< -a $(ADDRESS) -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			fi; \
 		fi; \
@@ -170,7 +179,7 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 					/usr/bin/time -pv $< -d -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -d -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -d -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
 					/usr/bin/time -pv $< -d -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
@@ -179,7 +188,7 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 				elif [[ -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -d -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
-					/usr/bin/time -pv $< -d -a -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
+					/usr/bin/time -pv $< -d -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			else \
 				if [[ -n "$(SCORE)" && -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
@@ -188,7 +197,7 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 					/usr/bin/time -pv $< -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
 					/usr/bin/time -pv $< -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
@@ -197,6 +206,10 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 				elif [[ -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
+					echo "Email: $(EMAIL)"; \
+					echo "Benchmark: $(BENCHMARK)"; \
+					echo "Filter: $(FILTER_ONLY)"; \
+					echo "Why is it entering this loop?"; \
 					/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			fi; \
@@ -208,7 +221,7 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 					$< -d -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
 					$< -d -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
 					$< -d -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
 					$< -d -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
@@ -226,7 +239,7 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 					$< -o amplify $(SCORE) $(LENGTH) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" && -n "$(CHARGE)" ]]; then \
 					$< -o amplify $(SCORE) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
-				elif [[ -n "$(LENGTH)" && -n "$(CHARGE) ]]; then \
+				elif [[ -n "$(LENGTH)" && -n "$(CHARGE)" ]]; then \
 					$< -o amplify $(LENGTH) $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				elif [[ -n "$(SCORE)" ]]; then \
 					$< -o amplify $(SCORE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
@@ -245,12 +258,16 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 cleavage: cleavage/cleaved.mature.len.rmdup.nr.faa
 
 cleavage/cleaved.mature.len.rmdup.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.log &: $(ROOT_DIR)/scripts/cleave.sh $(ROOT_DIR)/scripts/run-cdhit.sh homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/09-cleavage.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/09-cleavage.log | awk '{print $$(NF-1)}'); \
+		mv logs/09-cleavage.log logs/.09-cleavage-$${timestamp}.log; \
+	fi
 	@echo "STAGE 09: PROPEPTIDE CLEAVAGE: $$(realpath logs)/09-cleavage.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
 		else \
-			$< -a $(EMAIL) -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
+			$< -a $(ADDRESS) -o cleavage homology/jackhmmer.nr.faa &> logs/09-cleavage.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -264,12 +281,16 @@ cleavage/cleaved.mature.len.rmdup.nr.faa cleavage/CLEAVE.DONE logs/09-cleavage.l
 homology: homology/jackhmmer.nr.faa
 
 homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE logs/08-homology.log &: $(ROOT_DIR)/scripts/run-jackhmmer.sh $(REF_AMP) translation/rnabloom.transcripts.filtered.transdecoder.faa $(ROOT_DIR)/scripts/run-cdhit.sh translation/TRANSLATION.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/08-homology.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/08-homology.log | awk '{print $$(NF-1)}'); \
+		mv logs/08-homology.log logs/.08-homology-$${timestamp}.log; \
+	fi
 	@echo "STAGE 08: HOMOLOGY SEARCH: $$(realpath logs)/08-homology.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 		else \
-			$< -a $(EMAIL) -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
+			$< -a $(ADDRESS) -o homology -t $(THREADS) -e $(EVALUE) translation/rnabloom.transcripts.filtered.transdecoder.faa &> logs/08-homology.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -283,12 +304,16 @@ homology/jackhmmer.nr.faa homology/HOMOLOGY.DONE logs/08-homology.log &: $(ROOT_
 translation: translation/rnabloom.transcripts.filtered.transdecoder.faa
 
 translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATION.DONE logs/07-translation.log &: $(ROOT_DIR)/scripts/translate.sh filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/07-translation.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/07-translation.log | awk '{print $$(NF-1)}'); \
+		mv logs/07-translation.log logs/.07-translation-$${timestamp}.log; \
+	fi
 	@echo "STAGE 07: IN SILICO TRANSLATION: $$(realpath logs)/07-translation.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
 		else \
-			$< -a $(EMAIL) -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
+			$< -a $(ADDRESS) -o translation filtering/rnabloom.transcripts.filtered.fa &> logs/07-translation.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -302,12 +327,16 @@ translation/rnabloom.transcripts.filtered.transdecoder.faa translation/TRANSLATI
 filtering: filtering/rnabloom.transcripts.filtered.fa
 
 filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE logs/06-filtering.log &: $(ROOT_DIR)/scripts/filter-expression.sh assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt assembly/ASSEMBLY.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/06-filtering.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/06-filtering.log | awk '{print $$(NF-1)}'); \
+		mv logs/06-filtering.log logs/.06-filtering-$${timestamp}.log; \
+	fi
 	@echo "STAGE 06: EXPRESSION FILTERING: $$(realpath logs)/06-filtering.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
 		else \
-			$< -a $(EMAIL) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
+			$< -a $(ADDRESS) -t $(THREADS) -o filtering -r assembly/rnabloom.transcripts.all.fa trimmed_reads/readslist.txt &> logs/06-filtering.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -322,19 +351,23 @@ filtering/rnabloom.transcripts.filtered.fa filtering/FILTERING.DONE logs/06-filt
 assembly: assembly/rnabloom.transcripts.all.fa
 
 assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE logs/05-assembly.log &: $(ROOT_DIR)/scripts/run-rnabloom.sh trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/05-assembly.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/05-assembly.log | awk '{print $$(NF-1)}'); \
+		mv logs/05-assembly.log logs/.05-assembly-$${timestamp}.log; \
+	fi
 	@echo "STAGE 05: TRANSCRIPTOME ASSEMBLY: $$(realpath logs)/05-assembly.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
 			if [[ $(RR) == true ]]; then \
-				/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+				/usr/bin/time -pv $< -a $(ADDRESS) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
 			else \
-				/usr/bin/time -pv $< -a $(EMAIL) -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+				/usr/bin/time -pv $< -a $(ADDRESS) -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
 			fi; \
 		else \
 			if [[ $(RR) == true ]]; then \
-				$< -a $(EMAIL) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+				$< -a $(ADDRESS) -o assembly -t $(THREADS) trimmed_reads/readslist.txt &> logs/05-assembly.log; \
 			else \
-				$< -a $(EMAIL) -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
+				$< -a $(ADDRESS) -o assembly -t $(THREADS) -R trimmed_reads/readslist.txt &> logs/05-assembly.log; \
 			fi; \
 		fi; \
 	else \
@@ -357,12 +390,16 @@ assembly/rnabloom.transcripts.all.fa assembly/ASSEMBLY.DONE logs/05-assembly.log
 readslist: trimmed_reads/readslist.txt
 
 trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE logs/04-readslist.log &: $(ROOT_DIR)/scripts/build-reads-list.sh $(INPUT_PROCESSED) trimmed_reads/TRIM.DONE DEPENDENCIES.CHECK
+	@if [[ -s logs/04-readslist.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/04-readslist.log | awk '{print $$(NF-1)}'); \
+		mv logs/04-readslist.log logs/.04-readslist-$${timestamp}.log; \
+	fi
 	@echo "STAGE 04: MAKING A READS LIST: $$(realpath logs)/04-readslist.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) -i trimmed_reads $(INPUT_PROCESSED) &> logs/04-readslist.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) -i trimmed_reads $(INPUT_PROCESSED) &> logs/04-readslist.log; \
 		else \
-			$< -a $(EMAIL) -i trimmed_reads $(INPUT_PROCESSED) &> logs/04-readslist.log; \
+			$< -a $(ADDRESS) -i trimmed_reads $(INPUT_PROCESSED) &> logs/04-readslist.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -377,19 +414,23 @@ trimmed_reads/readslist.txt trimmed_reads/READSLIST.DONE logs/04-readslist.log &
 trim: trimmed_reads/TRIM.DONE
 
 trimmed_reads/TRIM.DONE logs/03-trimmed_reads.log &: $(ROOT_DIR)/scripts/trim-reads.sh $(ROOT_DIR)/scripts/run-fastp.sh $(INPUT_PROCESSED) DEPENDENCIES.CHECK raw_reads/READS.DONE
+	@if [[ -s logs/03-trimmed_reads.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/03-trimmed_reads.log | awk '{print $$(NF-1)}'); \
+		mv logs/03-trimmed_reads.log logs/.03-trimmed_reads-$${timestamp}.log; \
+	fi
 	@echo "STAGE 03: TRIMMING READS: $$(realpath logs)/03-trimmed_reads.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(PARALLEL) == true ]]; then \
 			if [[ $(BENCHMARK) == true ]]; then \
-				/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
+				/usr/bin/time -pv $< -a $(ADDRESS) -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			else \
-				$< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
+				$< -a $(ADDRESS) -i raw_reads -o trimmed_reads -t $(THREADS) -p $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			fi; \
 		else \
 			if [[ $(BENCHMARK) == true ]]; then \
-				/usr/bin/time -pv $< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
+				/usr/bin/time -pv $< -a $(ADDRESS) -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			else \
-				$< -a $(EMAIL) -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
+				$< -a $(ADDRESS) -i raw_reads -o trimmed_reads -t $(THREADS) $(INPUT_PROCESSED) &> logs/03-trimmed_reads.log; \
 			fi; \
 		fi; \
 	else \
@@ -411,12 +452,16 @@ trimmed_reads/TRIM.DONE logs/03-trimmed_reads.log &: $(ROOT_DIR)/scripts/trim-re
 reads: raw_reads/READS.DONE
 
 raw_reads/READS.DONE $(INPUT_PROCESSED) logs/02-raw_reads.log &: $(ROOT_DIR)/scripts/check-reads.sh $(INPUT) DEPENDENCIES.CHECK
+	@if [[ -s logs/02-raw_reads.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/02-raw_reads.log | awk '{print $$(NF-1)}'); \
+		mv logs/02-raw_reads.log logs/.02-raw_reads-$${timestamp}.log; \
+	fi
 	@echo "STAGE 02: GETTING READS: $$(realpath logs)/02-raw_reads.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv $< -a $(EMAIL) $(INPUT) &> logs/02-raw_reads.log; \
+			/usr/bin/time -pv $< -a $(ADDRESS) $(INPUT) &> logs/02-raw_reads.log; \
 		else \
-			$< -a $(EMAIL) $(INPUT) &> logs/02-raw_reads.log; \
+			$< -a $(ADDRESS) $(INPUT) &> logs/02-raw_reads.log; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
@@ -429,13 +474,16 @@ raw_reads/READS.DONE $(INPUT_PROCESSED) logs/02-raw_reads.log &: $(ROOT_DIR)/scr
 check: DEPENDENCIES.CHECK
 DEPENDENCIES.CHECK logs/01-check.log &: $(ROOT_DIR)/scripts/check-dependencies.sh $(ROOT_DIR)/CONFIG.DONE
 	@mkdir -p logs
-	@rm -f logs/01-check.log
+	@if [[ -s logs/01-check.log ]]; then \
+		timestamp=$$(ls -l --time-style='+%Y%m%d_%H%M%S' logs/01-check.log | awk '{print $$(NF-1)}'); \
+		mv logs/01-check.log logs/.01-check-$${timestamp}.log; \
+	fi
 	@echo "STAGE 01: CHECK DEPENDENCIES: $$(realpath logs)/01-check.log: $$(date)" 1>&2
-	@if [[ -n $(EMAIL) ]]; then \
+	@if [[ $(EMAIL) == true ]]; then \
 		if [[ $(BENCHMARK) == true ]]; then \
-			/usr/bin/time -pv --append -o logs/01-check.log $< -a $(EMAIL) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
+			/usr/bin/time -pv --append -o logs/01-check.log $< -a $(ADDRESS) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
 		else \
-			$< -a $(EMAIL) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
+			$< -a $(ADDRESS) 2>> logs/01-check.log | tee -a logs/01-check.log 1>&2; \
 		fi; \
 	else \
 		if [[ $(BENCHMARK) == true ]]; then \
