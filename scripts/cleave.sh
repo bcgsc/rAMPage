@@ -341,7 +341,7 @@ else
 fi
 
 echo "Removing duplicate sequences..." 1>&2
-outfile_len_nr=$outdir/cleaved.mature.len.nr.faa
+outfile_len_nr=$outdir/cleaved.mature.len.rmdup.nr.faa
 $ROOT_DIR/scripts/run-cdhit.sh -d -o ${outfile_len_nr} ${outfile_len}
 
 if [[ ! -s ${outfile_len_nr} ]]; then
