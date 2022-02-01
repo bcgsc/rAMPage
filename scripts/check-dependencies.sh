@@ -258,7 +258,7 @@ if ! command -v mail &>/dev/null; then
 	echo -e "System does not have email set up.\n" 1>&2
 fi
 
-printenv >env.txt
+# printenv >env.txt
 touch $(realpath $WORKDIR)/DEPENDENCIES.CHECK
 
 echo "STATUS: DONE" 1>&2
