@@ -50,15 +50,15 @@ function get_help() {
 		echo "OPTION(S):"
 		echo -e "\
 		\t-a <address>\temail address for alerts\n \
-		\t-c <int>\tcharge cut-off (multiple accepted for sweeps) [i.e. keep charge(sequences >= int]\t(default = 2)\n \
+		\t-c <int>\tcharge cut-off (multiple accepted for sweeps) [i.e. keep charge(sequences >= int]\t(default = 2, 4, 6, 8)\n \
 		\t-d\tdownstream filtering only\t(skips running AMPlify)\n \
-		\t-e <str>\texplicitly force final AMPs to be specified cut-offs [overrides -f, -F]\t(e.g. Score:Length:Charge, AMP:Length:Charge, AMP::)\n \
+		\t-e <str>\texplicitly force final AMPs to be specified cut-offs [overrides -f, -F]\t(default = AMP::, e.g. Score:Length:Charge, AMP:Length:Charge, AMP::)\n \
 		\t-f\tforce final AMPs to be the least number of non-zero AMPs*\n \
 		\t-F\tforce final AMPs to be those passing the most lenient cut-offs [overrides -f]\n \
 		\t-h\tshow this help menu\n \
-		\t-l <int>\tlength cut-off (multiple accepted for sweeps) [i.e. keep len(sequences) <= int]\t(default = 30)\n \
+		\t-l <int>\tlength cut-off (multiple accepted for sweeps) [i.e. keep len(sequences) <= int]\t(default = 50, 30)\n \
 		\t-o <directory>\toutput directory\t(required)\n \
-		\t-s <3.0103 to 80>\tAMPlify score cut-off (multiple accepted for sweeps) [i.e. keep score(sequences) >= dbl]\t(default = 10 or 7)\n \
+		\t-s <3.0103 to 80>\tAMPlify score cut-off (multiple accepted for sweeps) [i.e. keep score(sequences) >= dbl]\t(default = 10, 7, 5 or 7, 5, 4)\n \
 		\t-t <int>\tnumber of threads\t(default = all)\n \
 		\t-T\tstop after obtaining AMPlify TSV file\n\
 		" | table
@@ -320,9 +320,14 @@ fi
 # there is no circumstance where it is the only value in the sweep?
 if [[ -n "$explicit" ]]; then
 	explicit_length=$(echo "$explicit" | cut -f2 -d:)
-	if [[ -n "$explicit_length" ]]; then
-		length+=("$explicit_length")
-		no_length_given=false
+	if [[ -n "$explicit_length"  ]]; then
+		if [[ "$explicit_length" != "AMP" ]]; then
+			length+=("$explicit_length")
+			no_length_given=false
+		else
+			no_length_given=true
+			explicit_length=""
+		fi	
 	fi
 fi
 sorted_length=($(echo "${length[@]}" | tr ' ' '\n' | sort -nru | tr '\n' ' '))
@@ -341,11 +346,16 @@ else
 fi
 
 # there is no circumstance where it is the only value in the sweep
-if [[ -n "$explicit" && "$explicit" != [Aa][Mm][Pp] ]]; then
+if [[ -n "$explicit"  ]]; then
 	explicit_charge=$(echo "$explicit" | cut -f3 -d:)
 	if [[ -n "$explicit_charge" ]]; then
-		charge+=("$explicit_charge")
-		no_charge_given=false
+		if [[ "$explicit_charge" != "AMP" ]]; then
+			charge+=("$explicit_charge")
+			no_charge_given=false
+		else
+			no_charge_given=true
+			explicit_charge=""
+		fi
 	fi
 fi
 sorted_charge=($(echo "${charge[@]}" | tr ' ' '\n' | sort -nu | tr '\n' ' '))
@@ -1064,8 +1074,13 @@ elif [[ -n "$explicit" ]]; then
 		final_amps=sweep/length_charge/amps.length_${explicit_length}-charge_${explicit_charge}.nr.faa
 		echo "~~~ Length: $explicit_length | Charge: $explicit_charge ~~~" 1>&2
 	elif [[ -n "$explicit_score" ]]; then
-		final_amps=sweep/score/amps.score_${explicit_score}.nr.faa
-		echo "~~~ Score: $explicit_score ~~~" 1>&2
+		if [[ "$score_amp" = true ]]; then
+			final_amps=$(basename $amps_fasta)
+			echo "~~~ Prediction: AMP ~~~" 1>&2
+		else
+			final_amps=sweep/score/amps.score_${explicit_score}.nr.faa
+			echo "~~~ Score: $explicit_score ~~~" 1>&2
+		fi
 	elif [[ -n "$explicit_length" ]]; then
 		final_amps=sweep/length/amps.length_${explicit_length}.nr.faa
 		echo "~~~ Length: $explicit_length ~~~" 1>&2
