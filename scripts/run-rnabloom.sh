@@ -58,6 +58,7 @@ function get_help() {
 		\t-o <directory>\toutput directory\t(required)\n \
 		\t-s\tstrand-specific library construction\t(default = false)\n \
 		\t-t <int>\tnumber of threads\t(default = 8)\n \
+		\t-R\tdo not conduct redundancy removal\t(used if low on memory)\n \
         " | table
 
 		# reads list
@@ -128,7 +129,7 @@ stranded=false
 rr=true 
 
 # 4 - read options
-while getopts :a:dhm:no:st: opt; do
+while getopts :a:dhm:no:st:R opt; do
 	case $opt in
 	a)
 		address="$OPTARG"
@@ -149,6 +150,7 @@ while getopts :a:dhm:no:st: opt; do
 		threads="$OPTARG"
 		custom_threads=true
 		;;
+	R) rr=false ;;
 	\?) print_error "Invalid option: -$OPTARG" ;;
 	esac
 done

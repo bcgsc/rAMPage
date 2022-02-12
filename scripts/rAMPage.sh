@@ -54,7 +54,7 @@ function get_help() {
 		\t-c <class>\ttaxonomic class of the dataset\t(default = top-level directory in \$outdir; should be Amphibia or Insecta)\n \
 		\t-C <int>\tcharge threshold sweep for AMPs\t(accepted multiple times; default = 2)\n \
 		\t-d\tdebug mode of Makefile\n \
-		\t-e <str>\texplicit putative AMP filter\t(overrides -f, -F; e.g. 10:30:2 [Score:Length:Charge])
+		\t-e <str>\texplicit putative AMP filter\t(overrides -f, -F; e.g. default = 10:30:2 (amphibians) or 7:30:2 (insects) [Score:Length:Charge])
 		\t-E <e-value>\te-value threshold for homology search\t(default = 1e-5)\n \
 		\t-f\tforce characterization even if no AMPs found\n \
 		\t-F\tfilter AMPs only (do not re-run AMPlify, only downstream steps)\n \
@@ -252,8 +252,15 @@ fi
 if [[ "$class" != [Aa][Mm][Pp][Hh][Ii][Bb][Ii][Aa]  && "$class" != [Ii][Nn][Ss][Ee][Cc][Tt][Aa] ]]; then
 	print_error "-c $class must be Amphibia or Insecta. Detected: $class".
 fi
-
-# explicit overrides forced char, and leniency
+# if explicit is already set by command line, then do not reset it
+if [[ -z "$explicit" ]]; then
+	if [[ "$class" ==  [Aa][Mm][Pp][Hh][Ii][Bb][Ii][Aa] ]]; then
+		explicit=10:30:2
+	else
+		explicit=7:30:2
+	fi
+fi
+	# explicit overrides forced char, and leniency
 if [[ -n "$explicit" ]]; then
 	export EXPLICIT=$explicit
 	forced_characterization=false
