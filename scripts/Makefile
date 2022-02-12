@@ -206,10 +206,6 @@ amplify/AMPlify_results.final.tsv amplify/amps.final.faa amplify/AMPLIFY.DONE lo
 				elif [[ -n "$(CHARGE)" ]]; then \
 					/usr/bin/time -pv $< -o amplify $(CHARGE) cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				else \
-					echo "Email: $(EMAIL)"; \
-					echo "Benchmark: $(BENCHMARK)"; \
-					echo "Filter: $(FILTER_ONLY)"; \
-					echo "Why is it entering this loop?"; \
 					/usr/bin/time -pv $< -o amplify cleavage/cleaved.mature.len.rmdup.nr.faa &> logs/10-amplify.log; \
 				fi; \
 			fi; \
