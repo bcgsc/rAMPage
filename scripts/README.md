@@ -21,6 +21,7 @@ This directory holds all the scripts used in the rAMPage pipeline. Each of the s
 1. [Annotation](#annotation)
 1. [Exonerate](#exonerate)
 1. [SABLE](#sable)
+1. [Extras](#extras)
 
 
 ## Downloading Metadata
@@ -432,4 +433,71 @@ OPTION(S):
                                                 
 EXAMPLE(S):
       run-sable.sh -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/exonerate/final_annotation.tsv
+```
+
+## Extras
+
+### Cluster
+
+```
+PROGRAM: cluster.sh
+
+DESCRIPTION:
+       Selects AMPs for synthesis by SpeciesCount, TopInsect, and TopAMPlifyCluster.
+       
+       OUTPUT:
+       -------
+         - AMPsForSynthesis.tsv
+         - OneEachCluster.tsv
+         - ThreeEachCluster.tsv
+       
+       EXIT CODES:
+       -----------
+         - 0: successfully completed
+         - 1: general errors
+       
+       
+USAGE(S):
+      cluster.sh [-o <outdir>] [-c <int>] [-i <int>] [-C <int>] [-s <float>] [-n <int>] [-r <int>] <final annotation directory paths>
+      
+OPTION(S):
+       -h              Show this help menu                                  
+       -o <directory>  Output directory                                     
+       -c <int>        Species count (at least) threshold for SpeciesCount  (default = 3)
+       -i <int>        Number of insect sequences to select for TopInsect   (default = 30)
+       -C <int>        Species count (at most) thresold for TopInsect       (default = 1)
+       -s <float>      AMPlify score threshold for TopInsect                (default = 0.99)
+       -n <int>        Number of sequences to select for TopAMPlifyCluster  (default = 30)
+       -r <int>        Number of arginines that is too hard to synthesize   (default = 5)
+```
+
+### BLAST
+
+```
+PROGRAM: blast.sh
+
+DESCRIPTION:
+       Characterizes the novelty of AMPs using BLASTp.
+       
+       OUTPUT:
+       -------
+         - amps.blast.summary.novel.final.tsv
+         - amps.blast.summary.known.final.tsv
+       
+       EXIT CODES:
+       -----------
+         - 0: successfully completed
+         - 1: general errors
+       
+       
+USAGE(S):
+          blast.sh [-o <outdir>] [-t <int>] -f <rAMPage AMPlify TSV> -d <preformatted BLAST nr database> <AMP FASTA file>
+          
+OPTION(S):
+           -b <BLAST executable>  Path to BLAST executable if not in PATH                                                                 
+           -d <database>          Pre-fromatted BLAST nr database          (e.g. /path/to nr)                                             
+           -f <TSV file>          rAMPage AMPlify TSV                      (NOTE: Must be rAMPage's AMPlify output for headers to match)  
+           -h                     Show this help menu
+           -o <directory>         Output directory 
+           -t <int>               Number of threads                        (default = 8)    
 ```

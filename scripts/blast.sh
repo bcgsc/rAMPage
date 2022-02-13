@@ -52,7 +52,7 @@ function get_help() {
         \t-d <database>\tPre-fromatted BLAST nr database\t(e.g. /path/to/nr)\n \
         \t-f <TSV file>\trAMPage AMPlify TSV\t(NOTE: Must be rAMPage's AMPlify output for headers to match)\n \
 		\t-h\tShow this help menu\n \
-		\t-o <directory>\tOutput directory \n \
+		\t-o <directory>\tOutput directory\n \
         \t-t <int>\tNumber of threads\t(default = 8)\n \
 		" | table
 	} 1>&2
