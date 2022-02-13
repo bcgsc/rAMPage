@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-major_version=0
-minor_version=9
-patch_version=1
+major_version=1
+minor_version=0
+patch_version=0
 
 version_message="rAMPage v${major_version}.${minor_version}.${patch_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
 
