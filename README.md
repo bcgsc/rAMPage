@@ -116,7 +116,7 @@ rAMPage
 | [seqtk](https://github.com/lh3/seqtk/releases/tag/v1.1)| v1.1-r91 |
 | [SignalP](https://services.healthtech.dtu.dk/services/SignalP-5.0/9-Downloads.php#) | v3.0
 | [ProP](https://services.healthtech.dtu.dk/services/ProP-1.0/9-Downloads.php#) | v1.0c |
-| [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.0.0) |v1.0.0|
+| [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.0.3) |v1.0.3|
 | [E<sub>N</sub>TAP](https://github.com/harta55/EnTAP/tree/v0.10.7-beta) | v0.10.7-beta|
 | [Exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate) | v2.4.0|
 | [SABLE](https://sourceforge.net/projects/meller-sable/) | v4.0 |
@@ -358,6 +358,48 @@ MAKEFILE TARGETS:
        05) assembly     12) exonerate
        06) filtering    13) sable
        07) translation  14) all
+
+DESCRIPTION:
+      Runs the rAMPage pipeline, using the Makefile.
+      
+USAGE(S):
+      rAMPage.sh [-a <address>] [-b] [-c <taxonomic class>] [-d] [-f] [-h] [-m] [-n <species name>] [-o <output directory>] [-p] [-r <FASTA.gz>] [-s] [-t <int>] [-v] <input reads TXT file>
+      
+OPTIONS:
+       -a <address>    email address for alerts                               
+       -c <class>      taxonomic class of the dataset                         (default = top-level directory in $outdir)
+       -d              debug mode of Makefile                                 
+       -f              force characterization even if no AMPs found           
+       -h              show help menu                                         
+       -m <target>     Makefile target                                        (default = exonerate)
+       -n <species>    taxonomic species or name of the dataset               (default = second-level directory in $outdir)
+       -o <directory>  output directory                                       (default = directory of input reads TXT file)
+       -p              run processes in parallel                              
+       -r <FASTA.gz>   reference transcriptome                                (accepted multiple times, *.fna.gz *.fsa_nt.gz)
+       -s              strand-specific library construction                   (default = false)
+       -t <int>        number of threads                                      (default = 48)
+       -v              print version number                                   
+       -E <e-value>    E-value threshold for homology search                  (default = 1e-5)
+       -S <0 to 1>     AMPlify score threshold for amphibian AMPs             (default = 0.90)
+       -L <int>        Length threshold for AMPs                              (default = 30)
+       -C <int>        Charge threshold for AMPs                              (default = 2)
+       -R              Disable redundancy removal during transcript assembly  
+                                                                              
+EXAMPLE(S):
+      rAMPage.sh -a user@example.com -c class -n species -p -s -t 8 -o /path/to/output/directory -r /path/to/reference.fna.gz -r /path/to/reference.fsa_nt.gz /path/to/input.txt 
+      
+INPUT EXAMPLE:
+       tissue /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz
+       tissue /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz
+       
+MAKEFILE TARGETS:
+       01) check        08) homology
+       02) reads        09) cleavage
+       03) trim         10) amplify
+       04) readslist    11) annotation
+       05) assembly     12) exonerate
+       06) filtering    13) sable
+       07) translation  14) all
 ```
 
 ### Choosing Thresholds
@@ -390,7 +432,9 @@ $ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa in
 
 ### Running multiple datasets from the root of the repository
 
-To run rAMPage on multiple datasets, you can use the `stAMPede.sh` wrapper script. By default, `stAMPede.sh` will run rAMPage on the datasets consecutively. If the `-s` option is invoked, they will be run simultaenously in parallel. The `-p` option allows parallelization of certain processes, such as trimming reads in parallel.
+To run rAMPage on multiple datasets, you can use the `stAMPede.sh` wrapper script. By default, `stAMPede.sh` will run rAMPage on the datasets consecutively. If the `-s` option is invoked, they will be run simultaenously in parallel. The `-p` option allows parallelization of certain processes, such as trimming reads in parallel. 
+
+**Note**: This script is experimental and has fewer optionso than running `rAMPage.sh`.
 
 ```
 PROGRAM: stAMPede.sh
