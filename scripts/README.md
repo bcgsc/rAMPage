@@ -49,7 +49,7 @@ DESCRIPTION:
       Checks the input.txt file to make sure the reads are present.
       
 USAGE(S):
-      check-reads.sh [-a <address>] [-t <int>] <input reads TXT file>
+      check-reads.sh [-a <address>] [-h] [-t <int>] <input reads TXT file>
       
 OPTION(S):
        -a <address>  email address for alerts
@@ -83,7 +83,7 @@ DESCRIPTION:
        For more information: https://github.com/OpenGene/fastp
        
 USAGE(S):
-      trim-reads.sh [-a <address>] [-p] [-t <int>] -i <input directory> -o <output directory> <input reads TXT file>
+      trim-reads.sh [-a <address>] [-h] [-p] [-t <int>] -i <input directory> -o <output directory> <input reads TXT file>
       
 OPTION(S):
        -a <address>    email address for alerts            
@@ -106,7 +106,7 @@ DESCRIPTION:
       Uses the input.processed.txt (produced by check-reads.sh) and builds a reads list for RNA-Bloom.
       
 USAGE(S):
-      build-reads-list.sh [-a <address>] [-s] -i <input directory> <input reads TXT file>
+      build-reads-list.sh [-a <address>] [-h] [-s] -i <input directory> <input reads TXT file>
       
 OPTION(S):
        -a <address>    email address for alerts                           
@@ -142,15 +142,16 @@ USAGE(S):
       run-rnabloom.sh [-a <address>] [-d] [-h] [-m <int K/M/G>] [-s] [-t <int>] -o <output directory> <reads list TXT file>
       
 OPTION(S):
-                        -a <address>    email address for alerts              
-                        -d              debug mode                            (skips RNA-Bloom)                                                            
-                        -h              show help menu                        
-                        -m <int K/M/G>  allotted memory for Java (e.g. 500G)  
-                        -n              no redundancy removal                 
-                        -o <directory>  output directory                      (required)
-                        -s              strand-specific library construction  (default = false)
-                        -t <int>        number of threads                     (default = 8)
-                                                                              
+       -a <address>    email address for alerts              
+       -d              debug mode                            (skips RNA-Bloom)
+       -h              show help menu                        
+       -m <int K/M/G>  allotted memory for Java (e.g. 500G)  
+       -n              no redundancy removal                 
+       -o <directory>  output directory                      (required)
+       -s              strand-specific library construction  (default = false)
+       -t <int>        number of threads                     (default = 8)
+       -R              do not conduct redundancy removal     (used if low on memory)
+                                                             
 EXAMPLE READS LIST (NONSTRANDED):
        tissue1 /path/to/readA_1.fastq.gz /path/to/readA_2.fastq.gz
        tissue2 /path/to/readB_1.fastq.gz /path/to/readB_2.fastq.gz
@@ -191,16 +192,16 @@ DESCRIPTION:
        For more information: https://combine-lab.github.io/salmon/
        
 USAGE(S):
-      filter-expression.sh [-a <address>] [-c <dbl>] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>
+      filter-expression.sh [-a <address>] [-c <dbl>] [-h] [-t <int>] -o <output directory> -r <reference transcriptome (assembly)> <readslist TXT file>
       
 OPTION(S):
-       -a <address>     email alert                           
-       -c <dbl>         TPM cut-off                           (default = 1.0)
-       -h               show this help menu                   
-       -o <directory>   output directory                      (required)
-       -r <FASTA file>  reference transcriptome (assembly)    (required)
-       -t <int>         number of threads                     (default = 2)
-                                                              
+       -a <address>     email alert                         
+       -c <dbl>         TPM cut-off                         (default = 1.0)
+       -h               show this help menu                 
+       -o <directory>   output directory                    (required)
+       -r <FASTA file>  reference transcriptome (assembly)  (required)
+       -t <int>         number of threads                   (default = 2)
+                                                            
 EXAMPLE(S):
       filter-expression.sh -a user@example.com -c 1.0 -s -t 8 -o /path/to/filtering/outdir -r /path/to/assembly/rnabloom.transcripts.all.fa /path/to/trimmed_reads/readslist.txt
 ```
@@ -227,7 +228,7 @@ DESCRIPTION:
        For more information: http://transdecoder.github.io
        
 USAGE(S):
-      translate.sh [-a <address>] -o <output directory> <input FASTA file>
+      translate.sh [-a <address>] [-h] -o <output directory> <input FASTA file>
       
 OPTION(S):
        -a <address>    email address for alerts  
@@ -245,7 +246,7 @@ PROGRAM: run-jackhmmer.sh
 
 DESCRIPTION:
        Runs jackhmmer from the HMMER package to find AMPs via homology search of protein sequences.
-       Requires /projects/amp/rAMPage/amp_seqs/amps.Amphibia.prot.combined.faa or /projects/amp/rAMPage/amp_seqs/amps.Insecta.prot.combined.faa file.
+       Requires $ROOT_DIR/amp_seqs/amps.$CLASS.prot.combined.faa file.
        
        OUTPUT:
        -------
@@ -267,11 +268,11 @@ DESCRIPTION:
        For more information: http://eddylab.org/software/hmmer/Userguide.pdf
        
 USAGE(S):
-      run-jackhmmer.sh [-a <address>] [-e <E-value>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
+      run-jackhmmer.sh [-a <address>] [-e <E-value>] [-h] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
       
 OPTION(S):
        -a <address>    email address for alerts                   
-       -e <E-value>    E-value threshold                          (default = 1e-3)
+       -e <E-value>    E-value threshold                          (default = 1e-5)
        -h              show this help menu                        
        -o <directory>  output directory                           (required)
        -s <0 to 1>     CD-HIT global sequence similarity cut-off  (default = 1.00)
@@ -294,23 +295,25 @@ DESCRIPTION:
          - cleaved.mature.len.faa
          - CLEAVE.DONE or CLEAVE.FAIL
          - CLEAVE_LEN.DONE or CLEAVE_LEN.FAIL
+         - CLEAVE_LEN_NR.DONE or CLEAVE_LEN_NR.FAIL
        
        EXIT CODES:
        -----------
          - 0: successfully completed
          - 1: general error
-         - 2: SignalP not found
-         - 3: cleavage failed
-         - 4: length filtering failed
+         - 2: cleavage failed
+         - 3: length filtering failed
+         - 4: redundancy removal failed
        
        For more information on ProP: https://services.healthtech.dtu.dk/service.php?ProP-1.0
        
 USAGE(S):
-      cleave.sh [-a <address>] [-c] -o <output directory> <input FASTA file>
+      cleave.sh [-a <address>] [-c] [-d] [-h] -o <output directory> <input FASTA file>
       
 OPTION(S):
        -a <address>    email address for alerts                                     
        -c              allow consecutive (i.e. adjacent) segments to be recombined  
+       -d              debug mode (skips running ProP)                              
        -h              show this help menu                                          
        -o <directory>  output directory                                             (required)
                                                                                     
@@ -328,8 +331,8 @@ DESCRIPTION:
        
        OUTPUT:
        -------
-         - amps.conf.short.charge.nr.faa
-         - AMPlify_results.conf.short.charge.nr.tsv
+         - amps.final.faa
+         - AMPlify_results.final.tsv
        
        EXIT CODES:
        -----------
@@ -340,22 +343,28 @@ DESCRIPTION:
        For more information on AMPlify: https://github.com/bcgsc/amplify
        
 USAGE(S):
-      run-amplify.sh [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-r <0 to 1>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
+      run-amplify.sh [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
       
 OPTION(S):
-       -a <address>    email address for alerts                                   
-       -c <int>        charge cut-off [i.e. keep charge(sequences >= int]         (default = 2)
-       -d              debug mode                                                 (skips running AMPlify)
-       -f              force final AMPs to be the lowest number of non-zero AMPs  
-       -h              show this help menu                                        
-       -l <int>        length cut-off [i.e. keep len(sequences) <= int]           (default = 30)
-       -r <0 to 1>     redundancy removal cut-off                                 (default = 1.0)
-       -o <directory>  output directory                                           (required)
-       -s <0 to 1>     AMPlify score cut-off [i.e. keep score(sequences) >= dbl]  (default = 0.90)
-       -t <int>        number of threads                                          (default = all)
-                                                                                  
+       -a <address>       email address for alerts                                                                  
+       -c <int>           charge cut-off (multiple accepted for sweeps) [i.e. keep charge(sequences >= int]         (default = 2, 4, 6, 8)
+       -d                 downstream filtering only                                                                 (skips running AMPlify)
+       -e <str>           explicitly force final AMPs to be specified cut-offs [overrides -f, -F]                   (default = AMP::, e.g. Score:Length:Charge, AMP:Length:Charge, AMP::)
+       -f                 force final AMPs to be the least number of non-zero AMPs*                                 
+       -F                 force final AMPs to be those passing the most lenient cut-offs [overrides -f]             
+       -h                 show this help menu                                                                       
+       -l <int>           length cut-off (multiple accepted for sweeps) [i.e. keep len(sequences) <= int]           (default = 50, 30)
+       -o <directory>     output directory                                                                          (required)
+       -s <3.0103 to 80>  AMPlify score cut-off (multiple accepted for sweeps) [i.e. keep score(sequences) >= dbl]  (default = 10, 7, 5 or 7, 5, 4)
+       -t <int>           number of threads                                                                         (default = all)
+       -T                 stop after obtaining AMPlify TSV file                                                     
+                                                                                                                    
 EXAMPLE(S):
-      run-amplify.sh -a user@example.com -c 2 -l 30 -s 0.90 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.faa
+       run-amplify.sh -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.rmdup.nr.faa
+       run-amplify.sh -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -e 10:30:2 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.rmdup.nr.faa
+       run-amplify.sh -a user@example.com -c 2 -l 30 -l 50 -s 10 -s 7 -e AMP:30:2 -t 8 -o /path/to/amplify/outdir /path/to/cleavage/cleaved.mature.len.rmdup.nr.faa
+       
+*i.e. if filtering by score >= 10, length <= 30, and charge >= 2 yields zero AMPs, then score >= 10, length <= 50, and charge >= 2 will be used for the next step of the pipeline, etc.
 ```
 
 ## Annotation
@@ -368,17 +377,18 @@ DESCRIPTION:
        For more information: https://entap.readthedocs.io/en/latest/introduction.html
        
 USAGE(S):
-      run-entap.sh [-a <address>] [-h] [-t <int>] -i <input FASTA file> -o <output directory> <database DMND file(s)>
+      run-entap.sh [-a <address>] [-h] [-t <int>] -i <input FASTA file> -f <input TSV file> -o <output directory> <database DMND file(s)>
       
 OPTION(S):
        -a <address>    email address for alerts  
+       -f <file>       input TSV file            (required)
        -h              show this help menu       
        -i <file>       input FASTA file          (required)
        -o <directory>  output directory          (required)
        -t <int>        number of threads         (default = 8)
                                                  
 EXAMPLE(S):
-      run-entap.sh -a user@example.com -t 8 -o /path/to/annotation/outdir -i /path/to/amplify/amps.final.faa nr.dmnd uniprot.dmnd
+      run-entap.sh -a user@example.com -t 8 -o /path/to/annotation/outdir -i /path/to/amplify/amps.final.faa -f /path/to/amplify/AMPlify_results.final.tsv nr.dmnd uniprot.dmnd
 ```
 
 ## Exonerate
@@ -392,7 +402,7 @@ DESCRIPTION:
        - amp_seqs/amps.$CLASS.prot.mature.faa
        
 USAGE(S):
-    exonerate.sh [-a <address>] [-h] -o <output directory> <query FASTA file> <annotation TSV file>
+    exonerate.sh [-a <address>] [-h] -o <output directory> <query FASTA file> [annotation TSV file]
     
 OPTION(S):
      -a <address>    email address for alerts  
@@ -400,17 +410,19 @@ OPTION(S):
      -o <directory>  output directory          (required)
                                                
 EXAMPLE(S):
-    exonerate.sh -a user@example.com -o /path/to/exonerate/outdir /path/to/annotation/amps.final.annotated.faa /path/to/annotation/final_annotations.final.tsv
+    exonerate.sh -a user@example.com -o /path/to/exonerate/outdir /path/to/annotation/amps.final.annotated.faa /path/to/annotation/final_annotation.final.tsv
 ```
 
 ## SABLE
 
 ```
+PROGRAM: run-sable.sh
+
 DESCRIPTION:
       Takes a protein FASTA file as input and predicts a secondary structure and RSA score.
       
 USAGE(S):
-      run-sable.sh [OPTIONS] -o <output directory> <protein FASTA file> <protein TSV file>
+      run-sable.sh [-a <address>] [-h] [-t <int>] -o <output directory> <protein FASTA file> <protein TSV file>
       
 OPTION(S):
        -a <address>    email address for alert  
@@ -419,5 +431,5 @@ OPTION(S):
        -t <INT>        number of threads        (default = 8)
                                                 
 EXAMPLE(S):
-      run-sable.sh -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/amplify/AMPlify_results.final.tsv
+      run-sable.sh -o /path/to/sable/outdir /path/to/exonerate/amps.exonerate.some_none.nr.faa  /path/to/exonerate/final_annotation.tsv
 ```
