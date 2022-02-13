@@ -22,6 +22,7 @@ function table() {
 
 function get_help() {
 	{
+		echo -e "PROGRAM: $PROGRAM\n"
 		echo "DESCRIPTION:"
 		echo -e "\
 		\tTakes a protein FASTA file as input and predicts a secondary structure and RSA score.\n\
