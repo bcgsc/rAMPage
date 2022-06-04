@@ -208,7 +208,7 @@ if [[ ! -v CLUSTALO ]]; then
 	if command -v clustalo &>/dev/null; then
 		CLUSTALO=$(command -v clustalo)
 	else
-		print_error "CLUSTALO is unbound and no 'clustalo' found in PATH. Please export RUN_CLUSTALO=/path/to/clustalo/executable."
+		print_error "CLUSTALO is unbound and no 'clustalo' found in PATH. Please export CLUSTALO=/path/to/clustalo/executable."
 	fi
 elif ! command -v $CLUSTALO &>/dev/null; then
 	print_error "Unable to execute $CLUSTALO."
