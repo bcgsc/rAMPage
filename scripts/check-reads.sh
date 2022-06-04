@@ -126,7 +126,7 @@ fi
 	fi
 } 1>&2
 
-input=$(realpath $1)
+input=$(realpath -s $1)
 input_processed=${input/.txt/.processed.txt}
 
 # if workdir is unbound then

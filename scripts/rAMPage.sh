@@ -3,7 +3,7 @@ set -euo pipefail
 
 major_version=1
 minor_version=0
-patch_version=0
+patch_version=1
 
 version_message="rAMPage v${major_version}.${minor_version}.${patch_version}\nDiana Lin, Canada's Michael Smith Genome Sciences Centre, BC Cancer\nCopyright 2021"
 
@@ -293,7 +293,7 @@ if [[ ! -v ROOT_DIR && ! -f "$ROOT_DIR/CONFIG.DONE" ]]; then
 fi
 
 if [[ "$target" != "clean" ]]; then
-	input=$(realpath $1)
+	input=$(realpath -s $1)
 
 	if [[ -z $outdir ]]; then
 		outdir=$(dirname $input)
