@@ -31,10 +31,16 @@ rAMPage is an _in silico_ anti-microbial peptide (AMP) discovery pipeline that t
 	```
 1. Download and install the dependencies (specified in the [Dependencies](#dependencies) section below), into [`rAMPage/src`](src/).
 	* some of these dependencies need to be configured: `SignalP`, `ProP`, `SABLE`, `E<sub>N</sub>TAP` (see [configurations](#configurations))
+	* install AMPlify using `conda` (*required*-- `biopython` and `pandas` are dependencies for other scripts other than AMPlify)
+		```shell
+		cd rAMPage
+		conda create --prefix src/AMPlify python=3.6
+		conda activate AMPlify
+		conda install -c bioconda amplify
+		```
 1. Update _all_ the paths in [`rAMPage/scripts/config.sh`](scripts/config.sh) to reflect dependencies in [`rAMPage/src`](src/) and dependencies pre-installed elsewhere.
 1. Source [`scripts/config.sh`](scripts/config.sh) in the root of the repository.
 	```shell
-	cd rAMPage
 	source scripts/config.sh
 	```
 1. Create working directories for each dataset using this convention: 
@@ -140,7 +146,6 @@ The file to edit is `src/prop-1.0c/prop`:
 | Before | After |
 |--------|-------|
 |`setenv	PROPHOME	/usr/cbs/packages/prop/1.0c/prop-1.0c` | `setenv	PROPHOME	$ROOT_DIR/src/prop-1.0c` |
-|\*`setenv AWK /usr/bin/gawk` | `setenv AWK awk` |
 |\*`setenv SIGNALP /usr/cbs/bio/bin/signalp` | `setenv SIGNALP $ROOT_DIR/src/signalp-3.0/signalp` |
 
 \*edit the one corresponding to your system, Linux used in the example
