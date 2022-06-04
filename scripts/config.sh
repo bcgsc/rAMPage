@@ -44,7 +44,7 @@ export RUN_SIGNALP=$ROOT_DIR/src/signalp-3.0/signalp
 export RUN_PROP=$ROOT_DIR/src/prop-1.0c/prop
 
 ## AMPLIFY
-export RUN_AMPLIFY=$ROOT_DIR/src/AMPlify-1.0.0/src/AMPlify.py
+export RUN_AMPLIFY=$ROOT_DIR/src/AMPlify/bin/AMPlify
 
 ## SABLE
 export RUN_SABLE=$ROOT_DIR/src/sable_v4_distr/run.sable

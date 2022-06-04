@@ -245,10 +245,10 @@ fi
 # Check AMPlify
 if [[ ! -v RUN_AMPLIFY ]]; then
 	# if not bound, look for it in PATH
-	if command -v AMPlify.py &>/dev/null; then
-		RUN_AMPLIFY=$(command -v AMPlify.py)
+	if command -v AMPlify &>/dev/null; then
+		RUN_AMPLIFY=$(command -v AMPlify)
 	else
-		print_error "RUN_AMPLIFY is unbound and no AMPlify.py found in PATH. Please export RUN_PROP=/path/to/AMPlify.py."
+		print_error "RUN_AMPLIFY is unbound and no AMPlify found in PATH. Please export RUN_AMPLIFY=/path/to/AMPlify"
 	fi
 elif ! command -v $RUN_AMPLIFY &>/dev/null; then
 	print_error "Unable to execute $RUN_AMPLIFY."
@@ -414,6 +414,7 @@ fi
 # -------------------
 if [[ "$debug" = false ]]; then
 	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
+	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/share/amplify/models
 	echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
 	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
 	$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
@@ -1013,8 +1014,11 @@ sed -i '/^-\+\t-\+/d' $outdir/amps.summary.tsv
 # sed -i "s|^|$outdir/|" $outdir/amps.summary.tsv
 # soft link the file that has the least number of AMPs but isn't 0
 # final_amps=$most_filtered_fasta
-least_nonzero_amps=$(find $(basename $outdir) -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)" | cut -f2- -d/)
-least_nonzero_amps_tsv=$(find $(basename $outdir) -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)" | cut -f2- -d/)
+# least_nonzero_amps=$(find $(basename $outdir) -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)" | cut -f2- -d/)
+# least_nonzero_amps_tsv=$(find $(basename $outdir) -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)" | cut -f2- -d/)
+
+least_nonzero_amps=$(find $outdir -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $2}' $outdir/amps.summary.tsv | tail -n1)" | awk -F "/" 'BEGIN{OFS="/"}{print $(NF-2), $(NF-1), $NF}')
+least_nonzero_amps_tsv=$(find $outdir -maxdepth 3 -name "$(awk -F "\t" '{if($3!=0) print $1}' $outdir/amps.summary.tsv | tail -n1)" | awk -F "/" 'BEGIN{OFS="/"}{print $(NF-2), $(NF-1), $NF}')
 
 if [[ "$score_amp" = false ]]; then
 	highest_score=${sorted_confidence[-1]}
