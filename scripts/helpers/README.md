@@ -103,6 +103,7 @@ USAGE(S):
 
 ```shell
 scripts/helpers/config-signalp.sh
+scripts/helpers/install_prop.sh
 ```
 
 ### Configuring ProP
@@ -116,6 +117,7 @@ USAGE(S):
 
 ```shell
 scripts/helpers/config-prop.sh
+scripts/helpers/install_prop.sh
 ```
 
 ### Configuring SABLE
