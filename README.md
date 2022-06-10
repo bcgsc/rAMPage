@@ -132,6 +132,14 @@ rAMPage
 
 ##### Configuring SignalP
 
+To download [SignalP](https://services.healthtech.dtu.dk/services/SignalP-5.0/9-Downloads.php#), you must enter your email address and institution. Afterwards, a download link valid for 4 hours will be emailed to you. Clicking on the link will show you one link for each system (e.g. Linux). Click the link to download, or right click to copy the link and download on the command line using `curl` or `wget`. 
+
+After moving the downloaded `signalp-3.0.Linux.tar.Z` file to `src`, decompress it:
+
+```shell
+cd src/
+cat signalp-3.0.Linux.tar.Z | uncompress | tar xvf -
+```
 The file to edit is `src/signalp-3.0/signalp`: 
 
 | Before | After |
@@ -139,7 +147,26 @@ The file to edit is `src/signalp-3.0/signalp`:
 |`SIGNALP=/usr/opt/signalp-3.0` | `SIGNALP=$ROOT_DIR/src/signalp-3.0`
 | `AWK=nawk` | `AWK=awk`
 
+**Note**: More changes may need to be made according to what executables are accessible in your PATH variable and on your system. For FULL installation instructions, please read `src/signalp-3.0/signalp-3.0.readme` in detail.
+
+
+The experimental `scripts/helpers/install_prop.sh` can be used to install SignalP with the changes listed above, but more changes may be required. Make sure that SignalP works with the test datasets in its directory before running rAMPage, e.g.
+
+```shell
+cd src/signalp-3.0
+./signalp-3.0 -t euk test/test.seq
+```
+
 ##### Configuring ProP
+
+To download [ProP](https://services.healthtech.dtu.dk/services/ProP-1.0/9-Downloads.php#), you must enter your email address and institution. Afterwards, a download link valid for 4 hours will be emailed to you. Clicking on the link will show one link for each system (e.g. Linux). Click the link to download, or right click to copy the link and download on the command line using `curl` or `wget`. 
+
+After moving the downloaded `prop-1.0c.Linux.tar.Z` file to `src`, decompress it:
+
+```shell
+cd src/
+cat prop-1.0c.Linux.tar.Z | uncompress | tar xvf -
+```
 
 The file to edit is `src/prop-1.0c/prop`:
 
@@ -149,6 +176,15 @@ The file to edit is `src/prop-1.0c/prop`:
 |\*`setenv SIGNALP /usr/cbs/bio/bin/signalp` | `setenv SIGNALP $ROOT_DIR/src/signalp-3.0/signalp` |
 
 \*edit the one corresponding to your system, Linux used in the example
+
+**Note**: More changes may need to be made according to what executables are accessible in your PATH variable and on your system. For FULL installation instructions, please read `src/prop-1.0c/prop-1.0c.readme` in detail.
+
+The experimental `scripts/helpers/install_prop.sh` can be used to install ProP with the changes listed above, but more changes may be required. Make sure that ProP works with the test datasets in its directory before running rAMPage, e.g.
+
+```shell
+cd src/prop-1.0c
+./prop -s test/EDA_HUMAN.fsa 
+```
 
 ##### Configuring E<sub>N</sub>TAP
 
@@ -439,7 +475,7 @@ $ROOT_DIR/scripts/rAMPage.sh -s -r tsa.GGFG.1.fsa_nt.gz -c insecta -n mgulosa in
 
 To run rAMPage on multiple datasets, you can use the `stAMPede.sh` wrapper script. By default, `stAMPede.sh` will run rAMPage on the datasets consecutively. If the `-s` option is invoked, they will be run simultaenously in parallel. The `-p` option allows parallelization of certain processes, such as trimming reads in parallel. 
 
-**Note**: This script is experimental and has fewer optionso than running `rAMPage.sh`.
+**Note**: This script is experimental and has fewer options than running `rAMPage.sh`.
 
 ```
 PROGRAM: stAMPede.sh
@@ -498,11 +534,13 @@ insecta/mgulosa/venom/input.txt stranded
 
 #### AMPs for Synthesis
 
-Clustering AMPs across datasets and choosing AMPs for synthesis are included in the `scripts/stAMPede.sh` script, but manual clustering can be done using `scripts/cluster.sh`:
+For reproducibility, clustering AMPs across datasets and choosing AMPs for synthesis are included in the `scripts/stAMPede.sh` script, but manual clustering can be done using `scripts/cluster.sh`:
 
 ```shell
 scripts/cluster.sh -o /path/to/outdir amphibia/ptoftae/skin-liver/exonerate insecta/mgulosa/venom/exonerate
 ```
+
+These are the 90 AMPs selected for synthesis, but only a subset of 21 have been validated _in vitro_ thus far.
 
 ## Directory Structure
 
