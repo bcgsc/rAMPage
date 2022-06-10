@@ -139,8 +139,6 @@ fi
 mkdir -p $outdir
 
 infile=$(realpath $1)
-# NOW:
-# database=/projects/btl/db/blast-20220119/nr
 
 # sort the files into those <= 30 and those > 30
 $RUN_BLASTP -version 2>&1 || exit 1
@@ -153,8 +151,8 @@ seqtk subseq $infile <(awk '{if($2<=30) print $1}' $outdir/seqtk.comp.txt) > $ou
 
 # blast it against NR database
 echo "Running BLASTp..." 1>&2
-# $RUN_BLASTP -db $database -query $outdir/amps.gt30.faa -out $outdir/amps.gt30.tsv -task blastp -outfmt '6 qaccver saccver stitle pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -num_threads $num_threads &> $outdir/blastp.log &
-# $RUN_BLASTP -db $database -query $outdir/amps.short.faa -out $outdir/amps.short.tsv -task blastp-short -outfmt '6 qaccver saccver stitle pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -num_threads $num_threads &> $outdir/blastp-short.log &
+ $RUN_BLASTP -db $database -query $outdir/amps.gt30.faa -out $outdir/amps.gt30.tsv -task blastp -outfmt '6 qaccver saccver stitle pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -num_threads $num_threads &> $outdir/blastp.log &
+ $RUN_BLASTP -db $database -query $outdir/amps.short.faa -out $outdir/amps.short.tsv -task blastp-short -outfmt '6 qaccver saccver stitle pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovs' -num_threads $num_threads &> $outdir/blastp-short.log &
 
 wait
 # add headers to combined blast
