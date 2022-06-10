@@ -561,4 +561,4 @@ rAMPage
 
 ## Citation
 
-rAMPage: Rapid AMP Annotation and Gene Estimation (2021). Diana Lin, Darcy Sutherland, Sambina Aninta, Ka Ming Nip, Chenkai Li, Rene L. Warren, Caren Helbing, Linda Hoang, Inanc Birol
+Mining amphibian and insect transcriptomes for antimicrobial peptide sequences with rAMPage. Diana Lin, Darcy Sutherland, Sambina Islam Aninta, Nathan Louie, Ka Ming Nip, Chenkai Li, Anat Yanai, Rene L. Warren, Caren C. Helbing, Linda M.N. Hoang, Inanc Birol. Antibiotics (submitted).
