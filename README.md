@@ -30,7 +30,7 @@ rAMPage is an _in silico_ anti-microbial peptide (AMP) discovery pipeline that t
 	git clone https://github.com/bcgsc/rAMPage.git
 	```
 1. Download and install the dependencies (specified in the [Dependencies](#dependencies) section below), into [`rAMPage/src`](src/).
-	* some of these dependencies need to be configured: `SignalP`, `ProP`, `SABLE`, `E<sub>N</sub>TAP` (see [configurations](#configurations))
+	* some of these dependencies need to be configured: `SignalP`, `ProP`, `SABLE`, `EnTAP` (see [configurations](#configurations))
 	* install AMPlify using `conda` (*required*-- `biopython` and `pandas` are dependencies for other scripts other than AMPlify)
 		```shell
 		cd rAMPage
