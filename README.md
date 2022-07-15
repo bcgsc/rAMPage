@@ -561,4 +561,4 @@ rAMPage
 
 ## Citation
 
-Mining amphibian and insect transcriptomes for antimicrobial peptide sequences with rAMPage. Diana Lin, Darcy Sutherland, Sambina Islam Aninta, Nathan Louie, Ka Ming Nip, Chenkai Li, Anat Yanai, Rene L. Warren, Caren C. Helbing, Linda M.N. Hoang, Inanc Birol. Antibiotics (submitted).
+Lin, D.; Sutherland, D.; Aninta, S.I.; Louie, N.; Nip, K.M.; Li, C.; Yanai, A.; Coombe, L.; Warren, R.L.; Helbing, C.C.; et al. Mining Amphibian and Insect Transcriptomes for Antimicrobial Peptide Sequences with rAMPage. **Antibiotics** _2022_, 11, 952. https://doi.org/10.3390/antibiotics11070952
