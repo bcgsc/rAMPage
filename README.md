@@ -154,7 +154,7 @@ The experimental `scripts/helpers/install_prop.sh` can be used to install Signal
 
 ```shell
 cd src/signalp-3.0
-./signalp-3.0 -t euk test/test.seq
+./signalp -t euk test/test.seq
 ```
 
 ##### Configuring ProP
