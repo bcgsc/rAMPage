@@ -42,14 +42,15 @@ cleaved_seq = open(OUTDIR + '/mature_cleaved_seq.faa', "w+")
 recombined_seq = open(OUTDIR + '/recombined_seq.faa', "w+")
 adj_seq = open(OUTDIR + "/adjacent_seq.faa", "w+")
 
+# Read FASTA input
+fasta_input = open(INPUT_FASTA, 'r')
+fasta_dict = SeqIO.to_dict(SeqIO.parse(fasta_input, "fasta"))
+
 with open(OUTDIR + "/new_csv", newline='') as f:
     reader = csv.reader(f)
     row1 = next(reader)  # gets the first line
     for row in reader:
 
-        # Read FASTA input
-        fasta_input = open(INPUT_FASTA)
-        fasta_dict = SeqIO.to_dict(SeqIO.parse(fasta_input, "fasta"))
         key = row[1]
         sequence = fasta_dict[key]
         sequence = str(sequence.seq[:])
@@ -61,7 +62,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
         if list_p_str[0] == "0":
             ProP = []
         else:
-            ProP = [i for i in (map(int, list_p_str))]
+            ProP = list(map(int, list_p_str))
 
         cut_list = [int(Signal_P)]
         cut_list = cut_list + ProP
@@ -100,7 +101,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
 
                 length_recomb = combinations(range(1, len(list_seq) + 1), 2)
                 for v in list(length_recomb):
-                    recomb = combinations(list_seq, 2)
                     if v[1] - v[0] != 1:
                         recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
@@ -111,7 +111,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 if len(list_seq) >= 3:
                     length_recomb = combinations(range(1, len(list_seq) + 1), 3)
                     for v in list(length_recomb):
-                        recomb = combinations(list_seq, 3)
                         if v[1] - v[0] != 1 and v[2] - v[1] != 1:
                             recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                                  "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
@@ -151,7 +150,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
 
                 length_recomb = combinations(range(1, len(list_seq) + 1), 2)
                 for v in list(length_recomb):
-                    recomb = combinations(list_seq, 2)
                     if v[1] - v[0] != 1:
                         recombined_seq.write(">" + str(key) + "-sig_in_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
@@ -162,7 +160,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 if len(list_seq) >= 3:
                     length_recomb = combinations(range(1, len(list_seq) + 1), 3)
                     for v in list(length_recomb):
-                        recomb = combinations(list_seq, 3)
                         if v[1] - v[0] != 1 and v[2] - v[1] != 1:
                             recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                                  "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
@@ -216,7 +213,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
 
             length_recomb = combinations(range(1, len(list_seq) + 1), 2)
             for v in list(length_recomb):
-                recomb = combinations(list_seq, 2)
                 if v[1] - v[0] != 1:
                     recombined_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                          "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
@@ -227,7 +223,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
             if len(list_seq) >= 3:
                 length_recomb = combinations(range(1, len(list_seq) + 1), 3)
                 for v in list(length_recomb):
-                    recomb = combinations(list_seq, 3)
                     if v[1] - v[0] != 1 and v[2] - v[1] != 1:
                         recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
@@ -265,7 +260,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 n_prop = n_prop - 1
             length_recomb = combinations(range(1, len(list_seq) + 1), 2)
             for v in list(length_recomb):
-                recomb = combinations(list_seq, 2)
                 if v[1] - v[0] != 1:
                     recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                          "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
@@ -276,7 +270,6 @@ with open(OUTDIR + "/new_csv", newline='') as f:
             if len(list_seq) >= 3:
                 length_recomb = combinations(range(1, len(list_seq) + 1), 3)
                 for v in list(length_recomb):
-                    recomb = combinations(list_seq, 3)
                     if v[1] - v[0] != 1 and v[2] - v[1] != 1:
                         recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
