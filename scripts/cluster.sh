@@ -54,7 +54,7 @@ function get_help() {
 		\t-c <int>\tSpecies count (at least) threshold for SpeciesCount\t(default = 3)\n \
 		\t-i <int>\tNumber of insect sequences to select for TopInsect\t(default = 30)\n \
 		\t-C <int>\tSpecies count (at most) thresold for TopInsect\t(default = 1)\n \
-		\t-s <float>\tAMPlify score threshold for TopInsect\t(default = 0.99)\n \
+		\t-s <float>\tAMPlify score threshold for TopInsect\t(default = 20)\n \
 		\t-n <int>\tNumber of sequences to select for TopAMPlifyCluster\t(default = 30)\n \
 		\t-r <int>\tNumber of arginines that is too hard to synthesize\t(default = 5)\n \
 		" | table
@@ -100,7 +100,7 @@ fi
 species_count="--species_count_threshold=3"
 num_insects="--num_insects=30"
 insect_species_count="--insect_species_count_threshold=1"
-insect_score="--insect_score_threshold=0.99"
+insect_score="--insect_score_threshold=20"
 num_seq_clusters="--num_cluster_seqs=30"
 too_many_rs="--too_many_Rs=5"
 

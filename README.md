@@ -122,7 +122,7 @@ rAMPage
 | [seqtk](https://github.com/lh3/seqtk/releases/tag/v1.1)| v1.1-r91 |
 | [SignalP](https://services.healthtech.dtu.dk/services/SignalP-5.0/9-Downloads.php#) | v3.0
 | [ProP](https://services.healthtech.dtu.dk/services/ProP-1.0/9-Downloads.php#) | v1.0c |
-| [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.0.3) |v1.0.3|
+| [AMPlify](https://github.com/bcgsc/AMPlify/releases/tag/v1.1.0) |v1.1.0|
 | [E<sub>N</sub>TAP](https://github.com/harta55/EnTAP/tree/v0.10.7-beta) | v0.10.7-beta|
 | [Exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate) | v2.4.0|
 | [SABLE](https://sourceforge.net/projects/meller-sable/) | v4.0 |
@@ -379,7 +379,7 @@ OPTIONS:
        -t <int>        number of threads                                      (default = 48)
        -v              print version number                                   
        -E <e-value>    E-value threshold for homology search                  (default = 1e-5)
-       -S <0 to 1>     AMPlify score threshold for amphibian AMPs             (default = 0.90)
+       -S <3.0103 to 80>     AMPlify score threshold for amphibian AMPs             (default = 10)
        -L <int>        Length threshold for AMPs                              (default = 30)
        -C <int>        Charge threshold for AMPs                              (default = 2)
        -R              Disable redundancy removal during transcript assembly  
@@ -421,7 +421,7 @@ OPTIONS:
        -t <int>        number of threads                                      (default = 48)
        -v              print version number                                   
        -E <e-value>    E-value threshold for homology search                  (default = 1e-5)
-       -S <0 to 1>     AMPlify score threshold for amphibian AMPs             (default = 0.90)
+       -S <3.0103 to 80>     AMPlify score threshold for amphibian AMPs             (default = 10)
        -L <int>        Length threshold for AMPs                              (default = 30)
        -C <int>        Charge threshold for AMPs                              (default = 2)
        -R              Disable redundancy removal during transcript assembly  
@@ -496,7 +496,7 @@ OPTION(S):
        -t <int>      number of threads                                          (default = 48)
        -v            verbose (uses /usr/bin/time -pv to time each rAMPage run)  
        -E <e-value>  E-value threshold for homology search                      (default = 1e-5)
-       -S <0 to 1>   AMPlify score threshold for amphibian AMPs                 (default = 0.90)
+       -S <3.0103 to 80>   AMPlify score threshold for amphibian AMPs                 (default = 10)
        -L <int>      Length threshold for AMPs                                  (default = 30)
        -C <int>      Charge threshold for AMPs                                  (default = 2)
                                                                                 
