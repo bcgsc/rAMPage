@@ -413,11 +413,9 @@ fi
 # RUNNING AMPLIFY
 # -------------------
 if [[ "$debug" = false ]]; then
-	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
-	model_dir=$(dirname $(dirname $RUN_AMPLIFY))/share/amplify/models
 	echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
-	echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-	$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+	echo -e "COMMAND: $RUN_AMPLIFY -s $input -od $outdir -of tsv -att on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+	$RUN_AMPLIFY -s $input -od $outdir -of tsv -att on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 
 	echo "Finished running AMPlify." 1>&2
 else
@@ -426,21 +424,19 @@ else
 		if [[ -s $output_file ]]; then
 			echo "FILTERING ONLY: Skipping AMPlify..." 1>&2
 		else
-			model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
 			echo "WARNING: FILTERING ONLY -d option selected but no previous AMPlify runs detected:"
 			echo "MISSING: $output_file" 1>&2
 			echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
-			echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-			$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+			echo -e "COMMAND: $RUN_AMPLIFY -s $input -od $outdir -of tsv -att on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+			$RUN_AMPLIFY -s $input -od $outdir -of tsv -att on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 			echo "Finished running AMPlify." 1>&2
 		fi
 	else
-		model_dir=$(dirname $(dirname $RUN_AMPLIFY))/models
 		echo "WARNING: FILTERING ONLY -d option selected but no previous AMPlify runs detected." 1>&2
 		echo "MISSING: $outdir/amplify.out" 1>&2
 		echo "Classifying sequences as 'AMP' or 'non-AMP' using AMPlify..." 1>&2
-		echo -e "COMMAND: $RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --atention on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
-		$RUN_AMPLIFY --model_dir $model_dir -s $input --out_dir $outdir --out_format tsv --attention on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
+		echo -e "COMMAND: $RUN_AMPLIFY -s $input -od $outdir -of tsv -att on 1> $outdir/amplify.out 2> $outdir/amplify.err || true\n" 1>&2
+		$RUN_AMPLIFY -s $input -od $outdir -of tsv -att on 1>$outdir/amplify.out 2>$outdir/amplify.err || true
 		
 		echo "Finished running AMPlify." 1>&2
 	fi
@@ -448,7 +444,7 @@ fi
 # -------------------
 
 # just do a TSV check instead!
-file=$(ls -t $outdir/AMPlify_results_*.tsv 2>/dev/null | head -n1 || true)
+file=$(ls -t $outdir/AMPlify_balanced_results_*.tsv 2>/dev/null | head -n1 || true)
 echo -e "Output: $file\n" 1>&2
 
 if [[ ! -s $file ]]; then
@@ -464,8 +460,6 @@ if [[ ! -s $file ]]; then
 	exit 2
 fi
 
-# (cd $outdir && ln -fs $(basename $file) AMPlify_results.nr.tsv)
-# file=$outdir/AMPlify_results.nr.tsv
 
 # convert TXT to TSV
 # if length or charge is added to next version, do not need to calculate it here

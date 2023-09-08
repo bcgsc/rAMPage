@@ -344,7 +344,7 @@ DESCRIPTION:
        For more information on AMPlify: https://github.com/bcgsc/amplify
        
 USAGE(S):
-      run-amplify.sh [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-s <0 to 1>] [-t <int>] -o <output directory> <input FASTA file>
+      run-amplify.sh [-a <address>] [-c <int>] [-d] [-f] [-h] [-l <int>] [-s <3.0103 to 80>] [-t <int>] -o <output directory> <input FASTA file>
       
 OPTION(S):
        -a <address>       email address for alerts                                                                  
@@ -466,7 +466,7 @@ OPTION(S):
        -c <int>        Species count (at least) threshold for SpeciesCount  (default = 3)
        -i <int>        Number of insect sequences to select for TopInsect   (default = 30)
        -C <int>        Species count (at most) thresold for TopInsect       (default = 1)
-       -s <float>      AMPlify score threshold for TopInsect                (default = 0.99)
+       -s <float>      AMPlify score threshold for TopInsect                (default = 20)
        -n <int>        Number of sequences to select for TopAMPlifyCluster  (default = 30)
        -r <int>        Number of arginines that is too hard to synthesize   (default = 5)
 ```
