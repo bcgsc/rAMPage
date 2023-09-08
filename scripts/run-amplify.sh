@@ -460,8 +460,6 @@ if [[ ! -s $file ]]; then
 	exit 2
 fi
 
-# (cd $outdir && ln -fs $(basename $file) AMPlify_balanced_results.nr.tsv)
-# file=$outdir/AMPlify_balanced_results.nr.tsv
 
 # convert TXT to TSV
 # if length or charge is added to next version, do not need to calculate it here
