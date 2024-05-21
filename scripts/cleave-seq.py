@@ -224,11 +224,11 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                 length_recomb = combinations(range(1, len(list_seq) + 1), 3)
                 for v in list(length_recomb):
                     if v[1] - v[0] != 1 and v[2] - v[1] != 1:
-                        recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                        recombined_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                              "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                              list_seq[v[2] - 1] + "\n")
                     else:
-                        adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                        adj_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                       "_" + str(v[2]) + "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] +
                                       list_seq[v[2] - 1] + "\n")
 
@@ -264,7 +264,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
                     recombined_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                          "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
                 else:
-                    adj_seq.write(">" + str(key) + "-no_sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
+                    adj_seq.write(">" + str(key) + "-sig_recomb-" + str(v[0]) + "_" + str(v[1]) +
                                   "\n" + list_seq[v[0] - 1] + list_seq[v[1] - 1] + "\n")
 
             if len(list_seq) >= 3:
@@ -282,7 +282,7 @@ with open(OUTDIR + "/new_csv", newline='') as f:
         # Case 5: when there is no signal cleavage site or no peptide cleavage site
 
         else:
-            cleaved_seq.write(">" + str(key) + "-sig_mature" + "\n" + sequence + "\n")
+            cleaved_seq.write(">" + str(key) + "-no_sig_no_prop" + "\n" + sequence + "\n")
 
 sig_seq.close()
 cleaved_seq.close()
